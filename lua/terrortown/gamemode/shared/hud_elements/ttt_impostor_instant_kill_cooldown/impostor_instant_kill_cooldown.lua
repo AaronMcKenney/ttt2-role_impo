@@ -10,6 +10,7 @@ if CLIENT then
 	local iconSize = 64
 	local icon_kill_waiting = Material("vgui/ttt/dynamic/roles/icon_impo")
 	local icon_kill_ready = Material("vgui/ttt/dynamic/roles/icon_traitor")
+	local icon_in_vent = Material("vgui/ttt/icon_vent")
 	
 	HUDELEMENT.icon = icon_kill_waiting
 	
@@ -63,14 +64,14 @@ if CLIENT then
 
 	function HUDELEMENT:ShouldDraw()
 		local client = LocalPlayer()
-
+		
 		return HUDEditor.IsEditing or (client:Alive() and client:GetSubRole() == ROLE_IMPOSTOR)
 	end
 	
 	function HUDELEMENT:SetIcon(new_icon)
 		self.icon = new_icon
 	end
-
+	
 	function HUDELEMENT:DrawComponent(text, bg_color, icon_color)
 		local pos = self:GetPos()
 		local size = self:GetSize()
@@ -88,18 +89,26 @@ if CLIENT then
 	
 	function HUDELEMENT:Draw()
 		local client = LocalPlayer()
-		local bg_color = COLOR_LGRAY
 		local icon_color = COLOR_BLACK
 		local kill_str = LANG.GetTranslation("KILL_" .. IMPOSTOR.name)
-		self:SetIcon(icon_kill_waiting)
-		
+		local bg_color = COLOR_LGRAY
 		if client.impo_can_insta_kill then
-			--Change HUD if the impostor can insta-kill again.
 			bg_color = IMPOSTOR.color
+		end
+		
+		--Venting icon has priority over insta-kill
+		if client.impo_in_vent ~= nil then
+			self:SetIcon(icon_in_vent)
+		elseif client.impo_can_insta_kill then
 			self:SetIcon(icon_kill_ready)
-		elseif client.impo_can_insta_kill == false and timer.Exists("ImposterKillTimer_Client_" .. client:SteamID64()) then
+		else
+			self:SetIcon(icon_kill_waiting)
+		end
+		
+		--Display time left if possible.
+		if not client.impo_can_insta_kill and timer.Exists("ImposterKillTimer_Client_" .. client:SteamID64()) then
 			local time_left = timer.TimeLeft("ImposterKillTimer_Client_" .. client:SteamID64())
-			kill_str = kill_str .. " (" .. math.ceil(time_left) .. ")"
+			kill_str = kill_str .. " (" .. math.ceil(math.abs(time_left)) .. ")"
 		end
 		
 		self:DrawComponent(kill_str, bg_color, icon_color)

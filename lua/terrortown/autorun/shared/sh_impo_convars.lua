@@ -3,7 +3,9 @@ CreateConVar("ttt2_impostor_notify_everyone", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY}
 CreateConVar("ttt2_impostor_normal_dmg_multi", "0.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_kill_dist", "125", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_kill_cooldown", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_num_vents", "3", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_num_starting_vents", "3", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_global_max_num_vents", "6", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_traitors_can_enter_vents", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 
 hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	tbl[ROLE_IMPOSTOR] = tbl[ROLE_IMPOSTOR] or {}
@@ -50,14 +52,22 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# How many vents does the impostor start with?
-	--  ttt2_impostor_num_vents [0..n] (default: 3)
+	--  ttt2_impostor_num_starting_vents [0..n] (default: 3)
 	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_num_vents",
+		cvar = "ttt2_impostor_num_starting_vents",
 		slider = true,
 		min = 0,
 		max = 10,
 		decimal = 0,
-		desc = "ttt2_impostor_num_vents (Def: 3)"
+		desc = "ttt2_impostor_num_starting_vents (Def: 3)"
+	})
+	
+	--# Can any traitor (ex. base traitor, vampire, etc.) access impostor-placed vents?
+	--  ttt2_impostor_traitors_can_enter_vents [0/1] (default: 0)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_traitors_can_enter_vents",
+		checkbox = true,
+		desc = "ttt2_impostor_traitors_can_enter_vents (Def: 0)"
 	})
 end)
 
@@ -66,7 +76,8 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalFloat("ttt2_impostor_normal_dmg_multi", GetConVar("ttt2_impostor_normal_dmg_multi"):GetFloat())
 	SetGlobalInt("ttt2_impostor_kill_dist", GetConVar("ttt2_impostor_kill_dist"):GetInt())
 	SetGlobalInt("ttt2_impostor_kill_cooldown", GetConVar("ttt2_impostor_kill_cooldown"):GetInt())
-	SetGlobalInt("ttt2_impostor_num_vents", GetConVar("ttt2_impostor_num_vents"):GetInt())
+	SetGlobalInt("ttt2_impostor_num_starting_vents", GetConVar("ttt2_impostor_num_starting_vents"):GetInt())
+	SetGlobalBool("ttt2_impostor_traitors_can_enter_vents", GetConVar("ttt2_impostor_traitors_can_enter_vents"):GetBool())
 end)
 
 cvars.AddChangeCallback("ttt2_impostor_notify_everyone", function(name, old, new)
@@ -81,6 +92,9 @@ end)
 cvars.AddChangeCallback("ttt2_impostor_kill_cooldown", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_kill_cooldown", tonumber(new))
 end)
-cvars.AddChangeCallback("ttt2_impostor_num_vents", function(name, old, new)
-	SetGlobalInt("ttt2_impostor_num_vents", tonumber(new))
+cvars.AddChangeCallback("ttt2_impostor_num_starting_vents", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_num_starting_vents", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_traitors_can_enter_vents", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_traitors_can_enter_vents", tobool(tonumber(new)))
 end)

@@ -2,8 +2,8 @@ if SERVER then
 	AddCSLuaFile()
 	resource.AddFile("materials/vgui/ttt/dynamic/roles/icon_impo.vmt")
 	util.AddNetworkString("TTT2ImpostorInstantKillUpdate")
-	util.AddNetworkString("TTT2ImpostorVentUpdate")
 	util.AddNetworkString("TTT2ImpostorSendInstantKillRequest")
+	util.AddNetworkString("TTT2ImpostorEnterVentUpdate")
 end
 
 function ROLE:PreInitialize()
@@ -44,12 +44,12 @@ function ROLE:Initialize()
 	roles.SetBaseRole(self, ROLE_TRAITOR)
 end
 
--------------------------
---SHARED CONSTS AND FUNCS
--------------------------
+---------------------------
+--SHARED CONSTS AND FUNCS--
+---------------------------
 local function CanKillTarget(impo, tgt, dist)
 	--impo is assumed to be a valid impostor and tgt is assumed to be a valid player
-	if impo.impo_can_insta_kill and dist <= GetConVar("ttt2_impostor_kill_dist"):GetInt() and impo.impo_in_vent == false then
+	if impo.impo_can_insta_kill and dist <= GetConVar("ttt2_impostor_kill_dist"):GetInt() and impo.impo_in_vent == nil then
 		return true
 	else
 		return false
@@ -60,12 +60,6 @@ if SERVER then
 	local function SendInstantKillUpdateToClient(ply)
 		net.Start("TTT2ImpostorInstantKillUpdate")
 		net.WriteBool(ply.impo_can_insta_kill)
-		net.Send(ply)
-	end
-	
-	local function SendVentUpdateToClient(ply)
-		net.Start("TTT2ImpostorVentUpdate")
-		net.WriteBool(ply.impo_in_vent)
 		net.Send(ply)
 	end
 	
@@ -85,10 +79,10 @@ if SERVER then
 		--Create a timer that is unique to the player. When it finishes, turn on ability to kill
 		--Because it's unique, it can be paused/unpaused whenever the impostor enters/leaves a vent.
 		--First remove any existing timer of the same name (to prevent wonkiness)
-		if timer.Exists("ImposterKillTimer_" .. ply:SteamID64()) then
-			timer.Remove("ImposterKillTimer_" .. ply:SteamID64())
+		if timer.Exists("ImposterKillTimer_Server_" .. ply:SteamID64()) then
+			timer.Remove("ImposterKillTimer_Server_" .. ply:SteamID64())
 		end
-		timer.Create("ImposterKillTimer_" .. ply:SteamID64(), kill_cooldown, 1, function()
+		timer.Create("ImposterKillTimer_Server_" .. ply:SteamID64(), kill_cooldown, 1, function()
 			ply.impo_can_insta_kill = true
 			SendInstantKillUpdateToClient(ply)
 		end)
@@ -115,18 +109,39 @@ if SERVER then
 	end)
 	
 	function ROLE:GiveRoleLoadout(ply, isRoleChange)
-		ply.impo_in_vent = false
+		ply:GiveEquipmentWeapon('weapon_ttt_vent')
 		PutInstantKillOnCooldown(ply)
-		SendVentUpdateToClient(ply)
+	end
+	
+	function ROLE:RemoveRoleLoadout(ply, isRoleChange)
+		ply:StripWeapon('weapon_ttt_vent')
 	end
 	
 	hook.Add("EntityTakeDamage", "ImpostorModifyDamage", function(target, dmg_info)
 		local attacker = dmg_info:GetAttacker()
 		
 		if IsValid(attacker) and attacker:IsPlayer() and attacker:GetSubRole() == ROLE_IMPOSTOR then
-			dmg_info:SetDamage(dmg_info:GetDamage() * GetConVar("ttt2_impostor_normal_dmg_multi"):GetFloat())
+			if attacker.impo_in_vent then
+				--Force Impostor to deal no damage if they are in a vent (just to be safe)
+				dmg_info:SetDamage(0)
+			else
+				dmg_info:SetDamage(dmg_info:GetDamage() * GetConVar("ttt2_impostor_normal_dmg_multi"):GetFloat())
+			end
 		end
 	end)
+	
+	--BMF???
+	--hook.Add("PlayerSwitchWeapon", "ImpostorSwitchWeapon", function(ply, oldWep, newWep)
+	--	if ply:GetSubRole() ~= ROLE_IMPOSTOR or not ply:Alive() or ply.impo_in_vent == nil then
+	--		return
+	--	end
+	--	
+	--	--Prevent impostors from pulling out weapons while in vents by forcing them to be holstered.
+	--	--ply:SetActiveWeapon(ply:GetWeapon("weapon_ttt_unarmed")) --BMF
+	--	--newWep = ply:GetWeapon("weapon_ttt_unarmed") --BMF
+	--	--return false --BMF
+	--	--WHAT IS THE POINT OF THIS FUNCTION?!?!?!?!
+	--end)
 end
 
 if CLIENT then
@@ -149,9 +164,23 @@ if CLIENT then
 		end
 	end)
 	
-	net.Receive("TTT2ImpostorVentUpdate", function()
+	net.Receive("TTT2ImpostorEnterVentUpdate", function()
 		local client = LocalPlayer()
-		client.impo_in_vent = net.ReadBool()
+		local new_vent = net.ReadEntity()
+		local exit_pos = net.ReadVector()
+		local exit_ang = net.ReadAngle()
+		
+		--Have to re-add any extra bits of info here as they are not sent in ReadEntity
+		new_vent.exit_pos = exit_pos
+		new_vent.exit_ang = exit_ang
+		
+		if client.impo_in_vent == nil then
+			--client is entering the vent from real space. Put them into vent space.
+			IMPOSTOR_DATA.EnterVent(client, new_vent)
+		else
+			--client is moving from one vent to another.
+			IMPOSTOR_DATA.MovePlayerToVent(client, new_vent)
+		end
 	end)
 	
 	hook.Add("TTTRenderEntityInfo", "ImpostorRenderEntityInfo", function(tData)
@@ -181,3 +210,15 @@ if CLIENT then
 	end
 	bind.Register("ImpostorSendInstantKillRequest", SendInstantKillRequest, nil, "Impostor", "Instant Kill", KEY_Q)
 end
+
+----------------
+--SHARED HOOKS--
+----------------
+hook.Add("KeyPress", "ImpostorKeyPress", function(ply, key)
+	--Always use the +USE key without ability to change binding for vent logic (no reason to change it).
+	if ply:GetSubRole() ~= ROLE_IMPOSTOR or not ply:Alive() or key ~= IN_USE or ply.impo_in_vent == nil then
+		return
+	end
+	
+	IMPOSTOR_DATA.ExitVent(ply)
+end)
