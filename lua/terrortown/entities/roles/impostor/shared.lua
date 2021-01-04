@@ -3,7 +3,7 @@ if SERVER then
 	resource.AddFile("materials/vgui/ttt/dynamic/roles/icon_impo.vmt")
 	util.AddNetworkString("TTT2ImpostorInstantKillUpdate")
 	util.AddNetworkString("TTT2ImpostorSendInstantKillRequest")
-	util.AddNetworkString("TTT2ImpostorEnterVentUpdate")
+	--BMF--util.AddNetworkString("TTT2ImpostorEnterVentUpdate")
 end
 
 function ROLE:PreInitialize()
@@ -127,21 +127,11 @@ if SERVER then
 			else
 				dmg_info:SetDamage(dmg_info:GetDamage() * GetConVar("ttt2_impostor_normal_dmg_multi"):GetFloat())
 			end
+		elseif IsValid(victim) and victim:IsPlayer() and victim:GetSubRole() == ROLE_IMPOSTOR and victim.impo_in_vent then
+			--Force Impostor to take no damage if they are in a vent (just to be safe)
+			dmg_info:SetDamage(0)
 		end
 	end)
-	
-	--BMF???
-	--hook.Add("PlayerSwitchWeapon", "ImpostorSwitchWeapon", function(ply, oldWep, newWep)
-	--	if ply:GetSubRole() ~= ROLE_IMPOSTOR or not ply:Alive() or ply.impo_in_vent == nil then
-	--		return
-	--	end
-	--	
-	--	--Prevent impostors from pulling out weapons while in vents by forcing them to be holstered.
-	--	--ply:SetActiveWeapon(ply:GetWeapon("weapon_ttt_unarmed")) --BMF
-	--	--newWep = ply:GetWeapon("weapon_ttt_unarmed") --BMF
-	--	--return false --BMF
-	--	--WHAT IS THE POINT OF THIS FUNCTION?!?!?!?!
-	--end)
 end
 
 if CLIENT then
@@ -164,24 +154,24 @@ if CLIENT then
 		end
 	end)
 	
-	net.Receive("TTT2ImpostorEnterVentUpdate", function()
-		local client = LocalPlayer()
-		local new_vent = net.ReadEntity()
-		local exit_pos = net.ReadVector()
-		local exit_ang = net.ReadAngle()
-		
-		--Have to re-add any extra bits of info here as they are not sent in ReadEntity
-		new_vent.exit_pos = exit_pos
-		new_vent.exit_ang = exit_ang
-		
-		if client.impo_in_vent == nil then
-			--client is entering the vent from real space. Put them into vent space.
-			IMPOSTOR_DATA.EnterVent(client, new_vent)
-		else
-			--client is moving from one vent to another.
-			IMPOSTOR_DATA.MovePlayerToVent(client, new_vent)
-		end
-	end)
+	--net.Receive("TTT2ImpostorEnterVentUpdate", function()
+	--	local client = LocalPlayer()
+	--	local new_vent = net.ReadEntity()
+	--	local exit_pos = net.ReadVector()
+	--	local exit_ang = net.ReadAngle()
+	--	
+	--	--Have to re-add any extra bits of info here as they are not sent in ReadEntity
+	--	new_vent.exit_pos = exit_pos
+	--	new_vent.exit_ang = exit_ang
+	--	
+	--	if client.impo_in_vent == nil then
+	--		--client is entering the vent from real space. Put them into vent space.
+	--		IMPOSTOR_DATA.EnterVent(client, new_vent)
+	--	else
+	--		--client is moving from one vent to another.
+	--		IMPOSTOR_DATA.MovePlayerToVent(client, new_vent)
+	--	end
+	--end)
 	
 	hook.Add("TTTRenderEntityInfo", "ImpostorRenderEntityInfo", function(tData)
 		local client = LocalPlayer()
@@ -214,11 +204,50 @@ end
 ----------------
 --SHARED HOOKS--
 ----------------
+
 hook.Add("KeyPress", "ImpostorKeyPress", function(ply, key)
 	--Always use the +USE key without ability to change binding for vent logic (no reason to change it).
 	if ply:GetSubRole() ~= ROLE_IMPOSTOR or not ply:Alive() or key ~= IN_USE or ply.impo_in_vent == nil then
 		return
 	end
 	
-	IMPOSTOR_DATA.ExitVent(ply)
+	local vent = nil
+	local ply_pos = ply:GetPos()
+	local CheckFilter = function(ent)
+		--BMF
+		if IsValid(ent) then
+			print("BMF CheckFilter: class=" .. ent:GetClass() .. ", idx=" .. ent:EntIndex() .. " (vs. " .. ply.impo_in_vent:EntIndex() .. ")")
+		end
+		--BMF
+		if not IsValid(ent) or ent:GetClass() ~= "ttt_vent" or ent:EntIndex() == ply.impo_in_vent:EntIndex() then
+			return false
+		end
+		
+		--Due to the CONTENTS_EMPTY mask, even if this function returns true, the hit result will always say that nothing was hit.
+		--To remedy this, ignore the hit result entirely and grab the result from CheckFilter directly
+		--(This is one of the weirdest workarounds that I have had the displeasure to write).
+		print("  CHECK FILTER RETURNS TRUE!")
+		if vent == nil then
+			--BMF TODO: Determine what happens if the trace line intersects multiple vents!
+			vent = GetVentFromIndex(ent:EntIndex())
+		end
+		
+		return true
+	end
+	local spos = ply:GetShootPos()
+	--Arbitrary magic number for how far we can place the vent from ourselves.
+	local epos = spos + ply:GetAimVector() * 1000000
+	tr = util.TraceLine({
+		start = spos,
+		endpos = epos,
+		filter = CheckFilter,
+		mask = CONTENTS_EMPTY --(or 0. Prevents anything from stopping the traceline, including the vents that CheckFilter okays!)
+	})
+	
+	if IsValid(vent) then
+		print("BMF ATTEMPTING TO MOVE PLAYER TO VENT")
+		IMPOSTOR_DATA.MovePlayerToVent(ply, vent)
+	else
+		IMPOSTOR_DATA.ExitVent(ply)
+	end
 end)

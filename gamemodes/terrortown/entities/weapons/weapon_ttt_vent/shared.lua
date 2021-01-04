@@ -119,7 +119,7 @@ if SERVER then
 						return false
 					end
 					
-					--Can't place vent on itself (???)
+					--Can't place vent on itself
 					if ent == self then
 						return false
 					end

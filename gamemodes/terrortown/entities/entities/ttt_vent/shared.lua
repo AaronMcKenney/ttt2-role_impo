@@ -36,8 +36,8 @@ ENT.CanUseKey = true
 
 hook.Add("TTTPrepareRound", "ClearAllVentEntities", function()
 	--If the vents persisted after round end, remove them here.
-	for _, slam in pairs(ents.FindByClass("ttt_vent")) do
-		slam:Remove()
+	for _, vent in pairs(ents.FindByClass("ttt_vent")) do
+		vent:Remove()
 	end
 end)
 
@@ -79,17 +79,6 @@ function ENT:Initialize()
 			vent:SetNoDraw(true)
 		end
 	end
-end
-
-if CLIENT then
-	hook.Add("PreDrawOutlines", "PreDrawOutlinesImpostorVent", function()
-		local client = LocalPlayer()
-		
-		--Outline vents for traitor team (They will be able to see it regardless of where they are)
-		if client:GetTeam() == TEAM_TRAITOR and #IMPOSTOR_DATA.VENT_NETWORK > 0 then
-			outline.Add(IMPOSTOR_DATA.VENT_NETWORK, IMPOSTOR.color, OUTLINE_MODE_VISIBLE)
-		end
-	end)
 end
 
 --ENT:Use is only called for SERVER. This function does not execute on the CLIENT side.
