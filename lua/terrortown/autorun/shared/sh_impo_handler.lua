@@ -2,6 +2,7 @@ if SERVER then
 	AddCSLuaFile()
 	util.AddNetworkString("TTT2ImpostorAddVentUpdate")
 	util.AddNetworkString("TTT2ImpostorEnterVentUpdate")
+	util.AddNetworkString("TTT2ImpostorSwitchVentUpdate")
 end
 
 IMPOSTOR_DATA = {}
@@ -57,25 +58,9 @@ function IMPOSTOR_DATA.MovePlayerToVent(ply, vent)
 	ply:SetPos(vent:GetPos())
 	ply:SetEyeAngles(vent.exit_ang)
 	ply.impo_in_vent = vent
-	
-	--if SERVER then
-	--	--Inform client of which vent they are now in.
-	--	--TODO: May be better to send EntID instead of the entire entity...
-	--	net.Start("TTT2ImpostorEnterVentUpdate")
-	--	net.WriteEntity(vent)
-	--	net.WriteVector(vent.exit_pos)
-	--	net.WriteAngle(vent.exit_ang)
-	--	net.Send(ply)
-	--end
 end
 
 function IMPOSTOR_DATA.EnterVent(ply, vent)
-	--TODO:
-	--See cl_hud_manager.lua for details (takeaway: ToScreen() is key here)
-	--Create "vent buttons" for all vents that the player isn't in (if they aren't already there).
-	--Make "vent buttons" grow in size if the player is hovering their cursor near them.
-	--Add functionality in role's shared page to enter vents if they enter the use key on a "vent button"
-	
 	--Effectively remove the player from existence by refusing to draw them, removing their collision box, and freezing them in place. May not be perfect!
 	--Could also try spectating here, but not sure if TTT2 will handle that properly (ex. may assume the player has died and break certain mods)
 	ply:SetCollisionGroup(COLLISION_GROUP_VEHICLE) --Vents really are vehicles, if you think about it.
@@ -119,9 +104,6 @@ function IMPOSTOR_DATA.EnterVent(ply, vent)
 end
 
 function IMPOSTOR_DATA.ExitVent(ply)
-	--TODO:
-	--Deactivate "vent buttons" if needed.
-	
 	--Correct player's position to be in a safe place
 	ply:SetPos(ply.impo_in_vent.exit_pos)
 	
@@ -149,22 +131,38 @@ function IMPOSTOR_DATA.ExitVent(ply)
 	ply.impo_in_vent = nil
 end
 
+function IMPOSTOR_DATA.SwitchVents(ply, ent_idx)
+	local new_vent = GetVentFromIndex(ent_idx)
+	
+	print("BMF SwitchVents: ent_idx=" .. ent_idx)
+	
+	if IsValid(new_vent) then
+		IMPOSTOR_DATA.MovePlayerToVent(ply, new_vent)
+	else
+		IMPOSTOR_DATA.ExitVent(ply)
+	end
+	
+	if CLIENT then
+		--Send request to server to call this function
+		net.Start("TTT2ImpostorSwitchVentUpdate")
+		net.WriteInt(ent_idx, 16)
+		net.SendToServer()
+	end
+end
+
 if SERVER then
+	net.Receive("TTT2ImpostorSwitchVentUpdate", function(len, ply)
+			local ent_idx = net.ReadInt(16)
+			
+			IMPOSTOR_DATA.SwitchVents(ply, ent_idx)
+	end)
+	
 	function IMPOSTOR_DATA.AddVentToNetwork(vent, ply, tr)
 		--Record player position and find good camera angle for vent exit handling.
 		vent.exit_pos = ply:GetPos()
 		vent.exit_ang = tr.HitNormal:Angle()
 		
 		--BMF
-		--local vent_exit_ang_p = "nil"
-		--local vent_exit_ang_y = "nil"
-		--local vent_exit_ang_r = "nil"
-		--if vent.exit_ang then
-		--	local vent_exit_ang_p = vent.exit_ang.p
-		--	local vent_exit_ang_y = vent.exit_ang.y
-		--	local vent_exit_ang_r = vent.exit_ang.r
-		--end
-		--print("BMF AddVentToNetwork Vent ID = " .. vent:GetCreationID() .. ", Exit Angle = (" .. vent_exit_ang_p .. ", " .. vent_exit_ang_y .. ", " .. vent_exit_ang_r .. ")")
 		print("BMF AddVentToNetwork Vent ID = " .. vent:GetCreationID() .. ", Exit Angle = ")
 		print(tr.HitNormal:Angle()) --Absolutely the only way to print this thing from what I can tell...
 		--BMF
@@ -182,7 +180,7 @@ if SERVER then
 	end
 
 	hook.Add("PlayerSwitchWeapon", "ImpostorDataPlayerSwitchWeapon", function(ply, old, new)
-		if not IsValid(ply) or ply:GetSubRole() ~= ROLE_IMPOSTOR or not ply.impo_in_vent then
+		if not IsValid(ply) or ply:GetSubRole() ~= ROLE_IMPOSTOR or not IsValid(ply.impo_in_vent) then
 			return
 		end
 		
@@ -204,15 +202,6 @@ if SERVER then
 end
 
 if CLIENT then
-	hook.Add("PreDrawOutlines", "PreDrawOutlinesImpostorVent", function()
-		local client = LocalPlayer()
-		
-		--Outline vents for traitor team (They will be able to see it regardless of where they are)
-		if client:GetTeam() == TEAM_TRAITOR and #IMPOSTOR_DATA.VENT_NETWORK > 0 then
-			outline.Add(IMPOSTOR_DATA.VENT_NETWORK, IMPOSTOR.color, OUTLINE_MODE_VISIBLE)
-		end
-	end)
-	
 	net.Receive("TTT2ImpostorAddVentUpdate", function()
 			local client = LocalPlayer()
 			local new_vent = net.ReadEntity()
@@ -233,13 +222,22 @@ if CLIENT then
 		local new_vent = GetVentFromIndex(new_vent_idx)
 		
 		if new_vent ~= nil then
-			if client.impo_in_vent == nil then
+			if not IsValid(client.impo_in_vent) then
 				--client is entering the vent from real space. Put them into vent space.
 				IMPOSTOR_DATA.EnterVent(client, new_vent)
 			else
 				--client is moving from one vent to another.
 				IMPOSTOR_DATA.MovePlayerToVent(client, new_vent)
 			end
+		end
+	end)
+	
+	hook.Add("PreDrawOutlines", "PreDrawOutlinesImpostorVent", function()
+		local client = LocalPlayer()
+		
+		--Outline vents for traitor team (They will be able to see it regardless of where they are)
+		if client:GetTeam() == TEAM_TRAITOR and #IMPOSTOR_DATA.VENT_NETWORK > 0 and not IsValid(client.impo_in_vent) then
+			outline.Add(IMPOSTOR_DATA.VENT_NETWORK, IMPOSTOR.color, OUTLINE_MODE_VISIBLE)
 		end
 	end)
 end

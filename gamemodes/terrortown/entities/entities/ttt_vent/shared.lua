@@ -11,21 +11,6 @@ ENT.Contact = "https://steamcommunity.com/profiles/76561198025772353/"
 --ENT.PrintName = LANG.TryTranslation("VENT_NAME_" .. IMPOSTOR.name)
 --ENT.Icon = "vgui/ttt/icon_vent"
 
---Possible vent models (found using 'findstr /spin /c:"vent" *.*' in garrysmod/settings/spawnlist):
---"models/props_farm/roof_vent001.mdl" --ERROR
---"models/props_farm/vent001.mdl" --ERROR
---"models/props_mvm/office_window_vent.mdl" --ERROR
---"models/props/cs_assault/VentilationDuct01.mdl" --Looks like a square chimney
---"models/props/cs_assault/VentilationDuct02.mdl" --Looks like a circular chimney
---"models/props/cs_assault/wall_vent.mdl" --Good dark square vent. Need to rework angles.
---"models/props/CS_militia/roof_vent.mdl" --Roof vent that looks like a house.
---"models/props/CS_militia/vent01.mdl" --Big semi-rusted see-through vent, with a divider. Lame.
---"models/props/de_nuke/VentilationDuct02Large.mdl" --Bigger version of VentilationDuct02.mdl
---"models/props_furniture/kitchen_vent1.mdl" --ERROR
---"models/props_street/warehouse_vent_pipe01.mdl" --ERROR
---"models/props_street/warehouse_vent_pipe02.mdl" --ERROR
---"models/props_street/warehouse_vent_pipe03.mdl" --ERROR
-
 ENT.Type = "anim"
 ENT.Model = Model("models/props/cs_assault/wall_vent.mdl")--"models/weapons/w_slam.mdl") --BMF TODO
 ENT.CanHavePrints = true

@@ -89,7 +89,7 @@ if SERVER then
 	end
 	
 	net.Receive("TTT2ImpostorSendInstantKillRequest", function(len, ply)
-		if not IsValid(ply) or not ply:IsPlayer() or ply:GetSubRole() ~= ROLE_IMPOSTOR then
+		if not IsValid(ply) or not ply:IsPlayer() or not ply:IsActive() or ply:GetSubRole() ~= ROLE_IMPOSTOR then
 			return
 		end
 		
@@ -135,6 +135,21 @@ if SERVER then
 end
 
 if CLIENT then
+	--Client consts
+	local VENT_BUTTON_SIZE = 64
+	local VENT_BUTTON_MIDPOINT = VENT_BUTTON_SIZE / 2
+	local VENT_SELECTED_BUTTON_SIZE = 80
+	local VENT_SELECTED_BUTTON_MIDPOINT = VENT_SELECTED_BUTTON_SIZE / 2
+	local ICON_IN_VENT = Material("vgui/ttt/icon_vent")
+	
+	local function ResetImpostorForClient()
+		local client = LocalPlayer()
+		
+		client.selected_vent = nil
+	end
+	hook.Add("TTTPrepareRound", "ImpostorPrepareRoundClient", ResetImpostorForClient)
+	hook.Add("TTTEndRound", "ImpostorEndRoundClient", ResetImpostorForClient)
+	
 	net.Receive("TTT2ImpostorInstantKillUpdate", function()
 		local client = LocalPlayer()
 		local kill_cooldown = GetConVar("ttt2_impostor_kill_cooldown"):GetInt()
@@ -154,30 +169,11 @@ if CLIENT then
 		end
 	end)
 	
-	--net.Receive("TTT2ImpostorEnterVentUpdate", function()
-	--	local client = LocalPlayer()
-	--	local new_vent = net.ReadEntity()
-	--	local exit_pos = net.ReadVector()
-	--	local exit_ang = net.ReadAngle()
-	--	
-	--	--Have to re-add any extra bits of info here as they are not sent in ReadEntity
-	--	new_vent.exit_pos = exit_pos
-	--	new_vent.exit_ang = exit_ang
-	--	
-	--	if client.impo_in_vent == nil then
-	--		--client is entering the vent from real space. Put them into vent space.
-	--		IMPOSTOR_DATA.EnterVent(client, new_vent)
-	--	else
-	--		--client is moving from one vent to another.
-	--		IMPOSTOR_DATA.MovePlayerToVent(client, new_vent)
-	--	end
-	--end)
-	
 	hook.Add("TTTRenderEntityInfo", "ImpostorRenderEntityInfo", function(tData)
 		local client = LocalPlayer()
 		local ent = tData:GetEntity()
 		
-		if not IsValid(client) or not client:IsPlayer() or client:GetSubRole() ~= ROLE_IMPOSTOR or not IsValid(ent) then
+		if not IsValid(client) or not client:IsPlayer() or not client:Alive() or not client:IsActive() or client:GetSubRole() ~= ROLE_IMPOSTOR or not IsValid(ent) then
 			return
 		end
 		
@@ -199,55 +195,96 @@ if CLIENT then
 		net.SendToServer()
 	end
 	bind.Register("ImpostorSendInstantKillRequest", SendInstantKillRequest, nil, "Impostor", "Instant Kill", KEY_Q)
-end
-
-----------------
---SHARED HOOKS--
-----------------
-
-hook.Add("KeyPress", "ImpostorKeyPress", function(ply, key)
-	--Always use the +USE key without ability to change binding for vent logic (no reason to change it).
-	if ply:GetSubRole() ~= ROLE_IMPOSTOR or not ply:Alive() or key ~= IN_USE or ply.impo_in_vent == nil then
-		return
-	end
 	
-	local vent = nil
-	local ply_pos = ply:GetPos()
-	local CheckFilter = function(ent)
-		--BMF
-		if IsValid(ent) then
-			print("BMF CheckFilter: class=" .. ent:GetClass() .. ", idx=" .. ent:EntIndex() .. " (vs. " .. ply.impo_in_vent:EntIndex() .. ")")
+	hook.Add("KeyPress", "ImpostorKeyPress", function(ply, key)
+		local client = LocalPlayer()
+		if ply:SteamID64() == client:SteamID64() and client:GetSubRole() == ROLE_IMPOSTOR and client:Alive() and client:IsActive() and key == IN_USE and client.impo_in_vent ~= nil then
+			local ent_idx = -1
+			if IsValid(client.selected_vent) then
+				ent_idx = client.selected_vent:EntIndex()
+			end
+			
+			--Use timer to prevent cases where key presses are registered multiple times on accident
+			--Not quite sure if this is a bug in GMod, my testing server, or my keyboard...
+			local cur_time = CurTime()
+			if client.impo_last_switch_time == nil or  cur_time > client.impo_last_switch_time + 0.2 then
+				IMPOSTOR_DATA.SwitchVents(client, ent_idx)
+				client.impo_last_switch_time = cur_time
+			end
 		end
-		--BMF
-		if not IsValid(ent) or ent:GetClass() ~= "ttt_vent" or ent:EntIndex() == ply.impo_in_vent:EntIndex() then
+	end)
+	
+	local function IsSelectingVent(ply, vent, previously_selected)
+		local midscreen_x = ScrW() / 2
+		local midscreen_y = ScrH() / 2
+		local vent_pos = vent:GetPos()
+		local vent_scr_pos = vent_pos:ToScreen()
+		
+		if util.IsOffScreen(vent_scr_pos) then
 			return false
 		end
 		
-		--Due to the CONTENTS_EMPTY mask, even if this function returns true, the hit result will always say that nothing was hit.
-		--To remedy this, ignore the hit result entirely and grab the result from CheckFilter directly
-		--(This is one of the weirdest workarounds that I have had the displeasure to write).
-		print("  CHECK FILTER RETURNS TRUE!")
-		if vent == nil then
-			--BMF TODO: Determine what happens if the trace line intersects multiple vents!
-			vent = GetVentFromIndex(ent:EntIndex())
+		local dist_from_mid_x = math.abs(vent_scr_pos.x - midscreen_x)
+		local dist_from_mid_y = math.abs(vent_scr_pos.y - midscreen_y)
+		local vent_button_dist_check = VENT_BUTTON_MIDPOINT
+		if previously_selected then
+			vent_button_dist_check = VENT_SELECTED_BUTTON_MIDPOINT
+		end
+		
+		if dist_from_mid_x > vent_button_dist_check or dist_from_mid_y > vent_button_dist_check then
+			return false
 		end
 		
 		return true
 	end
-	local spos = ply:GetShootPos()
-	--Arbitrary magic number for how far we can place the vent from ourselves.
-	local epos = spos + ply:GetAimVector() * 1000000
-	tr = util.TraceLine({
-		start = spos,
-		endpos = epos,
-		filter = CheckFilter,
-		mask = CONTENTS_EMPTY --(or 0. Prevents anything from stopping the traceline, including the vents that CheckFilter okays!)
-	})
 	
-	if IsValid(vent) then
-		print("BMF ATTEMPTING TO MOVE PLAYER TO VENT")
-		IMPOSTOR_DATA.MovePlayerToVent(ply, vent)
-	else
-		IMPOSTOR_DATA.ExitVent(ply)
-	end
-end)
+	hook.Add("HUDPaint", "ImpostorHUDPaint", function()
+		local client = LocalPlayer()
+		
+		if client:GetSubRole() ~= ROLE_IMPOSTOR or not client:Alive() or not client:IsActive() or not IsValid(client.impo_in_vent) then
+			return
+		end
+		
+		--If the player was selecting a valid vent on the previous frame then see if they still are
+		local selected_vent_idx = -1
+		if IsValid(client.selected_vent) then
+			selected_vent_idx = client.selected_vent:EntIndex()
+			if not IsSelectingVent(client, client.selected_vent, true) then
+				client.selected_vent = nil
+				selected_vent_idx = -1
+			end
+		end
+		
+		--See if we are currently selecting any vents
+		if not IsValid(client.selected_vent) then
+			for _, vent in ipairs(IMPOSTOR_DATA.VENT_NETWORK) do
+				--Make sure not to run IsSelectingVent on selected_vent_idx (which we already checked above)
+				if IsValid(vent) and vent:EntIndex() ~= selected_vent_idx and IsSelectingVent(client, vent, false) then
+					client.selected_vent = vent
+					selected_vent_idx = client.selected_vent.EntIndex()
+					break
+				end
+			end
+		end
+		
+		--Finally, draw all vents, making sure to draw the selected one last (to handle overlaps).
+		for _, vent in ipairs(IMPOSTOR_DATA.VENT_NETWORK) do
+			if IsValid(vent) and vent:EntIndex() ~= selected_vent_idx and vent:EntIndex() ~= client.impo_in_vent:EntIndex() then
+				local vent_pos = vent:GetPos()
+				local vent_scr_pos = vent_pos:ToScreen()
+				
+				if util.IsOffScreen(vent_scr_pos) then
+					continue
+				end
+				
+				draw.FilteredTexture(vent_scr_pos.x - VENT_BUTTON_MIDPOINT, vent_scr_pos.y - VENT_BUTTON_MIDPOINT, VENT_BUTTON_SIZE, VENT_BUTTON_SIZE, ICON_IN_VENT, 200, IMPOSTOR.color)
+			end
+		end
+		if IsValid(client.selected_vent) and client.selected_vent:EntIndex() ~= client.impo_in_vent:EntIndex() then
+			local vent_pos = client.selected_vent:GetPos()
+			local vent_scr_pos = vent_pos:ToScreen()
+			
+			draw.FilteredTexture(vent_scr_pos.x - VENT_SELECTED_BUTTON_MIDPOINT, vent_scr_pos.y - VENT_SELECTED_BUTTON_MIDPOINT, VENT_SELECTED_BUTTON_SIZE, VENT_SELECTED_BUTTON_SIZE, ICON_IN_VENT, 200, IMPOSTOR.color)
+		end
+	end)
+end
