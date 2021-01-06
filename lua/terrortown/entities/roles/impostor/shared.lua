@@ -3,7 +3,6 @@ if SERVER then
 	resource.AddFile("materials/vgui/ttt/dynamic/roles/icon_impo.vmt")
 	util.AddNetworkString("TTT2ImpostorInstantKillUpdate")
 	util.AddNetworkString("TTT2ImpostorSendInstantKillRequest")
-	--BMF--util.AddNetworkString("TTT2ImpostorEnterVentUpdate")
 end
 
 function ROLE:PreInitialize()
@@ -197,6 +196,9 @@ if CLIENT then
 	bind.Register("ImpostorSendInstantKillRequest", SendInstantKillRequest, nil, "Impostor", "Instant Kill", KEY_Q)
 	
 	hook.Add("KeyPress", "ImpostorKeyPress", function(ply, key)
+		--Note: Technically KeyPress is called on both the server and client.
+		--However, what we do with KeyPress depends on the client's aim, so it is easier to have this
+		--hook be client-only, which will then call on the server to replicate the functionality.
 		local client = LocalPlayer()
 		if ply:SteamID64() == client:SteamID64() and client:GetSubRole() == ROLE_IMPOSTOR and client:Alive() and client:IsActive() and key == IN_USE and client.impo_in_vent ~= nil then
 			local ent_idx = -1
@@ -207,7 +209,7 @@ if CLIENT then
 			--Use timer to prevent cases where key presses are registered multiple times on accident
 			--Not quite sure if this is a bug in GMod, my testing server, or my keyboard...
 			local cur_time = CurTime()
-			if client.impo_last_switch_time == nil or  cur_time > client.impo_last_switch_time + 0.2 then
+			if client.impo_last_switch_time == nil or cur_time > client.impo_last_switch_time + 0.2 then
 				IMPOSTOR_DATA.SwitchVents(client, ent_idx)
 				client.impo_last_switch_time = cur_time
 			end

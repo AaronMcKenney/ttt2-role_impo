@@ -61,6 +61,10 @@ function IMPOSTOR_DATA.MovePlayerToVent(ply, vent)
 end
 
 function IMPOSTOR_DATA.EnterVent(ply, vent)
+	if IsValid(ply.impo_in_vent) or not IsValid(vent) then
+		return
+	end
+	
 	--Effectively remove the player from existence by refusing to draw them, removing their collision box, and freezing them in place. May not be perfect!
 	--Could also try spectating here, but not sure if TTT2 will handle that properly (ex. may assume the player has died and break certain mods)
 	ply:SetCollisionGroup(COLLISION_GROUP_VEHICLE) --Vents really are vehicles, if you think about it.
@@ -132,6 +136,10 @@ function IMPOSTOR_DATA.ExitVent(ply)
 end
 
 function IMPOSTOR_DATA.SwitchVents(ply, ent_idx)
+	if not IsValid(ply.impo_in_vent) then
+		return
+	end
+	
 	local new_vent = GetVentFromIndex(ent_idx)
 	
 	print("BMF SwitchVents: ent_idx=" .. ent_idx)
@@ -161,6 +169,12 @@ if SERVER then
 		--Record player position and find good camera angle for vent exit handling.
 		vent.exit_pos = ply:GetPos()
 		vent.exit_ang = tr.HitNormal:Angle()
+		
+		if GetConVar("ttt2_impostor_vent_placement_range"):GetInt() > 100 then
+			--Server is configured to place vents from extreme distances.
+			--Modify exit_pos to be closer to the vent, while also not being inside the thing.
+			vent.exit_pos = tr.HitPos + tr.HitNormal * 100
+		end
 		
 		--BMF
 		print("BMF AddVentToNetwork Vent ID = " .. vent:GetCreationID() .. ", Exit Angle = ")
@@ -221,15 +235,8 @@ if CLIENT then
 		
 		local new_vent = GetVentFromIndex(new_vent_idx)
 		
-		if new_vent ~= nil then
-			if not IsValid(client.impo_in_vent) then
-				--client is entering the vent from real space. Put them into vent space.
-				IMPOSTOR_DATA.EnterVent(client, new_vent)
-			else
-				--client is moving from one vent to another.
-				IMPOSTOR_DATA.MovePlayerToVent(client, new_vent)
-			end
-		end
+		--client is entering the vent from real space. Put them into vent space.
+		IMPOSTOR_DATA.EnterVent(client, new_vent)
 	end)
 	
 	hook.Add("PreDrawOutlines", "PreDrawOutlinesImpostorVent", function()

@@ -4,8 +4,8 @@ CreateConVar("ttt2_impostor_normal_dmg_multi", "0.0", {FCVAR_ARCHIVE, FCVAR_NOTF
 CreateConVar("ttt2_impostor_kill_dist", "125", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_kill_cooldown", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_num_starting_vents", "3", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_global_max_num_vents", "6", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_traitors_can_enter_vents", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_global_max_num_vents", "9", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_vent_placement_range", "100", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 
 hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	tbl[ROLE_IMPOSTOR] = tbl[ROLE_IMPOSTOR] or {}
@@ -62,12 +62,26 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_num_starting_vents (Def: 3)"
 	})
 	
-	--# Can any traitor (ex. base traitor, vampire, etc.) access impostor-placed vents?
-	--  ttt2_impostor_traitors_can_enter_vents [0/1] (default: 0)
+	--# What is the maximum number of vents allowed on the map (-1 for unlimited)?
+	--  ttt2_impostor_global_max_num_vents [-1..n] (default: 9)
 	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_traitors_can_enter_vents",
-		checkbox = true,
-		desc = "ttt2_impostor_traitors_can_enter_vents (Def: 0)"
+		cvar = "ttt2_impostor_global_max_num_vents",
+		slider = true,
+		min = -1,
+		max = 15,
+		decimal = 0,
+		desc = "ttt2_impostor_global_max_num_vents (Def: 9)"
+	})
+	
+	--# What is the range on the Impostor's vent placement tool?
+	--  ttt2_impostor_vent_placement_range [0..n] (default: 100)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_vent_placement_range",
+		slider = true,
+		min = 0,
+		max = 1000,
+		decimal = 0,
+		desc = "ttt2_impostor_vent_placement_range (Def: 100)"
 	})
 end)
 
@@ -77,7 +91,8 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalInt("ttt2_impostor_kill_dist", GetConVar("ttt2_impostor_kill_dist"):GetInt())
 	SetGlobalInt("ttt2_impostor_kill_cooldown", GetConVar("ttt2_impostor_kill_cooldown"):GetInt())
 	SetGlobalInt("ttt2_impostor_num_starting_vents", GetConVar("ttt2_impostor_num_starting_vents"):GetInt())
-	SetGlobalBool("ttt2_impostor_traitors_can_enter_vents", GetConVar("ttt2_impostor_traitors_can_enter_vents"):GetBool())
+	SetGlobalInt("ttt2_impostor_global_max_num_vents", GetConVar("ttt2_impostor_global_max_num_vents"):GetInt())
+	SetGlobalInt("ttt2_impostor_vent_placement_range", GetConVar("ttt2_impostor_vent_placement_range"):GetInt())
 end)
 
 cvars.AddChangeCallback("ttt2_impostor_notify_everyone", function(name, old, new)
@@ -95,6 +110,9 @@ end)
 cvars.AddChangeCallback("ttt2_impostor_num_starting_vents", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_num_starting_vents", tonumber(new))
 end)
-cvars.AddChangeCallback("ttt2_impostor_traitors_can_enter_vents", function(name, old, new)
-	SetGlobalBool("ttt2_impostor_traitors_can_enter_vents", tobool(tonumber(new)))
+cvars.AddChangeCallback("ttt2_impostor_global_max_num_vents", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_global_max_num_vents", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_vent_placement_range", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_vent_placement_range", tonumber(new))
 end)

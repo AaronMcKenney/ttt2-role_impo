@@ -132,8 +132,7 @@ if SERVER then
 					return true
 				end
 				local spos = ply:GetShootPos()
-				--Arbitrary magic number for how far we can place the vent from ourselves.
-				local vent_placement_range = 84
+				local vent_placement_range = GetConVar("ttt2_impostor_vent_placement_range"):GetInt()
 				local epos = spos + ply:GetAimVector() * vent_placement_range
 				tr = util.TraceLine({
 					start = spos,
@@ -150,6 +149,12 @@ if SERVER then
 	function SWEP:StickVent()
 		local ply = self:GetOwner()
 		if not IsValid(ply) then
+			return
+		end
+		
+		local max_num_vents = GetConVar("ttt2_impostor_global_max_num_vents"):GetInt()
+		if max_num_vents >= 0 and #IMPOSTOR_DATA.VENT_NETWORK >= max_num_vents then
+			LANG.Msg(ply, "VENT_MAX_HIT_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			return
 		end
 		
