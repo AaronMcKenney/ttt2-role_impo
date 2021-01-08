@@ -2,7 +2,11 @@ if SERVER then
 	AddCSLuaFile()
 	resource.AddFile("materials/vgui/ttt/dynamic/roles/icon_impo.vmt")
 	util.AddNetworkString("TTT2ImpostorInstantKillUpdate")
+	util.AddNetworkString("TTT2ImpostorSabotageUpdate")
 	util.AddNetworkString("TTT2ImpostorSendInstantKillRequest")
+	util.AddNetworkString("TTT2ImpostorSendSabotageLightsRequest")
+	util.AddNetworkString("TTT2ImpostorSendSabotageLightsResponse")
+	util.AddNetworkString("TTT2ImpostorSabotageLights")
 end
 
 function ROLE:PreInitialize()
@@ -43,15 +47,49 @@ function ROLE:Initialize()
 	roles.SetBaseRole(self, ROLE_TRAITOR)
 end
 
----------------------------
---SHARED CONSTS AND FUNCS--
----------------------------
+-------------------------------------
+--SHARED CONSTS, GLOBALS, AND FUNCS--
+-------------------------------------
+--Used to reduce chances of lag interrupting otherwise seemless player interactions.
+local IOTA = 0.2
+--Sabotage cooldown is global. If a terrorist triggers a sabotage, all must wait.
+impos_can_sabo = true
+
 local function CanKillTarget(impo, tgt, dist)
 	--impo is assumed to be a valid impostor and tgt is assumed to be a valid player
 	if impo.impo_can_insta_kill and dist <= GetConVar("ttt2_impostor_kill_dist"):GetInt() and impo.impo_in_vent == nil then
 		return true
 	else
 		return false
+	end
+end
+
+local function SabotageLights(ply)
+	--Sabotage ply's lights by performing screen fades.
+	local fade_time = GetConVar("ttt2_impostor_sabo_fade_time"):GetFloat()
+	local fade_hold = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat() / 2
+	
+	--Sabotage Lights is disabled if ttt2_impostor_sabo_lights_length < 0
+	if fade_hold >= 0 then
+		--SCREENFADE.IN: Cut to black immediately. After fade_hold, transition out over fade_time.
+		--SCREENFADE.OUT: Fade to black over fade_time. After fade_hold, cut back to normal immediately.
+		--SCREENFADE.MODULATE: Cut to black immediately. Cut back to normal some time after. Not sure how fade_time factors in here.
+		--SCREENFADE.STAYOUT: Cut to black immediately. Never returns to normal. Why is this a thing?
+		--SCREENFADE.PURGE: Not sure how this differs from SCREENFADE.MODULATE.
+		
+		--Create temporary lights-out effect: fade to black, hold, then fade to normal.
+		--Add IOTA in first ScreenFade call to handle lag between the two calls and create a hopefully seemless blackout effect.
+		ply:ScreenFade(SCREENFADE.OUT, COLOR_BLACK, fade_time, fade_hold + IOTA)
+		timer.Simple(fade_time + fade_hold, function()
+			--Have to create a lambda function() here. ply:ScreenFade by itself doesn't pass compile.
+			ply:ScreenFade(SCREENFADE.IN, COLOR_BLACK, fade_time, fade_hold)
+		end)
+	end
+	
+	if SERVER then
+		--Send request to client to call this same function, just to keep things in sync.
+		net.Start("TTT2ImpostorSabotageLights")
+		net.Send(ply)
 	end
 end
 
@@ -62,8 +100,15 @@ if SERVER then
 		net.Send(ply)
 	end
 	
+	local function SendSabotageUpdateToClients()
+		net.Start("TTT2ImpostorSabotageUpdate")
+		net.WriteBool(impos_can_sabo)
+		net.Broadcast()
+	end
+	
 	local function PutInstantKillOnCooldown(ply)
 		local kill_cooldown = GetConVar("ttt2_impostor_kill_cooldown"):GetInt()
+		
 		--Handle case where admin wants impostor to be overpowered trash.
 		if kill_cooldown <= 0 then
 			ply.impo_can_insta_kill = true
@@ -78,12 +123,37 @@ if SERVER then
 		--Create a timer that is unique to the player. When it finishes, turn on ability to kill
 		--Because it's unique, it can be paused/unpaused whenever the impostor enters/leaves a vent.
 		--First remove any existing timer of the same name (to prevent wonkiness)
-		if timer.Exists("ImposterKillTimer_Server_" .. ply:SteamID64()) then
-			timer.Remove("ImposterKillTimer_Server_" .. ply:SteamID64())
+		if timer.Exists("ImpostorKillTimer_Server_" .. ply:SteamID64()) then
+			timer.Remove("ImpostorKillTimer_Server_" .. ply:SteamID64())
 		end
-		timer.Create("ImposterKillTimer_Server_" .. ply:SteamID64(), kill_cooldown, 1, function()
+		timer.Create("ImpostorKillTimer_Server_" .. ply:SteamID64(), kill_cooldown, 1, function()
 			ply.impo_can_insta_kill = true
 			SendInstantKillUpdateToClient(ply)
+		end)
+	end
+	
+	local function PutSabotageOnCooldown()
+		local sabo_cooldown = GetConVar("ttt2_impostor_sabo_cooldown"):GetInt()
+		
+		--Handle case where admin wants impostor to be overpowered trash.
+		if sabo_cooldown <= 0 then
+			impos_can_sabo = true
+			SendSabotageUpdateToClients()
+			return
+		end
+		
+		--Turn off ability to sabotage lights
+		impos_can_sabo = false
+		SendSabotageUpdateToClients()
+		
+		--Create a timer that is unique to the player. When it finishes, turn on ability to sabotage lights
+		--First remove any existing timer of the same name (to prevent wonkiness)
+		if timer.Exists("ImpostorSaboTimer_Server") then
+			timer.Remove("ImpostorSaboTimer_Server")
+		end
+		timer.Create("ImpostorSaboTimer_Server", sabo_cooldown, 1, function()
+			impos_can_sabo = true
+			SendSabotageUpdateToClients()
 		end)
 	end
 	
@@ -104,6 +174,35 @@ if SERVER then
 		if CanKillTarget(ply, tgt, dist) then
 			tgt:Kill()
 			PutInstantKillOnCooldown(ply)
+		end
+	end)
+	
+	net.Receive("TTT2ImpostorSendSabotageLightsRequest", function(len, ply)
+		local fade_time = GetConVar("ttt2_impostor_sabo_fade_time"):GetFloat()
+		local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
+		if not IsValid(ply) or not ply:IsPlayer() or not ply:IsActive() or ply:GetSubRole() ~= ROLE_IMPOSTOR or fade_time <= 0.0 or sabo_lights_len < 0.0 then
+			return
+		end
+		
+		if impos_can_sabo then
+			--Prevent button spamming tricks by immediately disabling sabo.
+			impos_can_sabo = false
+			
+			for _, ply_i in ipairs(player.GetAll()) do
+				if ply_i:GetSubRole() == ROLE_IMPOSTOR then
+					--Inform impostors that the sabotage is starting.
+					net.Start("TTT2ImpostorSendSabotageLightsResponse")
+					net.Send(ply_i)
+				end
+				
+				--BMF TODO: Don't just blind everyone!
+				SabotageLights(ply_i)
+			end
+			
+			--Only begin cooldown timer after fade effect ends.
+			timer.Simple(sabo_lights_len + 2*fade_time, function()
+				PutSabotageOnCooldown()
+			end)
 		end
 	end)
 	
@@ -130,6 +229,11 @@ if SERVER then
 			--Force Impostor to take no damage if they are in a vent (just to be safe)
 			dmg_info:SetDamage(0)
 		end
+	end)
+	
+	hook.Add("TTTBeginRound", "ImpostorBeginRound", function()
+		impos_can_sabo = true
+		SendSabotageUpdateToClients()
 	end)
 end
 
@@ -158,14 +262,52 @@ if CLIENT then
 		if not client.impo_can_insta_kill then
 			--Create a timer which hopefully will match the server's timer.
 			--This is used in the HUD to keep the client up to date in real time on when they can next kill
-			timer.Create("ImposterKillTimer_Client_" .. client:SteamID64(), kill_cooldown, 1, function()
+			timer.Create("ImpostorKillTimer_Client_" .. client:SteamID64(), kill_cooldown, 1, function()
 				return
 			end)
-		elseif timer.Exists("ImposterKillTimer_Client_" .. client:SteamID64()) then
+		elseif timer.Exists("ImpostorKillTimer_Client_" .. client:SteamID64()) then
 			--Remove the previously created timer if it still exists.
 			--Hopefully this will prevent cases where multiple timers run around.
-			timer.Remove("ImposterKillTimer_Client_" .. client:SteamID64())
+			timer.Remove("ImpostorKillTimer_Client_" .. client:SteamID64())
 		end
+	end)
+	
+	net.Receive("TTT2ImpostorSabotageUpdate", function()
+		local sabo_cooldown = GetConVar("ttt2_impostor_sabo_cooldown"):GetInt()
+		
+		impos_can_sabo = net.ReadBool()
+		
+		if not impos_can_sabo then
+			--Create a timer which hopefully will match the server's timer.
+			--This is used in the HUD to keep the client up to date in real time on when they can next sabotage
+			timer.Create("ImpostorSaboTimer_Client", sabo_cooldown, 1, function()
+				return
+			end)
+		elseif timer.Exists("ImpostorSaboTimer_Client") then
+			--Remove the previously created timer if it still exists.
+			--Hopefully this will prevent cases where multiple timers run around.
+			timer.Remove("ImpostorSaboTimer_Client")
+		end
+	end)
+	
+	net.Receive("TTT2ImpostorSendSabotageLightsResponse", function()
+		local client = LocalPlayer()
+		local fade_time = GetConVar("ttt2_impostor_sabo_fade_time"):GetFloat()
+		local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
+		
+		--Immediately set impos_can_sabo to false here, to keep things in sync.
+		impos_can_sabo = false
+		
+		--Create a timer which hopefully will match the server's timer.
+		--This is used in the HUD to allow impostors to track the darkness other clients are experiencing.
+		timer.Create("ImpostorSaboLightsTimer_Client", sabo_lights_len + 2*fade_time, 1, function()
+			return
+		end)
+	end)
+	
+	net.Receive("TTT2ImpostorSabotageLights", function()
+		local client = LocalPlayer()
+		SabotageLights(client)
 	end)
 	
 	hook.Add("TTTRenderEntityInfo", "ImpostorRenderEntityInfo", function(tData)
@@ -195,6 +337,12 @@ if CLIENT then
 	end
 	bind.Register("ImpostorSendInstantKillRequest", SendInstantKillRequest, nil, "Impostor", "Instant Kill", KEY_Q)
 	
+	local function SendSabotageLightsRequest()
+		net.Start("TTT2ImpostorSendSabotageLightsRequest")
+		net.SendToServer()
+	end
+	bind.Register("ImpostorSendSabotageLightsRequest", SendSabotageLightsRequest, nil, "Impostor", "Sabotage Lights", KEY_V)
+	
 	hook.Add("KeyPress", "ImpostorKeyPress", function(ply, key)
 		--Note: Technically KeyPress is called on both the server and client.
 		--However, what we do with KeyPress depends on the client's aim, so it is easier to have this
@@ -209,7 +357,7 @@ if CLIENT then
 			--Use timer to prevent cases where key presses are registered multiple times on accident
 			--Not quite sure if this is a bug in GMod, my testing server, or my keyboard...
 			local cur_time = CurTime()
-			if client.impo_last_switch_time == nil or cur_time > client.impo_last_switch_time + 0.2 then
+			if client.impo_last_switch_time == nil or cur_time > client.impo_last_switch_time + IOTA then
 				IMPOSTOR_DATA.SwitchVents(client, ent_idx)
 				client.impo_last_switch_time = cur_time
 			end

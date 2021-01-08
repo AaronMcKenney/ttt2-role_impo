@@ -90,8 +90,8 @@ function IMPOSTOR_DATA.EnterVent(ply, vent)
 	
 	--Pause the Impostor's kill timer if possible.
 	if SERVER then
-		if ply.impo_can_insta_kill == false and timer.Exists("ImposterKillTimer_Server_" .. ply:SteamID64()) then
-			timer.Pause("ImposterKillTimer_Server_" .. ply:SteamID64())
+		if ply.impo_can_insta_kill == false and timer.Exists("ImpostorKillTimer_Server_" .. ply:SteamID64()) then
+			timer.Pause("ImpostorKillTimer_Server_" .. ply:SteamID64())
 		end
 		
 		--In addition, sync the client by having them call this same function
@@ -99,8 +99,8 @@ function IMPOSTOR_DATA.EnterVent(ply, vent)
 		net.WriteInt(vent:EntIndex(), 16)
 		net.Send(ply)
 	elseif CLIENT then
-		if not ply.impo_can_insta_kill and timer.Exists("ImposterKillTimer_Client_" .. ply:SteamID64()) then
-			timer.Pause("ImposterKillTimer_Client_" .. ply:SteamID64())
+		if not ply.impo_can_insta_kill and timer.Exists("ImpostorKillTimer_Client_" .. ply:SteamID64()) then
+			timer.Pause("ImpostorKillTimer_Client_" .. ply:SteamID64())
 		end
 	end
 	
@@ -122,12 +122,12 @@ function IMPOSTOR_DATA.ExitVent(ply)
 	
 	--UnPause the Impostor's kill timer if possible.
 	if SERVER then
-		if ply.impo_can_insta_kill == false and timer.Exists("ImposterKillTimer_Server_" .. ply:SteamID64()) then
-			timer.UnPause("ImposterKillTimer_Server_" .. ply:SteamID64())
+		if ply.impo_can_insta_kill == false and timer.Exists("ImpostorKillTimer_Server_" .. ply:SteamID64()) then
+			timer.UnPause("ImpostorKillTimer_Server_" .. ply:SteamID64())
 		end
 	elseif CLIENT then
-		if not ply.impo_can_insta_kill and timer.Exists("ImposterKillTimer_Client_" .. ply:SteamID64()) then
-			timer.UnPause("ImposterKillTimer_Client_" .. ply:SteamID64())
+		if not ply.impo_can_insta_kill and timer.Exists("ImpostorKillTimer_Client_" .. ply:SteamID64()) then
+			timer.UnPause("ImpostorKillTimer_Client_" .. ply:SteamID64())
 		end
 	end
 	

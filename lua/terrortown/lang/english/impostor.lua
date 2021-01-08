@@ -2,13 +2,13 @@ local L = LANG.GetLanguageTableReference("english")
 
 -- GENERAL ROLE LANGUAGE STRINGS
 L[IMPOSTOR.name] = "Impostor"
-L["info_popup_" .. IMPOSTOR.name] = [[You are an Impostor! Impostors have access to a close range instant kill attack and vents that allow them to teleport. 
+L["info_popup_" .. IMPOSTOR.name] = [[You are an Impostor! Impostors are traitors have access to a close range instant kill ability, sabotage ability, and vents that allow them to teleport. 
 
 However, you do not have access to a shop and deal little to no damage normally.]]
 L["body_found_" .. IMPOSTOR.abbr] = "They were an Impostor!"
 L["search_role_" .. IMPOSTOR.abbr] = "This person was an Impostor"
 L["target_" .. IMPOSTOR.name] = "Impostor"
-L["ttt2_desc_" .. IMPOSTOR.name] = [[You are an Impostor! Impostors have access to a close range instant kill attack and vents that allow them to teleport. 
+L["ttt2_desc_" .. IMPOSTOR.name] = [[You are an Impostor! Impostors are traitors have access to a close range instant kill ability, sabotage ability, and vents that allow them to teleport. 
 
 However, you do not have access to a shop and deal little to no damage normally.]]
 
@@ -26,3 +26,6 @@ NOTE: By default, vents are invisible to non-traitors until they are first enter
 L["VENT_PRIMARY_DESC_" .. IMPOSTOR.name] = "Primary attack to deploy."
 L["VENT_CANNOT_PLACE_" .. IMPOSTOR.name] = "Unable to place vent."
 L["VENT_MAX_HIT_" .. IMPOSTOR.name] = "Maximum number of vents have been placed."
+
+-- SABOTAGE LANGUAGE STRINGS
+L["SABO_LIGHTS_" .. IMPOSTOR.name] = "SABOTAGE LIGHTS"
