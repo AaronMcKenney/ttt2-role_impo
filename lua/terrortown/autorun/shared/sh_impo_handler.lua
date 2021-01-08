@@ -2,7 +2,7 @@ if SERVER then
 	AddCSLuaFile()
 	util.AddNetworkString("TTT2ImpostorAddVentUpdate")
 	util.AddNetworkString("TTT2ImpostorEnterVentUpdate")
-	util.AddNetworkString("TTT2ImpostorSwitchVentUpdate")
+	util.AddNetworkString("TTT2ImpostorMoveFromVentUpdate")
 end
 
 IMPOSTOR_DATA = {}
@@ -67,7 +67,7 @@ function IMPOSTOR_DATA.EnterVent(ply, vent)
 	
 	--Effectively remove the player from existence by refusing to draw them, removing their collision box, and freezing them in place. May not be perfect!
 	--Could also try spectating here, but not sure if TTT2 will handle that properly (ex. may assume the player has died and break certain mods)
-	ply:SetCollisionGroup(COLLISION_GROUP_VEHICLE) --Vents really are vehicles, if you think about it.
+	ply:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE) --Vents really are vehicles, if you think about it.
 	--Don't just make the player invisible, but their weapons as well
 	ply:SetNoDraw(true)
 	for _, wep in ipairs(ply:GetWeapons()) do
@@ -135,14 +135,14 @@ function IMPOSTOR_DATA.ExitVent(ply)
 	ply.impo_in_vent = nil
 end
 
-function IMPOSTOR_DATA.SwitchVents(ply, ent_idx)
+function IMPOSTOR_DATA.MovePlayerFromVentTo(ply, ent_idx)
 	if not IsValid(ply.impo_in_vent) then
 		return
 	end
 	
 	local new_vent = GetVentFromIndex(ent_idx)
 	
-	print("BMF SwitchVents: ent_idx=" .. ent_idx)
+	print("BMF MovePlayerFromVentTo: from_ent_idx=" .. ply.impo_in_vent:EntIndex() .. ", to_ent_idx=" .. ent_idx)
 	
 	if IsValid(new_vent) then
 		IMPOSTOR_DATA.MovePlayerToVent(ply, new_vent)
@@ -152,17 +152,17 @@ function IMPOSTOR_DATA.SwitchVents(ply, ent_idx)
 	
 	if CLIENT then
 		--Send request to server to call this function
-		net.Start("TTT2ImpostorSwitchVentUpdate")
+		net.Start("TTT2ImpostorMoveFromVentUpdate")
 		net.WriteInt(ent_idx, 16)
 		net.SendToServer()
 	end
 end
 
 if SERVER then
-	net.Receive("TTT2ImpostorSwitchVentUpdate", function(len, ply)
+	net.Receive("TTT2ImpostorMoveFromVentUpdate", function(len, ply)
 			local ent_idx = net.ReadInt(16)
 			
-			IMPOSTOR_DATA.SwitchVents(ply, ent_idx)
+			IMPOSTOR_DATA.MovePlayerFromVentTo(ply, ent_idx)
 	end)
 	
 	function IMPOSTOR_DATA.AddVentToNetwork(vent, ply, tr)
@@ -182,6 +182,8 @@ if SERVER then
 		--BMF
 		
 		IMPOSTOR_DATA.VENT_NETWORK[#IMPOSTOR_DATA.VENT_NETWORK + 1] = vent
+		
+		print("BMF AddVentToNetwork: There are now " .. #IMPOSTOR_DATA.VENT_NETWORK .. " vents on the Server")
 		
 		--Inform clients that a new vent has been placed so that they can make note of it.
 		--Unfortunately, this means that a modded client will be able to easily sus out impostors.
@@ -217,16 +219,18 @@ end
 
 if CLIENT then
 	net.Receive("TTT2ImpostorAddVentUpdate", function()
-			local client = LocalPlayer()
-			local new_vent = net.ReadEntity()
-			local exit_pos = net.ReadVector()
-			local exit_ang = net.ReadAngle()
-			
-			--Have to re-add any extra bits of info here as they are not sent in ReadEntity
-			new_vent.exit_pos = exit_pos
-			new_vent.exit_ang = exit_ang
-			
-			IMPOSTOR_DATA.VENT_NETWORK[#IMPOSTOR_DATA.VENT_NETWORK + 1] = new_vent
+		local client = LocalPlayer()
+		local new_vent = net.ReadEntity()
+		local exit_pos = net.ReadVector()
+		local exit_ang = net.ReadAngle()
+		
+		--Have to re-add any extra bits of info here as they are not sent in ReadEntity
+		new_vent.exit_pos = exit_pos
+		new_vent.exit_ang = exit_ang
+		
+		IMPOSTOR_DATA.VENT_NETWORK[#IMPOSTOR_DATA.VENT_NETWORK + 1] = new_vent
+		
+		print("BMF TTT2ImpostorAddVentUpdate: There are now " .. #IMPOSTOR_DATA.VENT_NETWORK .. " vents on the Client")
 	end)
 	
 	net.Receive("TTT2ImpostorEnterVentUpdate", function()

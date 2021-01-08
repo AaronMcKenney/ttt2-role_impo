@@ -348,9 +348,10 @@ if CLIENT then
 		--However, what we do with KeyPress depends on the client's aim, so it is easier to have this
 		--hook be client-only, which will then call on the server to replicate the functionality.
 		local client = LocalPlayer()
-		if ply:SteamID64() == client:SteamID64() and client:GetSubRole() == ROLE_IMPOSTOR and client:Alive() and client:IsActive() and key == IN_USE and client.impo_in_vent ~= nil then
+		if ply:SteamID64() == client:SteamID64() and client:GetSubRole() == ROLE_IMPOSTOR and client:Alive() and client:IsActive() and key == IN_USE and IsValid(client.impo_in_vent) then
 			local ent_idx = -1
-			if IsValid(client.selected_vent) then
+			if IsValid(client.selected_vent) and client.selected_vent:EntIndex() ~= client.impo_in_vent:EntIndex() then
+				--Selected vent must be valid and different from the one we're currently in.
 				ent_idx = client.selected_vent:EntIndex()
 			end
 			
@@ -358,7 +359,7 @@ if CLIENT then
 			--Not quite sure if this is a bug in GMod, my testing server, or my keyboard...
 			local cur_time = CurTime()
 			if client.impo_last_switch_time == nil or cur_time > client.impo_last_switch_time + IOTA then
-				IMPOSTOR_DATA.SwitchVents(client, ent_idx)
+				IMPOSTOR_DATA.MovePlayerFromVentTo(client, ent_idx)
 				client.impo_last_switch_time = cur_time
 			end
 		end
@@ -411,7 +412,7 @@ if CLIENT then
 				--Make sure not to run IsSelectingVent on selected_vent_idx (which we already checked above)
 				if IsValid(vent) and vent:EntIndex() ~= selected_vent_idx and IsSelectingVent(client, vent, false) then
 					client.selected_vent = vent
-					selected_vent_idx = client.selected_vent.EntIndex()
+					selected_vent_idx = client.selected_vent:EntIndex()
 					break
 				end
 			end
