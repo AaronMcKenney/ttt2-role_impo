@@ -56,14 +56,8 @@ function ENT:Initialize()
 	--Set up fingerprints
 	self.fingerprints = {}
 	
-	if CLIENT then
-		local client = LocalPlayer()
-		
-		if client:GetTeam() ~= TEAM_TRAITOR then
-			--Vent starts out as invisible until an impostor interacts with it (so that they can place it in common areas without immediate consequences)
-			self:SetNoDraw(true)
-		end
-	end
+	--Vent starts out as invisible until an impostor interacts with it (so that they can place it in common areas without immediate consequences)
+	self:SetNoDraw(true)
 end
 
 --ENT:Use is only called for SERVER. This function does not execute on the CLIENT side.
