@@ -61,7 +61,7 @@ function ENT:Initialize()
 		
 		if client:GetTeam() ~= TEAM_TRAITOR then
 			--Vent starts out as invisible until an impostor interacts with it (so that they can place it in common areas without immediate consequences)
-			vent:SetNoDraw(true)
+			self:SetNoDraw(true)
 		end
 	end
 end

@@ -3,6 +3,7 @@ if SERVER then
 	util.AddNetworkString("TTT2ImpostorAddVentUpdate")
 	util.AddNetworkString("TTT2ImpostorEnterVentUpdate")
 	util.AddNetworkString("TTT2ImpostorMoveFromVentUpdate")
+	util.AddNetworkString("TTT2ImpostorRevealVentUpdate")
 end
 
 IMPOSTOR_DATA = {}
@@ -37,8 +38,15 @@ function GetVentFromIndex(new_vent_idx)
 end
 
 function IMPOSTOR_DATA.RevealVent(vent)
-	if vent then
+	if IsValid(vent) then
+		print("BMF RevealVent: Revealing vent with index " .. vent:EntIndex())
 		vent:SetNoDraw(false)
+	end
+	
+	if SERVER then
+		net.Start("TTT2ImpostorRevealVentUpdate")
+		net.WriteInt(vent:EntIndex(), 16)
+		net.Broadcast()
 	end
 end
 
@@ -98,13 +106,14 @@ function IMPOSTOR_DATA.EnterVent(ply, vent)
 		net.Start("TTT2ImpostorEnterVentUpdate")
 		net.WriteInt(vent:EntIndex(), 16)
 		net.Send(ply)
+		
+		--In addition, reveal the vent to everyone since it was entered from
+		IMPOSTOR_DATA.RevealVent(vent)
 	elseif CLIENT then
 		if not ply.impo_can_insta_kill and timer.Exists("ImpostorKillTimer_Client_" .. ply:SteamID64()) then
 			timer.Pause("ImpostorKillTimer_Client_" .. ply:SteamID64())
 		end
 	end
-	
-	IMPOSTOR_DATA.RevealVent(vent)
 end
 
 function IMPOSTOR_DATA.ExitVent(ply)
@@ -125,13 +134,15 @@ function IMPOSTOR_DATA.ExitVent(ply)
 		if ply.impo_can_insta_kill == false and timer.Exists("ImpostorKillTimer_Server_" .. ply:SteamID64()) then
 			timer.UnPause("ImpostorKillTimer_Server_" .. ply:SteamID64())
 		end
+		
+		--In addition, reveal the vent if it has been exited from for the first time.
+		IMPOSTOR_DATA.RevealVent(ply.impo_in_vent)
 	elseif CLIENT then
 		if not ply.impo_can_insta_kill and timer.Exists("ImpostorKillTimer_Client_" .. ply:SteamID64()) then
 			timer.UnPause("ImpostorKillTimer_Client_" .. ply:SteamID64())
 		end
 	end
 	
-	IMPOSTOR_DATA.RevealVent(ply.impo_in_vent)
 	ply.impo_in_vent = nil
 end
 
@@ -241,6 +252,13 @@ if CLIENT then
 		
 		--client is entering the vent from real space. Put them into vent space.
 		IMPOSTOR_DATA.EnterVent(client, new_vent)
+	end)
+	
+	net.Receive("TTT2ImpostorRevealVentUpdate", function()
+		local client = LocalPlayer()
+		local new_vent_idx = net.ReadInt(16)
+		
+		IMPOSTOR_DATA.RevealVent(GetVentFromIndex(new_vent_idx))
 	end)
 	
 	hook.Add("PreDrawOutlines", "PreDrawOutlinesImpostorVent", function()
