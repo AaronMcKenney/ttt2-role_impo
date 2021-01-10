@@ -1,5 +1,5 @@
 --ConVar syncing
-CreateConVar("ttt2_impostor_notify_everyone", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_inform_everyone", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_normal_dmg_multi", "0.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_kill_dist", "125", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_kill_cooldown", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -9,16 +9,17 @@ CreateConVar("ttt2_impostor_sabo_lights_length", "5.0", {FCVAR_ARCHIVE, FCVAR_NO
 CreateConVar("ttt2_impostor_num_starting_vents", "3", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_global_max_num_vents", "9", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_vent_placement_range", "100", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_traitor_team_can_use_vents", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 
 hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	tbl[ROLE_IMPOSTOR] = tbl[ROLE_IMPOSTOR] or {}
 	
 	--# At the beginning of the round, should everyone be told how many impostors are among us?
-	--  ttt2_impostor_notify_everyone [0/1] (default: 1)
+	--  ttt2_impostor_inform_everyone [0/1] (default: 0)
 	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_notify_everyone",
+		cvar = "ttt2_impostor_inform_everyone",
 		checkbox = true,
-		desc = "ttt2_impostor_notify_everyone (Def: 1)"
+		desc = "ttt2_impostor_inform_everyone (Def: 0)"
 	})
 	
 	--# How much damage should the impostor be able to do with traditional guns and crowbars?
@@ -120,10 +121,18 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		decimal = 0,
 		desc = "ttt2_impostor_vent_placement_range (Def: 100)"
 	})
+	
+	--# Should all traitor roles be able to use vents that the Impostor(s) have placed?
+	--  ttt2_impostor_traitor_team_can_use_vents [0/1] (default: 1)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_traitor_team_can_use_vents",
+		checkbox = true,
+		desc = "ttt2_impostor_traitor_team_can_use_vents (Def: 1)"
+	})
 end)
 
 hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
-	SetGlobalBool("ttt2_impostor_notify_everyone", GetConVar("ttt2_impostor_notify_everyone"):GetBool())
+	SetGlobalBool("ttt2_impostor_inform_everyone", GetConVar("ttt2_impostor_inform_everyone"):GetBool())
 	SetGlobalFloat("ttt2_impostor_normal_dmg_multi", GetConVar("ttt2_impostor_normal_dmg_multi"):GetFloat())
 	SetGlobalInt("ttt2_impostor_kill_dist", GetConVar("ttt2_impostor_kill_dist"):GetInt())
 	SetGlobalInt("ttt2_impostor_kill_cooldown", GetConVar("ttt2_impostor_kill_cooldown"):GetInt())
@@ -133,10 +142,11 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalInt("ttt2_impostor_num_starting_vents", GetConVar("ttt2_impostor_num_starting_vents"):GetInt())
 	SetGlobalInt("ttt2_impostor_global_max_num_vents", GetConVar("ttt2_impostor_global_max_num_vents"):GetInt())
 	SetGlobalInt("ttt2_impostor_vent_placement_range", GetConVar("ttt2_impostor_vent_placement_range"):GetInt())
+	SetGlobalBool("ttt2_impostor_traitor_team_can_use_vents", GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool())
 end)
 
-cvars.AddChangeCallback("ttt2_impostor_notify_everyone", function(name, old, new)
-	SetGlobalBool("ttt2_impostor_notify_everyone", tobool(tonumber(new)))
+cvars.AddChangeCallback("ttt2_impostor_inform_everyone", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_inform_everyone", tobool(tonumber(new)))
 end)
 cvars.AddChangeCallback("ttt2_impostor_normal_dmg_multi", function(name, old, new)
 	SetGlobalFloat("ttt2_impostor_normal_dmg_multi", tonumber(new))
@@ -164,4 +174,7 @@ cvars.AddChangeCallback("ttt2_impostor_global_max_num_vents", function(name, old
 end)
 cvars.AddChangeCallback("ttt2_impostor_vent_placement_range", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_vent_placement_range", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_traitor_team_can_use_vents", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_traitor_team_can_use_vents", tobool(tonumber(new)))
 end)

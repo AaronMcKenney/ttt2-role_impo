@@ -62,7 +62,7 @@ end
 
 --ENT:Use is only called for SERVER. This function does not execute on the CLIENT side.
 function ENT:Use(activator, caller, type, value)
-	if not IsValid(activator) or not activator:IsPlayer() or not activator:Alive() or activator:GetSubRole() ~= ROLE_IMPOSTOR or IsValid(activator.impo_in_vent) then
+	if not IsValid(activator) or not activator:IsPlayer() or not activator:Alive() then
 		return
 	end
 	

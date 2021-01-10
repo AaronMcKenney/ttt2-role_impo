@@ -1,6 +1,7 @@
 if SERVER then
 	AddCSLuaFile()
 	resource.AddFile("materials/vgui/ttt/dynamic/roles/icon_impo.vmt")
+	util.AddNetworkString("TTT2ImpostorInformEveryone")
 	util.AddNetworkString("TTT2ImpostorInstantKillUpdate")
 	util.AddNetworkString("TTT2ImpostorSabotageUpdate")
 	util.AddNetworkString("TTT2ImpostorSendInstantKillRequest")
@@ -158,7 +159,7 @@ if SERVER then
 	end
 	
 	net.Receive("TTT2ImpostorSendInstantKillRequest", function(len, ply)
-		if not IsValid(ply) or not ply:IsPlayer() or not ply:IsActive() or ply:GetSubRole() ~= ROLE_IMPOSTOR then
+		if not IsValid(ply) or not ply:IsPlayer() or not ply:IsTerror() or ply:GetSubRole() ~= ROLE_IMPOSTOR then
 			return
 		end
 		
@@ -180,7 +181,7 @@ if SERVER then
 	net.Receive("TTT2ImpostorSendSabotageLightsRequest", function(len, ply)
 		local fade_time = GetConVar("ttt2_impostor_sabo_fade_time"):GetFloat()
 		local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
-		if not IsValid(ply) or not ply:IsPlayer() or not ply:IsActive() or ply:GetSubRole() ~= ROLE_IMPOSTOR or fade_time <= 0.0 or sabo_lights_len < 0.0 then
+		if not IsValid(ply) or not ply:IsPlayer() or not ply:IsTerror() or ply:GetSubRole() ~= ROLE_IMPOSTOR or fade_time <= 0.0 or sabo_lights_len < 0.0 then
 			return
 		end
 		
@@ -234,6 +235,22 @@ if SERVER then
 	hook.Add("TTTBeginRound", "ImpostorBeginRound", function()
 		impos_can_sabo = true
 		SendSabotageUpdateToClients()
+		
+		if GetConVar("ttt2_impostor_inform_everyone"):GetBool() then
+			local num_impos = 0
+			
+			for _, ply in ipairs(player.GetAll()) do
+				if ply:GetSubRole() == ROLE_IMPOSTOR then
+					num_impos = num_impos + 1
+				end
+			end
+			
+			if num_impos > 0 then
+				net.Start("TTT2ImpostorInformEveryone")
+				net.WriteInt(num_impos, 16)
+				net.Broadcast()
+			end
+		end
 	end)
 end
 
@@ -252,6 +269,13 @@ if CLIENT then
 	end
 	hook.Add("TTTPrepareRound", "ImpostorPrepareRoundClient", ResetImpostorForClient)
 	hook.Add("TTTEndRound", "ImpostorEndRoundClient", ResetImpostorForClient)
+	
+	net.Receive("TTT2ImpostorInformEveryone", function()
+		local client = LocalPlayer()
+		local num_impos = net.ReadInt(16)
+		
+		EPOP:AddMessage({text = LANG.GetParamTranslation("INFORM_" .. IMPOSTOR.name, {n = num_impos}), color = IMPOSTOR.color}, "", 6)
+	end)
 	
 	net.Receive("TTT2ImpostorInstantKillUpdate", function()
 		local client = LocalPlayer()
@@ -314,7 +338,7 @@ if CLIENT then
 		local client = LocalPlayer()
 		local ent = tData:GetEntity()
 		
-		if not IsValid(client) or not client:IsPlayer() or not client:Alive() or not client:IsActive() or client:GetSubRole() ~= ROLE_IMPOSTOR or not IsValid(ent) then
+		if not IsValid(client) or not client:IsPlayer() or not client:Alive() or not client:IsTerror() or client:GetSubRole() ~= ROLE_IMPOSTOR or not IsValid(ent) then
 			return
 		end
 		
@@ -348,7 +372,7 @@ if CLIENT then
 		--However, what we do with KeyPress depends on the client's aim, so it is easier to have this
 		--hook be client-only, which will then call on the server to replicate the functionality.
 		local client = LocalPlayer()
-		if ply:SteamID64() == client:SteamID64() and client:GetSubRole() == ROLE_IMPOSTOR and client:Alive() and client:IsActive() and key == IN_USE and IsValid(client.impo_in_vent) then
+		if ply:SteamID64() == client:SteamID64() and client:Alive() and client:IsTerror() and key == IN_USE and IsValid(client.impo_in_vent) then
 			local ent_idx = -1
 			if IsValid(client.selected_vent) and client.selected_vent:EntIndex() ~= client.impo_in_vent:EntIndex() then
 				--Selected vent must be valid and different from the one we're currently in.
@@ -392,7 +416,7 @@ if CLIENT then
 	hook.Add("HUDPaint", "ImpostorHUDPaint", function()
 		local client = LocalPlayer()
 		
-		if client:GetSubRole() ~= ROLE_IMPOSTOR or not client:Alive() or not client:IsActive() or not IsValid(client.impo_in_vent) then
+		if not client:Alive() or not client:IsTerror() or not IsValid(client.impo_in_vent) then
 			return
 		end
 		
@@ -428,7 +452,7 @@ if CLIENT then
 					continue
 				end
 				
-				draw.FilteredTexture(vent_scr_pos.x - VENT_BUTTON_MIDPOINT, vent_scr_pos.y - VENT_BUTTON_MIDPOINT, VENT_BUTTON_SIZE, VENT_BUTTON_SIZE, ICON_IN_VENT, 200, IMPOSTOR.color)
+				draw.FilteredTexture(vent_scr_pos.x - VENT_BUTTON_MIDPOINT, vent_scr_pos.y - VENT_BUTTON_MIDPOINT, VENT_BUTTON_SIZE, VENT_BUTTON_SIZE, ICON_IN_VENT, 200, COLOR_ORANGE)
 			end
 		end
 		if IsValid(client.selected_vent) and client.selected_vent:EntIndex() ~= client.impo_in_vent:EntIndex() then

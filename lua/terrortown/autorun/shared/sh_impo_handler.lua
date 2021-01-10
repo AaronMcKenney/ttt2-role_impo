@@ -37,6 +37,13 @@ function GetVentFromIndex(new_vent_idx)
 	return nil
 end
 
+function IMPOSTOR_DATA.CanUseVentNetwork(ply)
+	if ply:GetSubRole() == ROLE_IMPOSTOR or (GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() and ply:GetTeam() == TEAM_TRAITOR) then
+		return true
+	end
+	return false
+end
+
 function IMPOSTOR_DATA.RevealVent(vent)
 	if IsValid(vent) then
 		print("BMF RevealVent: Revealing vent with index " .. vent:EntIndex())
@@ -69,7 +76,7 @@ function IMPOSTOR_DATA.MovePlayerToVent(ply, vent)
 end
 
 function IMPOSTOR_DATA.EnterVent(ply, vent)
-	if IsValid(ply.impo_in_vent) or not IsValid(vent) then
+	if IsValid(ply.impo_in_vent) or not IsValid(vent) or not IMPOSTOR_DATA.CanUseVentNetwork(ply) then
 		return
 	end
 	
@@ -207,7 +214,7 @@ if SERVER then
 	end
 
 	hook.Add("PlayerSwitchWeapon", "ImpostorDataPlayerSwitchWeapon", function(ply, old, new)
-		if not IsValid(ply) or ply:GetSubRole() ~= ROLE_IMPOSTOR or not IsValid(ply.impo_in_vent) then
+		if not IsValid(ply) or not IsValid(ply.impo_in_vent) then
 			return
 		end
 		
