@@ -52,7 +52,7 @@ end
 --SHARED CONSTS, GLOBALS, AND FUNCS--
 -------------------------------------
 --Used to reduce chances of lag interrupting otherwise seemless player interactions.
-local IOTA = 0.2
+local IOTA = 0.3
 --Sabotage cooldown is global. If a terrorist triggers a sabotage, all must wait.
 impos_can_sabo = true
 
@@ -266,6 +266,7 @@ if CLIENT then
 		local client = LocalPlayer()
 		
 		client.selected_vent = nil
+		client.impo_last_switch_time = nil
 	end
 	hook.Add("TTTPrepareRound", "ImpostorPrepareRoundClient", ResetImpostorForClient)
 	hook.Add("TTTEndRound", "ImpostorEndRoundClient", ResetImpostorForClient)

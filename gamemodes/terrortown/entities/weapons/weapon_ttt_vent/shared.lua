@@ -18,6 +18,8 @@ if CLIENT then
 	}
 end
 
+local IOTA = 0.3
+
 --Author information
 SWEP.Author = "BlackMagicFine"
 SWEP.Contact = "https://steamcommunity.com/profiles/76561198025772353/"
@@ -106,7 +108,7 @@ if SERVER then
 		end
 	end
 	
-	function SWEP:TraceLineForVent()
+	function SWEP:TraceLineForVent(vent_placement_range)
 		local tr = nil
 		
 		if (IsValid(self)) then
@@ -132,7 +134,6 @@ if SERVER then
 					return true
 				end
 				local spos = ply:GetShootPos()
-				local vent_placement_range = GetConVar("ttt2_impostor_vent_placement_range"):GetInt()
 				local epos = spos + ply:GetAimVector() * vent_placement_range
 				tr = util.TraceLine({
 					start = spos,
@@ -158,9 +159,11 @@ if SERVER then
 			return
 		end
 		
-		local tr = self:TraceLineForVent()
+		local vent_placement_range = GetConVar("ttt2_impostor_vent_placement_range"):GetInt()
+		local tr = self:TraceLineForVent(vent_placement_range)
+		local vent_exit_pos = IMPOSTOR_DATA.DetermineVentExitPos(tr, vent_placement_range, ply:GetPos())
 		--Explicitly check if the player's current position is safe for exiting from this potential vent.
-		local is_spawn_point_safe = spawn.IsSpawnPointSafe(ply, ply:GetPos(), false, player.GetAll())
+		local is_spawn_point_safe = spawn.IsSpawnPointSafe(ply, vent_exit_pos, false, player.GetAll())
 		local vent_was_placed = false
 		
 		if tr.HitWorld and is_spawn_point_safe then
@@ -174,7 +177,10 @@ if SERVER then
 				
 				vent.fingerprints = self.fingerprints
 				
-				IMPOSTOR_DATA.AddVentToNetwork(vent, ply, tr)
+				--Wait an Iota before adding to the network, as clients may need time to acknowledge its existence
+				timer.Simple(IOTA, function()
+					IMPOSTOR_DATA.AddVentToNetwork(vent, ply, tr)
+				end)
 				
 				self:PlacedVent()
 				vent_was_placed = true

@@ -183,16 +183,23 @@ if SERVER then
 			IMPOSTOR_DATA.MovePlayerFromVentTo(ply, ent_idx)
 	end)
 	
+	function IMPOSTOR_DATA.DetermineVentExitPos(tr, vent_placement_range, ply_pos)
+		local PLY_IS_CLOSE_TO_VENT = 10000 --100^2
+		print("BMF DetermineVentExitPos: DistToSqr=" .. tr.HitPos:DistToSqr(ply_pos))
+		if tr.HitPos:DistToSqr(ply_pos) <= PLY_IS_CLOSE_TO_VENT then
+			--Player is relatively close to the would-be vent. Their own position can therefore be used.
+			return ply_pos
+		else
+			--Server is configured to place vents from extreme distances.
+			--Let exit_pos be close to the vent, while also not being inside the thing.
+			return tr.HitPos + tr.HitNormal * 100
+		end
+	end
+	
 	function IMPOSTOR_DATA.AddVentToNetwork(vent, ply, tr)
 		--Record player position and find good camera angle for vent exit handling.
-		vent.exit_pos = ply:GetPos()
+		vent.exit_pos = IMPOSTOR_DATA.DetermineVentExitPos(tr, GetConVar("ttt2_impostor_vent_placement_range"):GetInt(), ply:GetPos())
 		vent.exit_ang = tr.HitNormal:Angle()
-		
-		if GetConVar("ttt2_impostor_vent_placement_range"):GetInt() > 100 then
-			--Server is configured to place vents from extreme distances.
-			--Modify exit_pos to be closer to the vent, while also not being inside the thing.
-			vent.exit_pos = tr.HitPos + tr.HitNormal * 100
-		end
 		
 		--BMF
 		print("BMF AddVentToNetwork Vent ID = " .. vent:GetCreationID() .. ", Exit Angle = ")
