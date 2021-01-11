@@ -383,9 +383,9 @@ if CLIENT then
 			--Use timer to prevent cases where key presses are registered multiple times on accident
 			--Not quite sure if this is a bug in GMod, my testing server, or my keyboard...
 			local cur_time = CurTime()
-			if client.impo_last_switch_time == nil or cur_time > client.impo_last_switch_time + IOTA then
+			if client.impo_last_move_time == nil or cur_time > client.impo_last_move_time + IOTA then
 				IMPOSTOR_DATA.MovePlayerFromVentTo(client, ent_idx)
-				client.impo_last_switch_time = cur_time
+				client.impo_last_move_time = cur_time
 			end
 		end
 	end)

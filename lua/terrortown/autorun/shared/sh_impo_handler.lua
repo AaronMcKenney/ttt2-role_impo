@@ -116,6 +116,9 @@ function IMPOSTOR_DATA.EnterVent(ply, vent)
 		--In addition, reveal the vent to everyone since it was entered from
 		IMPOSTOR_DATA.RevealVent(vent)
 	elseif CLIENT then
+		--Keep track of when the Impostor last entered/switched/exited a vent to prevent accidental key presses booting them out of a vent immediately upon entering it.
+		ply.impo_last_move_time = CurTime()
+		
 		if not ply.impo_can_insta_kill and timer.Exists("ImpostorKillTimer_Client_" .. ply:SteamID64()) then
 			timer.Pause("ImpostorKillTimer_Client_" .. ply:SteamID64())
 		end
