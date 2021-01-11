@@ -10,6 +10,7 @@ CreateConVar("ttt2_impostor_num_starting_vents", "3", {FCVAR_ARCHIVE, FCVAR_NOTF
 CreateConVar("ttt2_impostor_global_max_num_vents", "9", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_vent_placement_range", "100", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_traitor_team_can_use_vents", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 
 hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	tbl[ROLE_IMPOSTOR] = tbl[ROLE_IMPOSTOR] or {}
@@ -129,6 +130,14 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		checkbox = true,
 		desc = "ttt2_impostor_traitor_team_can_use_vents (Def: 1)"
 	})
+	
+	--# Should all traitor roles be affected by an Impostor's sabotage?
+	--  ttt2_impostor_traitor_team_is_affected_by_sabo [0/1] (default: 0)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_traitor_team_is_affected_by_sabo",
+		checkbox = true,
+		desc = "ttt2_impostor_traitor_team_is_affected_by_sabo (Def: 0)"
+	})
 end)
 
 hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
@@ -143,6 +152,7 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalInt("ttt2_impostor_global_max_num_vents", GetConVar("ttt2_impostor_global_max_num_vents"):GetInt())
 	SetGlobalInt("ttt2_impostor_vent_placement_range", GetConVar("ttt2_impostor_vent_placement_range"):GetInt())
 	SetGlobalBool("ttt2_impostor_traitor_team_can_use_vents", GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool())
+	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo"):GetBool())
 end)
 
 cvars.AddChangeCallback("ttt2_impostor_inform_everyone", function(name, old, new)
@@ -177,4 +187,7 @@ cvars.AddChangeCallback("ttt2_impostor_vent_placement_range", function(name, old
 end)
 cvars.AddChangeCallback("ttt2_impostor_traitor_team_can_use_vents", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_traitor_team_can_use_vents", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_traitor_team_is_affected_by_sabo", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo", tobool(tonumber(new)))
 end)

@@ -190,14 +190,13 @@ if SERVER then
 			impos_can_sabo = false
 			
 			for _, ply_i in ipairs(player.GetAll()) do
-				if ply_i:GetSubRole() == ROLE_IMPOSTOR then
-					--Inform impostors that the sabotage is starting.
-					net.Start("TTT2ImpostorSendSabotageLightsResponse")
-					net.Send(ply_i)
-				end
+				--Inform everyone that the sabotage is starting.
+				net.Start("TTT2ImpostorSendSabotageLightsResponse")
+				net.Send(ply_i)
 				
-				--BMF TODO: Don't just blind everyone!
-				SabotageLights(ply_i)
+				if ply_i:GetSubRole() ~= ROLE_IMPOSTOR and (GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo"):GetBool() or ply_i:GetTeam() ~= TEAM_TRAITOR) then
+					SabotageLights(ply_i)
+				end
 			end
 			
 			--Only begin cooldown timer after fade effect ends.
@@ -316,9 +315,12 @@ if CLIENT then
 	end)
 	
 	net.Receive("TTT2ImpostorSendSabotageLightsResponse", function()
+		--Inform the clients that the lights will be sabotaged.
 		local client = LocalPlayer()
 		local fade_time = GetConVar("ttt2_impostor_sabo_fade_time"):GetFloat()
 		local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
+		
+		LANG.Msg("SABO_LIGHTS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 		
 		--Immediately set impos_can_sabo to false here, to keep things in sync.
 		impos_can_sabo = false
@@ -326,6 +328,7 @@ if CLIENT then
 		--Create a timer which hopefully will match the server's timer.
 		--This is used in the HUD to allow impostors to track the darkness other clients are experiencing.
 		timer.Create("ImpostorSaboLightsTimer_Client", sabo_lights_len + 2*fade_time, 1, function()
+			LANG.Msg("SABO_LIGHTS_END_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			return
 		end)
 	end)

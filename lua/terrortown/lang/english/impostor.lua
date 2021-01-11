@@ -30,3 +30,5 @@ L["VENT_MAX_HIT_" .. IMPOSTOR.name] = "Maximum number of vents have been placed.
 
 -- SABOTAGE LANGUAGE STRINGS
 L["SABO_LIGHTS_" .. IMPOSTOR.name] = "SABOTAGE LIGHTS"
+L["SABO_LIGHTS_START_" .. IMPOSTOR.name] = "An Impostor has sabotaged the lights!"
+L["SABO_LIGHTS_END_" .. IMPOSTOR.name] = "The lights are back on!"
