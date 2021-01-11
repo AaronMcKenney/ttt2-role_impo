@@ -12,12 +12,9 @@ ENT.Contact = "https://steamcommunity.com/profiles/76561198025772353/"
 --ENT.Icon = "vgui/ttt/icon_vent"
 
 ENT.Type = "anim"
-ENT.Model = Model("models/props/cs_assault/wall_vent.mdl")--"models/weapons/w_slam.mdl") --BMF TODO
+ENT.Model = Model("models/props/cs_assault/wall_vent.mdl")
 ENT.CanHavePrints = true
 ENT.CanUseKey = true
-
---BMF
---AccessorFunc(ENT, "Placer", "Placer") -- using Placer instead of Owner, so everyone can damage the SLAM
 
 hook.Add("TTTPrepareRound", "ClearAllVentEntities", function()
 	--If the vents persisted after round end, remove them here.
@@ -26,19 +23,12 @@ hook.Add("TTTPrepareRound", "ClearAllVentEntities", function()
 	end
 end)
 
-function ENT:SetupDataTables()
-	--BMF TODO
-	--self:NetworkVar("Bool", 0, "Defusable") -- same as active on C4, just for defuser compatibility
-end
-
 function ENT:Initialize()
 	self:SetModel(self.Model)
 	
 	--Vent is immovable
-	--BMF--if SERVER then
-		self:PhysicsInit(SOLID_VPHYSICS)
-		self:SetMoveType(MOVETYPE_NONE)
-	--BMF--end
+	self:PhysicsInit(SOLID_VPHYSICS)
+	self:SetMoveType(MOVETYPE_NONE)
 	self:SetSolid(SOLID_BBOX)
 	self:SetCollisionGroup(COLLISION_GROUP_WEAPON)
 	
@@ -58,6 +48,9 @@ function ENT:Initialize()
 	
 	--Vent starts out as invisible until an impostor interacts with it (so that they can place it in common areas without immediate consequences)
 	self:SetNoDraw(true)
+	
+	--Now that the vent has been created, add it to the network so that it may be used.
+	IMPOSTOR_DATA.AddVentToNetwork(self, self:GetOwner())
 end
 
 --ENT:Use is only called for SERVER. This function does not execute on the CLIENT side.

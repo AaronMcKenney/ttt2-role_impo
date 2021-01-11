@@ -18,8 +18,6 @@ if CLIENT then
 	}
 end
 
-local IOTA = 0.3
-
 --Author information
 SWEP.Author = "BlackMagicFine"
 SWEP.Contact = "https://steamcommunity.com/profiles/76561198025772353/"
@@ -68,19 +66,6 @@ SWEP.AllowDrop = false
 
 -- If NoSights is true, the weapon won't have ironsights
 SWEP.NoSights = true
-
-function SWEP:SetupDataTables()
-	--This function can be used to set up network data. It is called upon an entity's creation.
-	self:NetworkVar("Vector", 0, "PlayerSpawnShift")
-	
-	--BMF
-	--if SERVER then
-	--	local ply = self:GetOwner()
-	--	--BMF TODO: Spawn shift is the difference between the player's position and the ENTITTY's position!
-	--	--Below fails due to self referring to the weapon and not the entity.
-	--	--self:SetPlayerSpawnShift(ply:GetPos() - self:GetPos())
-	--end
-end
 
 function SWEP:Initialize()
 	--No initializing
@@ -161,7 +146,7 @@ if SERVER then
 		
 		local vent_placement_range = GetConVar("ttt2_impostor_vent_placement_range"):GetInt()
 		local tr = self:TraceLineForVent(vent_placement_range)
-		local vent_exit_pos = IMPOSTOR_DATA.DetermineVentExitPos(tr, vent_placement_range, ply:GetPos())
+		local vent_exit_pos = IMPOSTOR_DATA.DetermineVentExitPos(tr.HitPos, tr.HitNormal, vent_placement_range, ply:GetPos())
 		--Explicitly check if the player's current position is safe for exiting from this potential vent.
 		local is_spawn_point_safe = spawn.IsSpawnPointSafe(ply, vent_exit_pos, false, player.GetAll())
 		local vent_was_placed = false
@@ -176,11 +161,6 @@ if SERVER then
 				vent:Spawn()
 				
 				vent.fingerprints = self.fingerprints
-				
-				--Wait an Iota before adding to the network, as clients may need time to acknowledge its existence
-				timer.Simple(IOTA, function()
-					IMPOSTOR_DATA.AddVentToNetwork(vent, ply, tr)
-				end)
 				
 				self:PlacedVent()
 				vent_was_placed = true

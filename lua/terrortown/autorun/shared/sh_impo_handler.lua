@@ -1,6 +1,5 @@
 if SERVER then
 	AddCSLuaFile()
-	util.AddNetworkString("TTT2ImpostorAddVentUpdate")
 	util.AddNetworkString("TTT2ImpostorEnterVentUpdate")
 	util.AddNetworkString("TTT2ImpostorMoveFromVentUpdate")
 	util.AddNetworkString("TTT2ImpostorRevealVentUpdate")
@@ -71,7 +70,7 @@ function IMPOSTOR_DATA.MovePlayerToVent(ply, vent)
 	print("BMF MovePlayerToVent " .. server_client_str .. " Creation ID = " .. creation_id_str .. ", Ent ID = " .. ent_id_str)
 	--BMF
 	ply:SetPos(vent:GetPos())
-	ply:SetEyeAngles(vent.exit_ang)
+	ply:SetEyeAngles(vent:GetAngles())
 	ply.impo_in_vent = vent
 end
 
@@ -176,49 +175,40 @@ function IMPOSTOR_DATA.MovePlayerFromVentTo(ply, ent_idx)
 	end
 end
 
+function IMPOSTOR_DATA.DetermineVentExitPos(vent_pos, vent_normal, vent_placement_range, ply_pos)
+	local PLY_IS_CLOSE_TO_VENT = 10000 --100^2
+	print("BMF DetermineVentExitPos: DistToSqr=" .. vent_pos:DistToSqr(ply_pos))
+	if vent_pos:DistToSqr(ply_pos) <= PLY_IS_CLOSE_TO_VENT then
+		--Player is relatively close to the would-be vent. Their own position can therefore be used.
+		return ply_pos
+	else
+		--Server is configured to place vents from extreme distances.
+		--Let exit_pos be close to the vent, while also not being inside the thing.
+		return vent_pos + vent_normal * 100
+	end
+end
+
+function IMPOSTOR_DATA.AddVentToNetwork(vent, owner)
+	--Record player position and find good camera angle for vent exit handling.
+	vent.exit_pos = IMPOSTOR_DATA.DetermineVentExitPos(vent:GetPos(), vent:GetAngles():Forward(), GetConVar("ttt2_impostor_vent_placement_range"):GetInt(), owner:GetPos())
+	
+	--BMF
+	print("BMF AddVentToNetwork Vent ID = " .. vent:EntIndex() .. ", Exit Angle = ")
+	print(vent:GetAngles())
+	--print(tr.HitNormal:Angle()) --Absolutely the only way to print this thing from what I can tell...
+	--BMF
+	
+	IMPOSTOR_DATA.VENT_NETWORK[#IMPOSTOR_DATA.VENT_NETWORK + 1] = vent
+	
+	print("BMF AddVentToNetwork: There are now " .. #IMPOSTOR_DATA.VENT_NETWORK .. " vents on the Server")
+end
+
 if SERVER then
 	net.Receive("TTT2ImpostorMoveFromVentUpdate", function(len, ply)
 			local ent_idx = net.ReadInt(16)
 			
 			IMPOSTOR_DATA.MovePlayerFromVentTo(ply, ent_idx)
 	end)
-	
-	function IMPOSTOR_DATA.DetermineVentExitPos(tr, vent_placement_range, ply_pos)
-		local PLY_IS_CLOSE_TO_VENT = 10000 --100^2
-		print("BMF DetermineVentExitPos: DistToSqr=" .. tr.HitPos:DistToSqr(ply_pos))
-		if tr.HitPos:DistToSqr(ply_pos) <= PLY_IS_CLOSE_TO_VENT then
-			--Player is relatively close to the would-be vent. Their own position can therefore be used.
-			return ply_pos
-		else
-			--Server is configured to place vents from extreme distances.
-			--Let exit_pos be close to the vent, while also not being inside the thing.
-			return tr.HitPos + tr.HitNormal * 100
-		end
-	end
-	
-	function IMPOSTOR_DATA.AddVentToNetwork(vent, ply, tr)
-		--Record player position and find good camera angle for vent exit handling.
-		vent.exit_pos = IMPOSTOR_DATA.DetermineVentExitPos(tr, GetConVar("ttt2_impostor_vent_placement_range"):GetInt(), ply:GetPos())
-		vent.exit_ang = tr.HitNormal:Angle()
-		
-		--BMF
-		print("BMF AddVentToNetwork Vent ID = " .. vent:GetCreationID() .. ", Exit Angle = ")
-		print(tr.HitNormal:Angle()) --Absolutely the only way to print this thing from what I can tell...
-		--BMF
-		
-		IMPOSTOR_DATA.VENT_NETWORK[#IMPOSTOR_DATA.VENT_NETWORK + 1] = vent
-		
-		print("BMF AddVentToNetwork: There are now " .. #IMPOSTOR_DATA.VENT_NETWORK .. " vents on the Server")
-		
-		--Inform clients that a new vent has been placed so that they can make note of it.
-		--Unfortunately, this means that a modded client will be able to easily sus out impostors.
-		--TODO: May be better to send EntID instead of the entire entity (i.e. impo_in_vent is a simplified table instead of an entity)...
-		net.Start("TTT2ImpostorAddVentUpdate")
-		net.WriteEntity(vent)
-		net.WriteVector(vent.exit_pos)
-		net.WriteAngle(vent.exit_ang)
-		net.Broadcast()
-	end
 
 	hook.Add("PlayerSwitchWeapon", "ImpostorDataPlayerSwitchWeapon", function(ply, old, new)
 		if not IsValid(ply) or not IsValid(ply.impo_in_vent) then
@@ -243,21 +233,6 @@ if SERVER then
 end
 
 if CLIENT then
-	net.Receive("TTT2ImpostorAddVentUpdate", function()
-		local client = LocalPlayer()
-		local new_vent = net.ReadEntity()
-		local exit_pos = net.ReadVector()
-		local exit_ang = net.ReadAngle()
-		
-		--Have to re-add any extra bits of info here as they are not sent in ReadEntity
-		new_vent.exit_pos = exit_pos
-		new_vent.exit_ang = exit_ang
-		
-		IMPOSTOR_DATA.VENT_NETWORK[#IMPOSTOR_DATA.VENT_NETWORK + 1] = new_vent
-		
-		print("BMF TTT2ImpostorAddVentUpdate: There are now " .. #IMPOSTOR_DATA.VENT_NETWORK .. " vents on the Client")
-	end)
-	
 	net.Receive("TTT2ImpostorEnterVentUpdate", function()
 		local client = LocalPlayer()
 		local new_vent_idx = net.ReadInt(16)
