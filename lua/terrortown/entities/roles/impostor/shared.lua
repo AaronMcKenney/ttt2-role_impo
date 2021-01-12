@@ -363,7 +363,7 @@ if CLIENT then
 		net.Start("TTT2ImpostorSendInstantKillRequest")
 		net.SendToServer()
 	end
-	bind.Register("ImpostorSendInstantKillRequest", SendInstantKillRequest, nil, "Impostor", "Instant Kill", KEY_Q)
+	bind.Register("ImpostorSendInstantKillRequest", SendInstantKillRequest, nil, "Impostor", "Instant Kill", KEY_C)
 	
 	local function SendSabotageLightsRequest()
 		net.Start("TTT2ImpostorSendSabotageLightsRequest")
