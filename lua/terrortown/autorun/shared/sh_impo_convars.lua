@@ -1,6 +1,6 @@
 --ConVar syncing
 CreateConVar("ttt2_impostor_inform_everyone", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_normal_dmg_multi", "0.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_normal_dmg_multi", "0.5", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_kill_dist", "125", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_kill_cooldown", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_cooldown", "180", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -13,6 +13,7 @@ CreateConVar("ttt2_impostor_traitor_team_can_use_vents", "1", {FCVAR_ARCHIVE, FC
 CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_hide_unused_vents", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_insta_kill_friendly_fire", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 
 hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	tbl[ROLE_IMPOSTOR] = tbl[ROLE_IMPOSTOR] or {}
@@ -26,14 +27,14 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# How much damage should the impostor be able to do with traditional guns and crowbars?
-	--  ttt2_impostor_normal_dmg_multi [0.0..n.m] (default: 0.0)
+	--  ttt2_impostor_normal_dmg_multi [0.0..n.m] (default: 0.5)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_normal_dmg_multi",
 		slider = true,
 		min = 0.0,
 		max = 1.0,
 		decimal = 2,
-		desc = "ttt2_impostor_normal_dmg_multi (Def: 0.0)"
+		desc = "ttt2_impostor_normal_dmg_multi (Def: 0.5)"
 	})
 	
 	--# What is the range on the impostor's instant-kill ability?
@@ -159,6 +160,14 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		checkbox = true,
 		desc = "ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit (Def: 1)"
 	})
+	
+	--# Should Impostors be able to Instant Kill their teammates?
+	--  ttt2_impostor_insta_kill_friendly_fire [0/1] (default: 0)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_insta_kill_friendly_fire",
+		checkbox = true,
+		desc = "ttt2_impostor_insta_kill_friendly_fire (Def: 0)"
+	})
 end)
 
 hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
@@ -176,6 +185,7 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo"):GetBool())
 	SetGlobalBool("ttt2_impostor_hide_unused_vents", GetConVar("ttt2_impostor_hide_unused_vents"):GetBool())
 	SetGlobalBool("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", GetConVar("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit"):GetBool())
+	SetGlobalBool("ttt2_impostor_insta_kill_friendly_fire", GetConVar("ttt2_impostor_insta_kill_friendly_fire"):GetBool())
 end)
 
 cvars.AddChangeCallback("ttt2_impostor_inform_everyone", function(name, old, new)
@@ -219,4 +229,7 @@ cvars.AddChangeCallback("ttt2_impostor_hide_unused_vents", function(name, old, n
 end)
 cvars.AddChangeCallback("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_insta_kill_friendly_fire", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_insta_kill_friendly_fire", tobool(tonumber(new)))
 end)
