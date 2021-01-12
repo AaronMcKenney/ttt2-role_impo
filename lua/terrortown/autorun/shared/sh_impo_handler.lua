@@ -8,14 +8,17 @@ end
 IMPOSTOR_DATA = {}
 IMPOSTOR_DATA.VENT_NETWORK = {}
 
-function IMPOSTOR_DATA.RemoveVentFromNetwork(vent)
-	if not vent then
-		return
-	end
-	
+function IMPOSTOR_DATA.RemoveVentFromNetwork(vent_idx)
 	for i, v in ipairs(IMPOSTOR_DATA.VENT_NETWORK) do
-		if v:GetCreationID() == vent:GetCreationID() then
-			IMPOSTOR_DATA.VENT_NETWORK[i] = nil
+		if v:EntIndex() == vent_idx then
+			table.remove(IMPOSTOR_DATA.VENT_NETWORK, i)
+			--BMF
+			if SERVER then
+				print("BMF RemoveVentFromNetwork: There are now " .. #IMPOSTOR_DATA.VENT_NETWORK .. " vents on the Server.")
+			elseif CLIENT then
+				print("BMF RemoveVentFromNetwork: There are now " .. #IMPOSTOR_DATA.VENT_NETWORK .. " vents on the Client.")
+			end
+			--BMF
 			break
 		end
 	end
@@ -23,8 +26,11 @@ end
 
 function IMPOSTOR_DATA.ResetVentNetwork()
 	IMPOSTOR_DATA.VENT_NETWORK = {}
+	
+	print("BMF ResetVentNetwork: Number of vents is now " .. #IMPOSTOR_DATA.VENT_NETWORK)
 end
-hook.Add("TTTEndRound", "ImpostorDataEndRound", IMPOSTOR_DATA.ResetVentNetwork())
+hook.Add("TTTPrepareRound", "ImpostorDataPrepareRound", IMPOSTOR_DATA.ResetVentNetwork)
+hook.Add("TTTBeginRound", "ImpostorDataPrepareRound", IMPOSTOR_DATA.ResetVentNetwork)
 
 function GetVentFromIndex(new_vent_idx)
 	for _, vent in ipairs(IMPOSTOR_DATA.VENT_NETWORK) do
@@ -203,7 +209,12 @@ function IMPOSTOR_DATA.AddVentToNetwork(vent, owner)
 	
 	IMPOSTOR_DATA.VENT_NETWORK[#IMPOSTOR_DATA.VENT_NETWORK + 1] = vent
 	
-	print("BMF AddVentToNetwork: There are now " .. #IMPOSTOR_DATA.VENT_NETWORK .. " vents on the Server")
+	--BMF
+	if SERVER then
+		print("BMF AddVentToNetwork: There are now " .. #IMPOSTOR_DATA.VENT_NETWORK .. " vents on the Server")
+	elseif CLIENT then
+		print("BMF AddVentToNetwork: There are now " .. #IMPOSTOR_DATA.VENT_NETWORK .. " vents on the Client")
+	end
 end
 
 if SERVER then

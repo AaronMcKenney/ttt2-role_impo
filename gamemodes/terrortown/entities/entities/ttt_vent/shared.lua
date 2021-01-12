@@ -51,6 +51,24 @@ function ENT:Initialize()
 		self:SetNoDraw(true)
 	end
 	
+	self:CallOnRemove("VentCallOnRemove", function(vent)
+		ent_idx = vent:EntIndex()
+		--BMF
+		print("VentCallOnRemove: Handling destruction of vent with index " .. ent_idx)
+		--BMF
+		--This vent-to-be-destroyed is occupied. Force all players in it out and kill them!
+		for _, ply in ipairs(player.GetAll()) do
+			if IsValid(ply.impo_in_vent) and ply.impo_in_vent:EntIndex() == ent_idx then
+				IMPOSTOR_DATA.ExitVent(ply)
+				if SERVER then
+					ply:Kill()
+				end
+			end
+		end
+		--Remove vent from existence.
+		IMPOSTOR_DATA.RemoveVentFromNetwork(ent_idx)
+	end)
+	
 	--Now that the vent has been created, add it to the network so that it may be used.
 	IMPOSTOR_DATA.AddVentToNetwork(self, self:GetOwner())
 end
