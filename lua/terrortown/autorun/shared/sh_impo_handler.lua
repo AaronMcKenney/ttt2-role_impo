@@ -181,13 +181,13 @@ end
 function IMPOSTOR_DATA.DetermineVentExitPos(vent_pos, vent_normal, vent_placement_range, ply_pos)
 	local PLY_IS_CLOSE_TO_VENT = 10000 --100^2
 	print("BMF DetermineVentExitPos: DistToSqr=" .. vent_pos:DistToSqr(ply_pos))
-	if vent_pos:DistToSqr(ply_pos) <= PLY_IS_CLOSE_TO_VENT then
+	if GetConVar("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit"):GetBool() and vent_pos:DistToSqr(ply_pos) <= PLY_IS_CLOSE_TO_VENT then
 		--Player is relatively close to the would-be vent. Their own position can therefore be used.
 		return ply_pos
 	else
 		--Server is configured to place vents from extreme distances.
 		--Let exit_pos be close to the vent, while also not being inside the thing.
-		return vent_pos + vent_normal * 100
+		return vent_pos + vent_normal * 50
 	end
 end
 

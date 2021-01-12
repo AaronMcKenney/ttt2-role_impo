@@ -12,6 +12,7 @@ CreateConVar("ttt2_impostor_vent_placement_range", "100", {FCVAR_ARCHIVE, FCVAR_
 CreateConVar("ttt2_impostor_traitor_team_can_use_vents", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_hide_unused_vents", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 
 hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	tbl[ROLE_IMPOSTOR] = tbl[ROLE_IMPOSTOR] or {}
@@ -147,6 +148,17 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		checkbox = true,
 		desc = "ttt2_impostor_hide_unused_vents (Def: 1)"
 	})
+	
+	--# If set, newly created vents will attempt to use the creator's position as the exit point (as long as the vent is close enough to them).
+	--    Allows for quick and creative vent placement. Can lead to map abuse (i.e. hiding vents in ridiculous locations).
+	--  If not set, all created vents (regardless of placement distance) will attempt to set the exit point out and in front automatically.
+	--    Enforces sane vent placement. However, the user will be forced to place vents on walls near the floor in most scenarios.
+	--  ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit [0/1] (default: 1)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit",
+		checkbox = true,
+		desc = "ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit (Def: 1)"
+	})
 end)
 
 hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
@@ -163,6 +175,7 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalBool("ttt2_impostor_traitor_team_can_use_vents", GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool())
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo"):GetBool())
 	SetGlobalBool("ttt2_impostor_hide_unused_vents", GetConVar("ttt2_impostor_hide_unused_vents"):GetBool())
+	SetGlobalBool("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", GetConVar("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit"):GetBool())
 end)
 
 cvars.AddChangeCallback("ttt2_impostor_inform_everyone", function(name, old, new)
@@ -203,4 +216,7 @@ cvars.AddChangeCallback("ttt2_impostor_traitor_team_is_affected_by_sabo", functi
 end)
 cvars.AddChangeCallback("ttt2_impostor_hide_unused_vents", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_hide_unused_vents", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", tobool(tonumber(new)))
 end)
