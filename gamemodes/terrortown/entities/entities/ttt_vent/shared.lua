@@ -46,8 +46,10 @@ function ENT:Initialize()
 	--Set up fingerprints
 	self.fingerprints = {}
 	
-	--Vent starts out as invisible until an impostor interacts with it (so that they can place it in common areas without immediate consequences)
-	self:SetNoDraw(true)
+	if GetConVar("ttt2_impostor_hide_unused_vents"):GetBool() then
+		--Vent starts out as invisible until an impostor interacts with it (so that they can place it in common areas without immediate consequences)
+		self:SetNoDraw(true)
+	end
 	
 	--Now that the vent has been created, add it to the network so that it may be used.
 	IMPOSTOR_DATA.AddVentToNetwork(self, self:GetOwner())
