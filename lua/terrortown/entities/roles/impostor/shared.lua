@@ -121,12 +121,7 @@ if SERVER then
 		ply.impo_can_insta_kill = false
 		SendInstantKillUpdateToClient(ply)
 		
-		--Create a timer that is unique to the player. When it finishes, turn on ability to kill
-		--Because it's unique, it can be paused/unpaused whenever the impostor enters/leaves a vent.
-		--First remove any existing timer of the same name (to prevent wonkiness)
-		if timer.Exists("ImpostorKillTimer_Server_" .. ply:SteamID64()) then
-			timer.Remove("ImpostorKillTimer_Server_" .. ply:SteamID64())
-		end
+		--Create a timer that is unique to the player. When it finishes, turn on ability to kill.
 		timer.Create("ImpostorKillTimer_Server_" .. ply:SteamID64(), kill_cooldown, 1, function()
 			ply.impo_can_insta_kill = true
 			SendInstantKillUpdateToClient(ply)
@@ -147,11 +142,7 @@ if SERVER then
 		impos_can_sabo = false
 		SendSabotageUpdateToClients()
 		
-		--Create a timer that is unique to the player. When it finishes, turn on ability to sabotage lights
-		--First remove any existing timer of the same name (to prevent wonkiness)
-		if timer.Exists("ImpostorSaboTimer_Server") then
-			timer.Remove("ImpostorSaboTimer_Server")
-		end
+		--Create a timer that is unique to the player. When it finishes, turn on ability to sabotage lights.
 		timer.Create("ImpostorSaboTimer_Server", sabo_cooldown, 1, function()
 			impos_can_sabo = true
 			SendSabotageUpdateToClients()
