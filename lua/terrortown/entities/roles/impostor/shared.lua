@@ -123,8 +123,11 @@ if SERVER then
 		
 		--Create a timer that is unique to the player. When it finishes, turn on ability to kill.
 		timer.Create("ImpostorKillTimer_Server_" .. ply:SteamID64(), kill_cooldown, 1, function()
-			ply.impo_can_insta_kill = true
-			SendInstantKillUpdateToClient(ply)
+			--Verify the player's existence, in case they are dropped from the Server.
+			if IsValid(ply) and ply:IsPlayer() then
+				ply.impo_can_insta_kill = true
+				SendInstantKillUpdateToClient(ply)
+			end
 		end)
 	end
 	
@@ -362,7 +365,7 @@ if CLIENT then
 	end
 	bind.Register("ImpostorSendSabotageLightsRequest", SendSabotageLightsRequest, nil, "Impostor", "Sabotage Lights", KEY_V)
 	
-	hook.Add("KeyPress", "ImpostorKeyPress", function(ply, key)
+	hook.Add("KeyPress", "ImpostorKeyPressForClient", function(ply, key)
 		--Note: Technically KeyPress is called on both the server and client.
 		--However, what we do with KeyPress depends on the client's aim, so it is easier to have this
 		--hook be client-only, which will then call on the server to replicate the functionality.

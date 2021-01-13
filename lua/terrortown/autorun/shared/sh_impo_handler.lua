@@ -240,7 +240,10 @@ if SERVER then
 			--The player will switch to the new weapon at the end of the function regardless.
 			--The timer here is a hack to force the player to holstered after the end of this function.
 			timer.Create("ImpostorDataSwitchWeapon", 0, 1, function()
-				ply:SelectWeapon("weapon_ttt_unarmed")
+				--Verify the player's existence, in case they are dropped from the Server.
+				if IsValid(ply) and ply:IsPlayer() then
+					ply:SelectWeapon("weapon_ttt_unarmed")
+				end
 			end)
 		end
 	end)
