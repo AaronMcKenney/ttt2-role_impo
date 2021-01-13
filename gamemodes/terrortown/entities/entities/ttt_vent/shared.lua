@@ -16,13 +16,6 @@ ENT.Model = Model("models/props/cs_assault/wall_vent.mdl")
 ENT.CanHavePrints = true
 ENT.CanUseKey = true
 
-hook.Add("TTTPrepareRound", "ClearAllVentEntities", function()
-	--If the vents persisted after round end, remove them here.
-	for _, vent in pairs(ents.FindByClass("ttt_vent")) do
-		vent:Remove()
-	end
-end)
-
 function ENT:Initialize()
 	self:SetModel(self.Model)
 	
