@@ -26,13 +26,13 @@ SWEP.Contact = "https://steamcommunity.com/profiles/76561198025772353/"
 SWEP.Base = "weapon_tttbase"
 
 --Default GMod values
-SWEP.Primary.Ammo = "none"
+SWEP.Primary.Ammo = "vent"
 SWEP.Primary.Delay = 1.25
 SWEP.Primary.Automatic = false
-SWEP.Primary.DefaultClip = GetConVar("ttt2_impostor_num_starting_vents"):GetInt()
+SWEP.Primary.ClipMax = GetConVar("ttt2_impostor_num_starting_vents"):GetInt() * 2
 SWEP.Primary.ClipSize = GetConVar("ttt2_impostor_num_starting_vents"):GetInt()
-SWEP.Secondary.Delay = 0.5
-SWEP.FiresUnderwater = false
+SWEP.Primary.DefaultClip = GetConVar("ttt2_impostor_num_starting_vents"):GetInt()
+SWEP.Secondary.Delay = 1.25
 
 --Model settings
 SWEP.HoldType = "slam"
@@ -67,6 +67,10 @@ SWEP.AllowDrop = false
 -- If NoSights is true, the weapon won't have ironsights
 SWEP.NoSights = true
 
+--CONSTANTS
+--ttt2_impostor_vent_secondary_fire_mode enum
+local TAKE_MODE = {NEVER = 0, UNREVEALED = 1, ALWAYS = 2}
+
 function SWEP:Initialize()
 	--No initializing
 end
@@ -78,6 +82,17 @@ function SWEP:PrimaryAttack()
 		
 		if SERVER then
 			self:StickVent()
+		end
+	end
+end
+
+function SWEP:SecondaryAttack()
+	if self:CanSecondaryAttack() and self:GetNextSecondaryFire() <= CurTime() then
+		self:SetNextPrimaryFire(CurTime() + self.Secondary.Delay)
+		self:SetNextSecondaryFire(CurTime() + self.Secondary.Delay)
+		
+		if SERVER then
+			self:TakeVent()
 		end
 	end
 end
@@ -96,10 +111,10 @@ if SERVER then
 	function SWEP:TraceLineForVent(vent_placement_range)
 		local tr = nil
 		
-		if (IsValid(self)) then
+		if IsValid(self) then
 			local ply = self:GetOwner()
 			
-			if (IsValid(ply)) then
+			if IsValid(ply) then
 				local CheckFilter = function(ent)
 					--Can't place vent on invalid entities and players
 					if not IsValid(ent) or ent:IsPlayer() then
@@ -131,7 +146,7 @@ if SERVER then
 		
 		return tr
 	end
-
+	
 	function SWEP:StickVent()
 		local ply = self:GetOwner()
 		if not IsValid(ply) then
@@ -169,6 +184,33 @@ if SERVER then
 		end
 		
 		LANG.Msg(ply, "VENT_CANNOT_PLACE_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+	end
+	
+	function SWEP:TakeVent()
+		local mode = GetConVar("ttt2_impostor_vent_secondary_fire_mode"):GetInt()
+		local ply = self:GetOwner()
+		if not IsValid(ply) or mode == TAKE_MODE.NEVER then
+			return
+		end
+		
+		--Don't do anything if the player has max ammo.
+		if self.Weapon:Clip1() >= self.Weapon:GetMaxClip1() then
+			LANG.Msg(ply, "VENT_FULL_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			return
+		end
+		
+		--Determine if the impostor is looking at a vent
+		local trace = ply:GetEyeTrace(MASK_SHOT_HULL)
+		local dist = trace.StartPos:Distance(trace.HitPos)
+		local tgt = trace.Entity
+		if not IsValid(tgt) or tgt:GetClass() ~= "ttt_vent" or dist > GetConVar("ttt2_impostor_vent_placement_range"):GetInt() or (mode == TAKE_MODE.UNREVEALED and not tgt:GetNoDraw()) then
+			LANG.Msg(ply, "VENT_CANNOT_TAKE_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			return
+		end
+		
+		--Take the vent away and give the Impostor one more vent to place.
+		tgt:Remove()
+		self:SetClip1(self:Clip1() + 1)
 	end
 end
 

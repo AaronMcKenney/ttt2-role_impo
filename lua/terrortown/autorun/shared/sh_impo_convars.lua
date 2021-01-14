@@ -14,6 +14,7 @@ CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo", "0", {FCVAR_ARCHI
 CreateConVar("ttt2_impostor_hide_unused_vents", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_insta_kill_friendly_fire", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_vent_secondary_fire_mode", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 
 hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	tbl[ROLE_IMPOSTOR] = tbl[ROLE_IMPOSTOR] or {}
@@ -168,6 +169,23 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		checkbox = true,
 		desc = "ttt2_impostor_insta_kill_friendly_fire (Def: 0)"
 	})
+	
+	--# Can the secondary fire on the Vent tool be used to take back already placed vents?
+	--  ttt2_impostor_vent_secondary_fire_mode [0..1] (default: 1)
+	--  # 0: Impostors cannot take vents back
+	--  # 1: Impostors can only take unrevealed vents back
+	--  # 2: Impostors can take any kind of vent back
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_vent_secondary_fire_mode",
+		combobox = true,
+		desc = "ttt2_impostor_vent_secondary_fire_mode (Def: 1)",
+		choices = {
+			"0 - Impostors cannot take vents back",
+			"1 - Impostors can only take unrevealed vents back",
+			"2 - Impostors can take any kind of vent back"
+		},
+		numStart = 0
+	})
 end)
 
 hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
@@ -186,6 +204,7 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalBool("ttt2_impostor_hide_unused_vents", GetConVar("ttt2_impostor_hide_unused_vents"):GetBool())
 	SetGlobalBool("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", GetConVar("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit"):GetBool())
 	SetGlobalBool("ttt2_impostor_insta_kill_friendly_fire", GetConVar("ttt2_impostor_insta_kill_friendly_fire"):GetBool())
+	SetGlobalInt("ttt2_impostor_vent_secondary_fire_mode", GetConVar("ttt2_impostor_vent_secondary_fire_mode"):GetInt())
 end)
 
 cvars.AddChangeCallback("ttt2_impostor_inform_everyone", function(name, old, new)
@@ -232,4 +251,7 @@ cvars.AddChangeCallback("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", fu
 end)
 cvars.AddChangeCallback("ttt2_impostor_insta_kill_friendly_fire", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_insta_kill_friendly_fire", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_vent_secondary_fire_mode", function(name, old, new)
+	SetGlobalFloat("ttt2_impostor_vent_secondary_fire_mode", tonumber(new))
 end)

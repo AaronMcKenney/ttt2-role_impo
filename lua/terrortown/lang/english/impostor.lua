@@ -27,6 +27,8 @@ NOTE: By default, vents are invisible to non-traitors until they are first enter
 L["VENT_PRIMARY_DESC_" .. IMPOSTOR.name] = "Primary attack to deploy."
 L["VENT_CANNOT_PLACE_" .. IMPOSTOR.name] = "Unable to place vent."
 L["VENT_MAX_HIT_" .. IMPOSTOR.name] = "Maximum number of vents have been placed."
+L["VENT_FULL_" .. IMPOSTOR.name] = "You can't hold any more vents."
+L["VENT_CANNOT_TAKE_" .. IMPOSTOR.name] = "Unable to take vent."
 
 -- SABOTAGE LANGUAGE STRINGS
 L["SABO_LIGHTS_" .. IMPOSTOR.name] = "SABOTAGE LIGHTS"
