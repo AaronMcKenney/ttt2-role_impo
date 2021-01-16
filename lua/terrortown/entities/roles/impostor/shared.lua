@@ -58,7 +58,7 @@ impos_can_sabo = true
 
 local function CanKillTarget(impo, tgt, dist)
 	--impo is assumed to be a valid impostor and tgt is assumed to be a valid player
-	if impo.impo_can_insta_kill and (GetConVar("ttt2_impostor_insta_kill_friendly_fire"):GetBool() or impo:GetTeam() ~= tgt:GetTeam()) and dist <= GetConVar("ttt2_impostor_kill_dist"):GetInt() and impo.impo_in_vent == nil then
+	if impo.impo_can_insta_kill and dist <= GetConVar("ttt2_impostor_kill_dist"):GetInt() and impo.impo_in_vent == nil then
 		return true
 	else
 		return false
