@@ -229,6 +229,13 @@ if SERVER then
 		end
 	end)
 	
+	hook.Add("TTT2PostPlayerDeath", "ImpostorPostPlayerDeath", function(victim, inflictor, attacker)
+		--Force any dead player who is venting out of the Vent Network in case they revive.
+		if IsValid(victim) and victim:IsPlayer() and IsValid(victim.impo_in_vent) then
+			IMPOSTOR_DATA.ForceExitFromVent(victim)
+		end
+	end)
+	
 	hook.Add("TTTCanSearchCorpse", "ImpostorCanSearchCorpse", function(ply, corpse, isCovert, isLongRange)
 		if IsValid(ply) and ply:IsPlayer() and timer.Exists("ImpostorJustKilled_Server_" .. ply:SteamID64()) then
 			return false

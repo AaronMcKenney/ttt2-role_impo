@@ -2,6 +2,7 @@ if SERVER then
 	AddCSLuaFile()
 	util.AddNetworkString("TTT2ImpostorEnterVentUpdate")
 	util.AddNetworkString("TTT2ImpostorMoveFromVentUpdate")
+	util.AddNetworkString("TTT2ImpostorForceExitFromVentUpdate")
 	util.AddNetworkString("TTT2ImpostorRevealVentUpdate")
 end
 
@@ -222,6 +223,11 @@ function IMPOSTOR_DATA.EnterVent(ply, vent)
 end
 
 function IMPOSTOR_DATA.ExitVent(ply)
+	--This is especially needed in case somehow both the vent and the player are removed and destroyed simultaneously, which would trigger this function twice.
+	if not IsValid(ply) or not ply:IsPlayer() or not IsValid(ply.impo_in_vent) then
+		return
+	end
+	
 	--Correct player's position to be in a safe place
 	ply:SetPos(ply.impo_in_vent.exit_pos)
 	
@@ -278,6 +284,22 @@ function IMPOSTOR_DATA.MovePlayerFromVentTo(ply, ent_idx)
 	end
 end
 
+function IMPOSTOR_DATA.ForceExitFromVent(ply)
+	--Unlike MovePlayerFromVentTo, which is called by the client to request a change in vent status,
+	--this function is used in the Server to force the player out.
+	if not IsValid(ply.impo_in_vent) then
+		return
+	end
+	
+	IMPOSTOR_DATA.ExitVent(ply)
+	
+	if SERVER then
+		--Send request to client to call this function
+		net.Start("TTT2ImpostorForceExitFromVentUpdate")
+		net.Send(ply)
+	end
+end
+
 function IMPOSTOR_DATA.DetermineVentExitPos(vent_pos, vent_normal, vent_placement_range, ply_pos)
 	local PLY_IS_CLOSE_TO_VENT = 10000 --100^2
 	print("BMF DetermineVentExitPos: DistToSqr=" .. vent_pos:DistToSqr(ply_pos))
@@ -319,7 +341,7 @@ if SERVER then
 	end)
 
 	hook.Add("PlayerSwitchWeapon", "ImpostorDataPlayerSwitchWeapon", function(ply, old, new)
-		if not IsValid(ply) or not IsValid(ply.impo_in_vent) then
+		if not IsValid(ply) or not ply:IsPlayer() or not IsValid(ply.impo_in_vent) then
 			return
 		end
 		
@@ -335,7 +357,7 @@ if SERVER then
 			--The timer here is a hack to force the player to holstered after the end of this function.
 			timer.Simple(0.2, function()
 				--Verify the player's existence, in case they are dropped from the Server.
-				if IsValid(ply) and ply:IsPlayer() then
+				if IsValid(ply) and ply:IsPlayer() and IsValid(ply.impo_in_vent) then
 					ply:SelectWeapon("weapon_ttt_unarmed")
 				end
 			end)
@@ -352,6 +374,12 @@ if CLIENT then
 		
 		--client is entering the vent from real space. Put them into vent space.
 		IMPOSTOR_DATA.EnterVent(client, new_vent)
+	end)
+	
+	net.Receive("TTT2ImpostorForceExitFromVentUpdate", function()
+		local client = LocalPlayer()
+		
+		IMPOSTOR_DATA.ForceExitFromVent(client)
 	end)
 	
 	net.Receive("TTT2ImpostorRevealVentUpdate", function()
