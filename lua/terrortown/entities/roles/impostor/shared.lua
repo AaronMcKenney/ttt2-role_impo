@@ -192,7 +192,7 @@ if SERVER then
 				net.Start("TTT2ImpostorSendSabotageLightsResponse")
 				net.Send(ply_i)
 				
-				if ply_i:GetSubRole() ~= ROLE_IMPOSTOR and (GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo"):GetBool() or ply_i:GetTeam() ~= TEAM_TRAITOR) then
+				if ply_i:GetSubRole() ~= ROLE_IMPOSTOR and (GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool() or ply_i:GetTeam() ~= TEAM_TRAITOR) then
 					SabotageLights(ply_i)
 				end
 			end
