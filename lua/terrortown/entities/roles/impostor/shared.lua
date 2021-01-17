@@ -168,6 +168,10 @@ if SERVER then
 		--If the impostor is able to, instantly kill the target and reset the cooldown.
 		if CanKillTarget(ply, tgt, dist) then
 			tgt:Kill()
+			--Create a timer which will aid in preventing the Impostor from searching the corpse that they just made.
+			timer.Create("ImpostorJustKilled_Server_" .. ply:SteamID64(), IOTA*2, 1, function()
+				return
+			end)
 			PutInstantKillOnCooldown(ply)
 		end
 	end)
@@ -225,7 +229,13 @@ if SERVER then
 		end
 	end)
 	
-	hook.Add("TTTBeginRound", "ImpostorBeginRound", function()
+	hook.Add("TTTCanSearchCorpse", "ImpostorCanSearchCorpse", function(ply, corpse, isCovert, isLongRange)
+		if IsValid(ply) and ply:IsPlayer() and timer.Exists("ImpostorJustKilled_Server_" .. ply:SteamID64()) then
+			return false
+		end
+	end)
+	
+	hook.Add("TTTBeginRound", "ImpostorBeginRoundServer", function()
 		impos_can_sabo = true
 		SendSabotageUpdateToClients()
 		
@@ -245,8 +255,9 @@ if SERVER then
 			end
 		end
 		
-		--Reset timer for everyone in case someone becomes a trapper.
+		--Reset data for everyone in case someone becomes an impostor/traitor/trapper/etc.
 		for _, ply in ipairs(player.GetAll()) do
+			ply.impo_in_vent = nil
 			ply.impo_trapper_timer_expired = nil
 		end
 	end)
@@ -263,11 +274,11 @@ if CLIENT then
 	local function ResetImpostorForClient()
 		local client = LocalPlayer()
 		
+		client.impo_in_vent = nil
 		client.impo_selected_vent = nil
 		client.impo_last_switch_time = nil
 		client.impo_trapper_timer_expired = nil
 	end
-	hook.Add("TTTPrepareRound", "ImpostorPrepareRoundClient", ResetImpostorForClient)
 	hook.Add("TTTBeginRound", "ImpostorBeginRoundClient", ResetImpostorForClient)
 	
 	net.Receive("TTT2ImpostorInformEveryone", function()
@@ -363,7 +374,7 @@ if CLIENT then
 		net.Start("TTT2ImpostorSendInstantKillRequest")
 		net.SendToServer()
 	end
-	bind.Register("ImpostorSendInstantKillRequest", SendInstantKillRequest, nil, "Impostor", "Instant Kill", KEY_C)
+	bind.Register("ImpostorSendInstantKillRequest", SendInstantKillRequest, nil, "Impostor", "Instant Kill", KEY_E)
 	
 	local function SendSabotageLightsRequest()
 		net.Start("TTT2ImpostorSendSabotageLightsRequest")

@@ -92,7 +92,7 @@ local function HandleTrapperVenting(ply, is_entering_vent)
 		
 		if SERVER and inform_traitors then
 			for _, ply_i in ipairs(player.GetAll()) do
-				-if ply_i:GetSubRole() == ROLE_IMPOSTOR or ply_i:GetTeam() == TEAM_TRAITOR then
+				if ply_i:GetSubRole() == ROLE_IMPOSTOR or ply_i:GetTeam() == TEAM_TRAITOR then
 					LANG.Msg(ply_i, "VENT_TRAPPER_ENTER_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 				end
 			end
