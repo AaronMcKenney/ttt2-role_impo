@@ -14,6 +14,9 @@ CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo", "0", {FCVAR_ARCHI
 CreateConVar("ttt2_impostor_hide_unused_vents", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_vent_secondary_fire_mode", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_trapper_venting_time", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_inform_about_trappers_venting", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_inform_trappers_about_venting", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 
 hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	tbl[ROLE_IMPOSTOR] = tbl[ROLE_IMPOSTOR] or {}
@@ -177,6 +180,33 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		},
 		numStart = 0
 	})
+	
+	--# Can the Trapper use the vents, and if so, for how long (Disabled if 0)?
+	--  ttt2_impostor_trapper_venting_time [0..n] (default: 30)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_trapper_venting_time",
+		slider = true,
+		min = 0,
+		max = 90,
+		decimal = 0,
+		desc = "ttt2_impostor_trapper_venting_time (Def: 30)"
+	})
+	
+	--# Should traitors be informed when a trapper enters and exits a vent?
+	--  ttt2_impostor_inform_about_trappers_venting [0/1] (default: 1)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_inform_about_trappers_venting",
+		checkbox = true,
+		desc = "ttt2_impostor_inform_about_trappers_venting (Def: 1)"
+	})
+	
+	--# Should trappers be informed when anyone enters and exits a vent?
+	--  ttt2_impostor_inform_trappers_about_venting [0/1] (default: 0)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_inform_trappers_about_venting",
+		checkbox = true,
+		desc = "ttt2_impostor_inform_trappers_about_venting (Def: 0)"
+	})
 end)
 
 hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
@@ -195,6 +225,9 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalBool("ttt2_impostor_hide_unused_vents", GetConVar("ttt2_impostor_hide_unused_vents"):GetBool())
 	SetGlobalBool("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", GetConVar("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit"):GetBool())
 	SetGlobalInt("ttt2_impostor_vent_secondary_fire_mode", GetConVar("ttt2_impostor_vent_secondary_fire_mode"):GetInt())
+	SetGlobalInt("ttt2_impostor_trapper_venting_time", GetConVar("ttt2_impostor_trapper_venting_time"):GetInt())
+	SetGlobalBool("ttt2_impostor_inform_about_trappers_venting", GetConVar("ttt2_impostor_inform_about_trappers_venting"):GetBool())
+	SetGlobalBool("ttt2_impostor_inform_trappers_about_venting", GetConVar("ttt2_impostor_inform_trappers_about_venting"):GetBool())
 end)
 
 cvars.AddChangeCallback("ttt2_impostor_inform_everyone", function(name, old, new)
@@ -241,4 +274,13 @@ cvars.AddChangeCallback("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", fu
 end)
 cvars.AddChangeCallback("ttt2_impostor_vent_secondary_fire_mode", function(name, old, new)
 	SetGlobalFloat("ttt2_impostor_vent_secondary_fire_mode", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_trapper_venting_time", function(name, old, new)
+	SetGlobalFloat("ttt2_impostor_trapper_venting_time", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_inform_about_trappers_venting", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_inform_about_trappers_venting", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_inform_trappers_about_venting", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_inform_trappers_about_venting", tobool(tonumber(new)))
 end)

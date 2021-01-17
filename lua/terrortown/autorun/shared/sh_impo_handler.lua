@@ -42,8 +42,96 @@ function GetVentFromIndex(new_vent_idx)
 	return nil
 end
 
+local function TrapperCanVent(ply)
+	local total_trapper_time_allowed = GetConVar("ttt2_impostor_trapper_venting_time"):GetInt()
+	
+	if ply:GetSubRole() == ROLE_TRAPPER and total_trapper_time_allowed > 0 and not ply.impo_trapper_timer_expired then
+		return true
+	end
+	
+	return false
+end
+
+local function HandleTrapperVenting(ply, is_entering_vent)
+	if not TrapperCanVent(ply) then
+		return
+	end
+	
+	local inform_traitors = GetConVar("ttt2_impostor_inform_about_trappers_venting"):GetBool()
+	local server_client_str = "SERVER_"
+	if CLIENT then
+		server_client_str = "CLIENT_"
+	end
+	
+	if not timer.Exists("ImpostorTrapperVent_" .. server_client_str .. ply:SteamID64()) then
+		local total_trapper_time_allowed = GetConVar("ttt2_impostor_trapper_venting_time"):GetInt()
+		timer.Create("ImpostorTrapperVent_" .. server_client_str .. ply:SteamID64(), total_trapper_time_allowed, 1, function()
+			--Verify the player's existence, in case they are dropped from the Server.
+			if IsValid(ply) and ply:IsPlayer() and ply:GetSubRole() == ROLE_TRAPPER then
+				ply.impo_trapper_timer_expired = true
+				if IsValid(ply.impo_in_vent) then
+					IMPOSTOR_DATA.ExitVent(ply)
+					
+					if CLIENT then
+						LANG.Msg("VENT_TRAPPER_TIME_UP_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+					end
+				end
+			end
+		end)
+	end
+	
+	if CLIENT then
+		local time_left = math.ceil(math.abs(timer.TimeLeft("ImpostorTrapperVent_" .. server_client_str .. ply:SteamID64())))
+		LANG.Msg("VENT_TRAPPER_TIME_LEFT_" .. IMPOSTOR.name, {t = time_left}, MSG_MSTACK_WARN)
+	end
+	
+	--Timer should only run while the trapper is in a vent.
+	--Also inform traitors when a trapper enters/exits a vent.
+	if is_entering_vent then
+		timer.UnPause("ImpostorTrapperVent_" .. server_client_str .. ply:SteamID64())
+		
+		if SERVER and inform_traitors then
+			for _, ply_i in ipairs(player.GetAll()) do
+				-if ply_i:GetSubRole() == ROLE_IMPOSTOR or ply_i:GetTeam() == TEAM_TRAITOR then
+					LANG.Msg(ply_i, "VENT_TRAPPER_ENTER_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+				end
+			end
+		end
+	else
+		timer.Pause("ImpostorTrapperVent_" .. server_client_str .. ply:SteamID64())
+		
+		if SERVER and inform_traitors then
+			for _, ply_i in ipairs(player.GetAll()) do
+				if ply_i:GetSubRole() == ROLE_IMPOSTOR or ply_i:GetTeam() == TEAM_TRAITOR then
+					LANG.Msg(ply_i, "VENT_TRAPPER_EXIT_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+				end
+			end
+		end
+	end
+end
+
+local function InformTrappers(ply, is_entering_vent)
+	if not SERVER or not GetConVar("ttt2_impostor_inform_trappers_about_venting"):GetBool() then
+		return
+	end
+	
+	if is_entering_vent then
+		for _, ply_i in ipairs(player.GetAll()) do
+			if ply_i:GetSubRole() == ROLE_TRAPPER and ply:SteamID64() == ply_i:SteamID64() then
+				LANG.Msg(ply_i, "VENT_ANYONE_ENTER_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			end
+		end
+	else
+		for _, ply_i in ipairs(player.GetAll()) do
+			if ply_i:GetSubRole() == ROLE_TRAPPER and ply:SteamID64() == ply_i:SteamID64() then
+				LANG.Msg(ply_i, "VENT_ANYONE_EXIT_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			end
+		end
+	end
+end
+
 function IMPOSTOR_DATA.CanUseVentNetwork(ply)
-	if ply:GetSubRole() == ROLE_IMPOSTOR or (GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() and ply:GetTeam() == TEAM_TRAITOR) then
+	if ply:IsTerror() and ply:Alive() and (ply:GetSubRole() == ROLE_IMPOSTOR or (GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() and ply:GetTeam() == TEAM_TRAITOR) or TrapperCanVent(ply)) then
 		return true
 	end
 	return false
@@ -106,10 +194,8 @@ function IMPOSTOR_DATA.EnterVent(ply, vent)
 	if SERVER then
 		--Switch player's weapon to holstered.
 		ply:SelectWeapon("weapon_ttt_unarmed")
-	end
-	
-	--Pause the Impostor's kill timer if possible.
-	if SERVER then
+		
+		--Pause the Impostor's kill timer if possible.
 		if ply.impo_can_insta_kill == false and timer.Exists("ImpostorKillTimer_Server_" .. ply:SteamID64()) then
 			timer.Pause("ImpostorKillTimer_Server_" .. ply:SteamID64())
 		end
@@ -121,6 +207,8 @@ function IMPOSTOR_DATA.EnterVent(ply, vent)
 		
 		--In addition, reveal the vent to everyone since it was entered from
 		IMPOSTOR_DATA.RevealVent(vent)
+		
+		InformTrappers(ply, true)
 	elseif CLIENT then
 		--Keep track of when the Impostor last entered/switched/exited a vent to prevent accidental key presses booting them out of a vent immediately upon entering it.
 		ply.impo_last_move_time = CurTime()
@@ -129,6 +217,8 @@ function IMPOSTOR_DATA.EnterVent(ply, vent)
 			timer.Pause("ImpostorKillTimer_Client_" .. ply:SteamID64())
 		end
 	end
+	
+	HandleTrapperVenting(ply, true)
 end
 
 function IMPOSTOR_DATA.ExitVent(ply)
@@ -152,11 +242,15 @@ function IMPOSTOR_DATA.ExitVent(ply)
 		
 		--In addition, reveal the vent if it has been exited from for the first time.
 		IMPOSTOR_DATA.RevealVent(ply.impo_in_vent)
+		
+		InformTrappers(ply, false)
 	elseif CLIENT then
 		if not ply.impo_can_insta_kill and timer.Exists("ImpostorKillTimer_Client_" .. ply:SteamID64()) then
 			timer.UnPause("ImpostorKillTimer_Client_" .. ply:SteamID64())
 		end
 	end
+	
+	HandleTrapperVenting(ply, false)
 	
 	ply.impo_in_vent = nil
 end
@@ -239,7 +333,7 @@ if SERVER then
 		if new:GetClass() ~= "weapon_ttt_unarmed" then
 			--The player will switch to the new weapon at the end of the function regardless.
 			--The timer here is a hack to force the player to holstered after the end of this function.
-			timer.Create("ImpostorDataSwitchWeapon", 0, 1, function()
+			timer.Simple(0.2, function()
 				--Verify the player's existence, in case they are dropped from the Server.
 				if IsValid(ply) and ply:IsPlayer() then
 					ply:SelectWeapon("weapon_ttt_unarmed")

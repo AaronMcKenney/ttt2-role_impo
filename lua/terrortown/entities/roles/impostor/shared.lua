@@ -48,9 +48,9 @@ function ROLE:Initialize()
 	roles.SetBaseRole(self, ROLE_TRAITOR)
 end
 
--------------------------------------
---SHARED CONSTS, GLOBALS, AND FUNCS--
--------------------------------------
+--------------------------------------------
+--SHARED CONSTS, GLOBALS, FUNCS, AND HOOKS--
+--------------------------------------------
 --Used to reduce chances of lag interrupting otherwise seemless player interactions.
 local IOTA = 0.3
 --Sabotage cooldown is global. If a terrorist triggers a sabotage, all must wait.
@@ -244,6 +244,11 @@ if SERVER then
 				net.Broadcast()
 			end
 		end
+		
+		--Reset timer for everyone in case someone becomes a trapper.
+		for _, ply in ipairs(player.GetAll()) do
+			ply.impo_trapper_timer_expired = nil
+		end
 	end)
 end
 
@@ -258,11 +263,12 @@ if CLIENT then
 	local function ResetImpostorForClient()
 		local client = LocalPlayer()
 		
-		client.selected_vent = nil
+		client.impo_selected_vent = nil
 		client.impo_last_switch_time = nil
+		client.impo_trapper_timer_expired = nil
 	end
 	hook.Add("TTTPrepareRound", "ImpostorPrepareRoundClient", ResetImpostorForClient)
-	hook.Add("TTTEndRound", "ImpostorEndRoundClient", ResetImpostorForClient)
+	hook.Add("TTTBeginRound", "ImpostorBeginRoundClient", ResetImpostorForClient)
 	
 	net.Receive("TTT2ImpostorInformEveryone", function()
 		local client = LocalPlayer()
@@ -372,9 +378,9 @@ if CLIENT then
 		local client = LocalPlayer()
 		if ply:SteamID64() == client:SteamID64() and client:Alive() and client:IsTerror() and key == IN_USE and IsValid(client.impo_in_vent) then
 			local ent_idx = -1
-			if IsValid(client.selected_vent) and client.selected_vent:EntIndex() ~= client.impo_in_vent:EntIndex() then
+			if IsValid(client.impo_selected_vent) and client.impo_selected_vent:EntIndex() ~= client.impo_in_vent:EntIndex() then
 				--Selected vent must be valid and different from the one we're currently in.
-				ent_idx = client.selected_vent:EntIndex()
+				ent_idx = client.impo_selected_vent:EntIndex()
 			end
 			
 			--Use timer to prevent cases where key presses are registered multiple times on accident
@@ -420,21 +426,21 @@ if CLIENT then
 		
 		--If the player was selecting a valid vent on the previous frame then see if they still are
 		local selected_vent_idx = -1
-		if IsValid(client.selected_vent) then
-			selected_vent_idx = client.selected_vent:EntIndex()
-			if not IsSelectingVent(client, client.selected_vent, true) then
-				client.selected_vent = nil
+		if IsValid(client.impo_selected_vent) then
+			selected_vent_idx = client.impo_selected_vent:EntIndex()
+			if not IsSelectingVent(client, client.impo_selected_vent, true) then
+				client.impo_selected_vent = nil
 				selected_vent_idx = -1
 			end
 		end
 		
 		--See if we are currently selecting any vents
-		if not IsValid(client.selected_vent) then
+		if not IsValid(client.impo_selected_vent) then
 			for _, vent in ipairs(IMPOSTOR_DATA.VENT_NETWORK) do
 				--Make sure not to run IsSelectingVent on selected_vent_idx (which we already checked above)
 				if IsValid(vent) and vent:EntIndex() ~= selected_vent_idx and IsSelectingVent(client, vent, false) then
-					client.selected_vent = vent
-					selected_vent_idx = client.selected_vent:EntIndex()
+					client.impo_selected_vent = vent
+					selected_vent_idx = client.impo_selected_vent:EntIndex()
 					break
 				end
 			end
@@ -453,8 +459,8 @@ if CLIENT then
 				draw.FilteredTexture(vent_scr_pos.x - VENT_BUTTON_MIDPOINT, vent_scr_pos.y - VENT_BUTTON_MIDPOINT, VENT_BUTTON_SIZE, VENT_BUTTON_SIZE, ICON_IN_VENT, 200, COLOR_ORANGE)
 			end
 		end
-		if IsValid(client.selected_vent) and client.selected_vent:EntIndex() ~= client.impo_in_vent:EntIndex() then
-			local vent_pos = client.selected_vent:GetPos()
+		if IsValid(client.impo_selected_vent) and client.impo_selected_vent:EntIndex() ~= client.impo_in_vent:EntIndex() then
+			local vent_pos = client.impo_selected_vent:GetPos()
 			local vent_scr_pos = vent_pos:ToScreen()
 			
 			draw.FilteredTexture(vent_scr_pos.x - VENT_SELECTED_BUTTON_MIDPOINT, vent_scr_pos.y - VENT_SELECTED_BUTTON_MIDPOINT, VENT_SELECTED_BUTTON_SIZE, VENT_SELECTED_BUTTON_SIZE, ICON_IN_VENT, 200, IMPOSTOR.color)
