@@ -132,7 +132,7 @@ local function InformTrappers(ply, is_entering_vent)
 end
 
 function IMPOSTOR_DATA.CanUseVentNetwork(ply)
-	if ply:IsTerror() and ply:Alive() and (ply:GetSubRole() == ROLE_IMPOSTOR or (GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() and ply:GetTeam() == TEAM_TRAITOR) or TrapperCanVent(ply)) then
+	if ply:IsTerror() and ply:Alive() and (ply:GetSubRole() == ROLE_IMPOSTOR or (GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() and ply:GetTeam() == TEAM_TRAITOR) or TrapperCanVent(ply) or GetConVar("ttt2_impostor_jesters_can_vent"):GetBool()) then
 		return true
 	end
 	return false

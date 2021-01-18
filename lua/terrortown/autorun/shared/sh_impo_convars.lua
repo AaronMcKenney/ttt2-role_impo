@@ -17,6 +17,7 @@ CreateConVar("ttt2_impostor_traitor_team_can_use_vents", "1", {FCVAR_ARCHIVE, FC
 CreateConVar("ttt2_impostor_trapper_venting_time", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_inform_about_trappers_venting", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_inform_trappers_about_venting", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_jesters_can_vent", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage (General)
 CreateConVar("ttt2_impostor_sabo_cooldown", "180", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage Lights
@@ -172,6 +173,14 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_inform_trappers_about_venting (Def: 0)"
 	})
 	
+	--# Should trappers be informed when anyone enters and exits a vent?
+	--  ttt2_impostor_jesters_can_vent [0/1] (default: 1)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_jesters_can_vent",
+		checkbox = true,
+		desc = "ttt2_impostor_jesters_can_vent (Def: 1)"
+	})
+	
 	--# What is the cooldown (in seconds) on the impostor's sabotage ability?
 	--  ttt2_impostor_sabo_cooldown [0..n] (default: 180)
 	table.insert(tbl[ROLE_IMPOSTOR], {
@@ -230,6 +239,7 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalInt("ttt2_impostor_trapper_venting_time", GetConVar("ttt2_impostor_trapper_venting_time"):GetInt())
 	SetGlobalBool("ttt2_impostor_inform_about_trappers_venting", GetConVar("ttt2_impostor_inform_about_trappers_venting"):GetBool())
 	SetGlobalBool("ttt2_impostor_inform_trappers_about_venting", GetConVar("ttt2_impostor_inform_trappers_about_venting"):GetBool())
+	SetGlobalBool("ttt2_impostor_jesters_can_vent", GetConVar("ttt2_impostor_jesters_can_vent"):GetBool())
 	SetGlobalInt("ttt2_impostor_sabo_cooldown", GetConVar("ttt2_impostor_sabo_cooldown"):GetInt())
 	SetGlobalFloat("ttt2_impostor_sabo_fade_time", GetConVar("ttt2_impostor_sabo_fade_time"):GetFloat())
 	SetGlobalFloat("ttt2_impostor_sabo_lights_length", GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat())
@@ -277,6 +287,9 @@ cvars.AddChangeCallback("ttt2_impostor_inform_about_trappers_venting", function(
 end)
 cvars.AddChangeCallback("ttt2_impostor_inform_trappers_about_venting", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_inform_trappers_about_venting", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_jesters_can_vent", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_jesters_can_vent", tobool(tonumber(new)))
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_cooldown", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_sabo_cooldown", tonumber(new))
