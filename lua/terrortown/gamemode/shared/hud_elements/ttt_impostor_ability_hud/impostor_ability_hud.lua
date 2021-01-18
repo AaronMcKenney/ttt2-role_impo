@@ -124,7 +124,7 @@ if CLIENT then
 		self:DrawComponent(kill_str, bg_color, icon_color, icon, true)
 	end
 	
-	function HUDELEMENT:DrawSabotageComponent()
+	function HUDELEMENT:DrawSabotageLightsComponent()
 		local icon_color = COLOR_WHITE
 		local sabo_str = LANG.GetTranslation("SABO_LIGHTS_" .. IMPOSTOR.name)
 		local bg_color = Color(255, 255, 153, 255) --Beacon's color
@@ -136,7 +136,7 @@ if CLIENT then
 			sabo_str = sabo_str .. TimeLeftToString(time_left)
 		elseif timer.Exists("ImpostorSaboLightsTimer_Client") then
 			--Sabotage is in progress.
-			local fade_time = GetConVar("ttt2_impostor_sabo_fade_time"):GetFloat()
+			local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
 			local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
 			local time_left = timer.TimeLeft("ImpostorSaboLightsTimer_Client")
 			
@@ -164,7 +164,36 @@ if CLIENT then
 			end
 		else
 			--Sabotage is ready to go
-			local sabo_key = string.upper(input.GetKeyName(bind.Find("ImpostorSendSabotageLightsRequest")))
+			local sabo_key = string.upper(input.GetKeyName(bind.Find("ImpostorSendSabotageRequest")))
+			sabo_str = sabo_str .. " (" .. LANG.GetTranslation("PRESS_" .. IMPOSTOR.name) .. sabo_key .. ")"
+		end
+		
+		self:DrawComponent(sabo_str, bg_color, icon_color, icon, false)
+	end
+	
+	function HUDELEMENT:DrawSabotageCommsComponent()
+		local icon_color = COLOR_BLACK
+		local sabo_str = LANG.GetTranslation("SABO_COMMS_" .. IMPOSTOR.name)
+		local bg_color = COLOR_LGRAY
+		local icon = icon_lit_bulb
+		
+		if timer.Exists("ImpostorSaboTimer_Client") then
+			--Sabotage is on cooldown
+			local time_left = timer.TimeLeft("ImpostorSaboTimer_Client")
+			sabo_str = sabo_str .. TimeLeftToString(time_left)
+		elseif timer.Exists("ImpostorSaboCommsTimer_Client") then
+			--Sabotage is in progress.
+			local time_left = timer.TimeLeft("ImpostorSaboCommsTimer_Client")
+			
+			--Screen is completely dark.
+			bg_color = IMPOSTOR.color
+			icon = icon_unlit_bulb
+			
+			--Give seconds left until darkness lifts
+			sabo_str = sabo_str .. TimeLeftToString(time_left)
+		else
+			--Sabotage is ready to go
+			local sabo_key = string.upper(input.GetKeyName(bind.Find("ImpostorSendSabotageRequest")))
 			sabo_str = sabo_str .. " (" .. LANG.GetTranslation("PRESS_" .. IMPOSTOR.name) .. sabo_key .. ")"
 		end
 		
@@ -172,13 +201,13 @@ if CLIENT then
 	end
 	
 	function HUDELEMENT:Draw()
-		local fade_time = GetConVar("ttt2_impostor_sabo_fade_time"):GetFloat()
-		local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
+		local client = LocalPlayer()
 		
 		self:DrawInstaKillComponent()
-		if fade_time > 0.0 and sabo_lights_len >= 0.0 then
-			self:DrawSabotageComponent()
+		if (client.impo_sabo_mode == SABO_MODE.LIGHTS and not timer.Exists("ImpostorSaboCommsTimer_Client")) or timer.Exists("ImpostorSaboLightsTimer_Client") then
+			self:DrawSabotageLightsComponent()
+		elseif client.impo_sabo_mode == SABO_MODE.COMMS or timer.Exists("ImpostorSaboCommsTimer_Client") then
+			self:DrawSabotageCommsComponent()
 		end
-		return
 	end
 end

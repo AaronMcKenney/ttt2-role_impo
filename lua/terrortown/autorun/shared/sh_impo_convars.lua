@@ -23,6 +23,9 @@ CreateConVar("ttt2_impostor_sabo_lights_cooldown", "180", {FCVAR_ARCHIVE, FCVAR_
 CreateConVar("ttt2_impostor_sabo_lights_fade", "2.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_length", "5.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+--Sabotage Comms
+CreateConVar("ttt2_impostor_sabo_comms_cooldown", "120", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_comms_length", "20", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 
 hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	tbl[ROLE_IMPOSTOR] = tbl[ROLE_IMPOSTOR] or {}
@@ -180,7 +183,7 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_jesters_can_vent (Def: 1)"
 	})
 	
-	--# What is the cooldown (in seconds) on the impostor's sabotage ability?
+	--# What is the cooldown (in seconds) on the impostor's Sabotage Lights ability?
 	--  ttt2_impostor_sabo_lights_cooldown [0..n] (default: 180)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_sabo_lights_cooldown",
@@ -214,12 +217,34 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_sabo_lights_length (Def: 3.0)"
 	})
 	
-	--# Should all traitor roles be affected by an Impostor's sabotage?
+	--# Should all traitor roles be affected by an Impostor's Sabotage Lights?
 	--  ttt2_impostor_traitor_team_is_affected_by_sabo_lights [0/1] (default: 0)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_traitor_team_is_affected_by_sabo_lights",
 		checkbox = true,
 		desc = "ttt2_impostor_traitor_team_is_affected_by_sabo_lights (Def: 0)"
+	})
+	
+	--# What is the cooldown (in seconds) on the impostor's Sabotage Comms ability?
+	--  ttt2_impostor_sabo_comms_cooldown [0..n] (default: 120)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_comms_cooldown",
+		slider = true,
+		min = 0,
+		max = 300,
+		decimal = 0,
+		desc = "ttt2_impostor_sabo_comms_cooldown (Def: 120)"
+	})
+	
+	--# How long (in seconds) should the comms be sabotaged for (<= 0 to disable ability)?
+	--  ttt2_impostor_sabo_comms_length [-n..m] (default: 20)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_comms_length",
+		slider = true,
+		min = 0,
+		max = 30,
+		decimal = 0,
+		desc = "ttt2_impostor_sabo_comms_length (Def: 20)"
 	})
 end)
 
@@ -243,6 +268,8 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalFloat("ttt2_impostor_sabo_lights_fade", GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat())
 	SetGlobalFloat("ttt2_impostor_sabo_lights_length", GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat())
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool())
+	SetGlobalInt("ttt2_impostor_sabo_comms_cooldown", GetConVar("ttt2_impostor_sabo_comms_cooldown"):GetInt())
+	SetGlobalInt("ttt2_impostor_sabo_comms_length", GetConVar("ttt2_impostor_sabo_comms_length"):GetInt())
 end)
 
 cvars.AddChangeCallback("ttt2_impostor_inform_everyone", function(name, old, new)
@@ -301,4 +328,10 @@ cvars.AddChangeCallback("ttt2_impostor_sabo_lights_length", function(name, old, 
 end)
 cvars.AddChangeCallback("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_comms_cooldown", function(name, old, new)
+	SetGlobalFloat("ttt2_impostor_sabo_comms_cooldown", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_comms_length", function(name, old, new)
+	SetGlobalFloat("ttt2_impostor_sabo_comms_length", tonumber(new))
 end)
