@@ -332,6 +332,14 @@ if SERVER then
 		return false
 	end)
 	
+	hook.Add("TTT2CanSeeChat", "ImpostorCanSeeChat", function(reader, sender, teamOnly)
+		if timer.Exists("ImpostorSaboCommsTimer_Server") and IsValid(reader) and reader:GetTeam() ~= TEAM_TRAITOR then
+			--Jam everyone but traitors while Sabotage Comms is in effect.
+			LANG.Msg(ply, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			return false
+		end
+	end)
+	
 	hook.Add("TTT2AvoidTeamChat", "ImpostorAvoidTeamChat", function(sender, tm, msg)
 		if timer.Exists("ImpostorSaboCommsTimer_Server") and tm ~= TEAM_TRAITOR then
 			--Jam everyone but traitors while Sabotage Comms is in effect.
@@ -383,7 +391,6 @@ if CLIENT then
 		client.impo_selected_vent = nil
 		client.impo_last_switch_time = nil
 		client.impo_trapper_timer_expired = nil
-		client.impo_sabo_mode = SABO_MODE.NONE
 	end
 	hook.Add("TTTBeginRound", "ImpostorBeginRoundClient", ResetImpostorForClient)
 	
