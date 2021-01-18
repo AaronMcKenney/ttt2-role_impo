@@ -304,9 +304,6 @@ if SERVER then
 			else
 				dmg_info:SetDamage(dmg_info:GetDamage() * GetConVar("ttt2_impostor_normal_dmg_multi"):GetFloat())
 			end
-		elseif IsValid(victim) and victim:IsPlayer() and victim:GetSubRole() == ROLE_IMPOSTOR and victim.impo_in_vent then
-			--Force Impostor to take no damage if they are in a vent (just to be safe)
-			dmg_info:SetDamage(0)
 		end
 	end)
 	

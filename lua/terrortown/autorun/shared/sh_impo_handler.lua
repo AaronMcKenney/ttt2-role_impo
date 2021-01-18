@@ -186,9 +186,8 @@ function IMPOSTOR_DATA.EnterVent(ply, vent)
 	--Prevent others from being able to aim at the player.
 	ply:RemoveFlags(FL_AIMTARGET)
 	--FL_ATCONTROLS ==> Player can move mouse but cannot move themselves.
-	--FL_GODMODE ==> Prevent damage while in vent.
 	--FL_NOTARGET ==> Prevent AI from targeting the player.
-	ply:AddFlags(bit.bor(FL_ATCONTROLS, FL_GODMODE, FL_NOTARGET))
+	ply:AddFlags(bit.bor(FL_ATCONTROLS, FL_NOTARGET))
 	
 	IMPOSTOR_DATA.MovePlayerToVent(ply, vent)
 	
@@ -238,7 +237,7 @@ function IMPOSTOR_DATA.ExitVent(ply)
 		wep:SetNoDraw(false)
 	end
 	ply:AddFlags(FL_AIMTARGET)
-	ply:RemoveFlags(bit.bor(FL_ATCONTROLS, FL_GODMODE, FL_NOTARGET))
+	ply:RemoveFlags(bit.bor(FL_ATCONTROLS, FL_NOTARGET))
 	
 	--UnPause the Impostor's kill timer if possible.
 	if SERVER then
