@@ -67,7 +67,7 @@ end
 
 local function SabotageLights(ply)
 	--Sabotage ply's lights by performing screen fades.
-	local fade_time = GetConVar("ttt2_impostor_sabo_fade_time"):GetFloat()
+	local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
 	local fade_hold = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat() / 2
 	
 	--Sabotage Lights is disabled if ttt2_impostor_sabo_lights_length < 0
@@ -132,7 +132,7 @@ if SERVER then
 	end
 	
 	local function PutSabotageOnCooldown()
-		local sabo_cooldown = GetConVar("ttt2_impostor_sabo_cooldown"):GetInt()
+		local sabo_cooldown = GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt()
 		
 		--Handle case where admin wants impostor to be overpowered trash.
 		if sabo_cooldown <= 0 then
@@ -177,7 +177,7 @@ if SERVER then
 	end)
 	
 	net.Receive("TTT2ImpostorSendSabotageLightsRequest", function(len, ply)
-		local fade_time = GetConVar("ttt2_impostor_sabo_fade_time"):GetFloat()
+		local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
 		local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
 		if not IsValid(ply) or not ply:IsPlayer() or not ply:IsTerror() or ply:GetSubRole() ~= ROLE_IMPOSTOR or fade_time <= 0.0 or sabo_lights_len < 0.0 then
 			return
@@ -315,7 +315,7 @@ if CLIENT then
 	end)
 	
 	net.Receive("TTT2ImpostorSabotageUpdate", function()
-		local sabo_cooldown = GetConVar("ttt2_impostor_sabo_cooldown"):GetInt()
+		local sabo_cooldown = GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt()
 		
 		impos_can_sabo = net.ReadBool()
 		
@@ -335,7 +335,7 @@ if CLIENT then
 	net.Receive("TTT2ImpostorSendSabotageLightsResponse", function()
 		--Inform the clients that the lights will be sabotaged.
 		local client = LocalPlayer()
-		local fade_time = GetConVar("ttt2_impostor_sabo_fade_time"):GetFloat()
+		local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
 		local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
 		
 		LANG.Msg("SABO_LIGHTS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)

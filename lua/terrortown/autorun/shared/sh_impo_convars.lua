@@ -18,10 +18,9 @@ CreateConVar("ttt2_impostor_trapper_venting_time", "30", {FCVAR_ARCHIVE, FCVAR_N
 CreateConVar("ttt2_impostor_inform_about_trappers_venting", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_inform_trappers_about_venting", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_jesters_can_vent", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
---Sabotage (General)
-CreateConVar("ttt2_impostor_sabo_cooldown", "180", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage Lights
-CreateConVar("ttt2_impostor_sabo_fade_time", "2.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_lights_cooldown", "180", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_lights_fade", "2.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_length", "5.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 
@@ -182,26 +181,26 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# What is the cooldown (in seconds) on the impostor's sabotage ability?
-	--  ttt2_impostor_sabo_cooldown [0..n] (default: 180)
+	--  ttt2_impostor_sabo_lights_cooldown [0..n] (default: 180)
 	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_sabo_cooldown",
+		cvar = "ttt2_impostor_sabo_lights_cooldown",
 		slider = true,
 		min = 0,
 		max = 300,
 		decimal = 0,
-		desc = "ttt2_impostor_sabo_cooldown (Def: 180)"
+		desc = "ttt2_impostor_sabo_lights_cooldown (Def: 180)"
 	})
 	
 	--# How long (in seconds) should it take for lights to fade to black upon activating Sabotage Lights (<= 0.0 to disable ability)?
 	--  Note: Fade time is nonlinear. HUD's color difference may be off for large fade times..
-	--  ttt2_impostor_sabo_fade_time [0.0..n.m] (default: 2.0)
+	--  ttt2_impostor_sabo_lights_fade [0.0..n.m] (default: 2.0)
 	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_sabo_fade_time",
+		cvar = "ttt2_impostor_sabo_lights_fade",
 		slider = true,
 		min = 0.0,
 		max = 30.0,
 		decimal = 2,
-		desc = "ttt2_impostor_sabo_fade_time (Def: 2.0)"
+		desc = "ttt2_impostor_sabo_lights_fade (Def: 2.0)"
 	})
 	
 	--# How long (in seconds) should the lights be sabotaged for (< 0.0 to disable ability)?
@@ -240,8 +239,8 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalBool("ttt2_impostor_inform_about_trappers_venting", GetConVar("ttt2_impostor_inform_about_trappers_venting"):GetBool())
 	SetGlobalBool("ttt2_impostor_inform_trappers_about_venting", GetConVar("ttt2_impostor_inform_trappers_about_venting"):GetBool())
 	SetGlobalBool("ttt2_impostor_jesters_can_vent", GetConVar("ttt2_impostor_jesters_can_vent"):GetBool())
-	SetGlobalInt("ttt2_impostor_sabo_cooldown", GetConVar("ttt2_impostor_sabo_cooldown"):GetInt())
-	SetGlobalFloat("ttt2_impostor_sabo_fade_time", GetConVar("ttt2_impostor_sabo_fade_time"):GetFloat())
+	SetGlobalInt("ttt2_impostor_sabo_lights_cooldown", GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt())
+	SetGlobalFloat("ttt2_impostor_sabo_lights_fade", GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat())
 	SetGlobalFloat("ttt2_impostor_sabo_lights_length", GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat())
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool())
 end)
@@ -291,11 +290,11 @@ end)
 cvars.AddChangeCallback("ttt2_impostor_jesters_can_vent", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_jesters_can_vent", tobool(tonumber(new)))
 end)
-cvars.AddChangeCallback("ttt2_impostor_sabo_cooldown", function(name, old, new)
-	SetGlobalInt("ttt2_impostor_sabo_cooldown", tonumber(new))
+cvars.AddChangeCallback("ttt2_impostor_sabo_lights_cooldown", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_lights_cooldown", tonumber(new))
 end)
-cvars.AddChangeCallback("ttt2_impostor_sabo_fade_time", function(name, old, new)
-	SetGlobalFloat("ttt2_impostor_sabo_fade_time", tonumber(new))
+cvars.AddChangeCallback("ttt2_impostor_sabo_lights_fade", function(name, old, new)
+	SetGlobalFloat("ttt2_impostor_sabo_lights_fade", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_lights_length", function(name, old, new)
 	SetGlobalFloat("ttt2_impostor_sabo_lights_length", tonumber(new))
