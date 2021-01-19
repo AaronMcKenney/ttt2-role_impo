@@ -19,6 +19,7 @@ CreateConVar("ttt2_impostor_inform_about_trappers_venting", "1", {FCVAR_ARCHIVE,
 CreateConVar("ttt2_impostor_inform_trappers_about_venting", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_jesters_can_vent", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage Lights
+CreateConVar("ttt2_impostor_sabo_lights_mode", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_cooldown", "180", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_fade", "2.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_length", "5.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -124,7 +125,7 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# Can the secondary fire on the Vent tool be used to take back already placed vents?
-	--  ttt2_impostor_vent_secondary_fire_mode [0..1] (default: 1)
+	--  ttt2_impostor_vent_secondary_fire_mode [0..2] (default: 1)
 	--  # 0: Impostors cannot take vents back
 	--  # 1: Impostors can only take unrevealed vents back
 	--  # 2: Impostors can take any kind of vent back
@@ -181,6 +182,21 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		cvar = "ttt2_impostor_jesters_can_vent",
 		checkbox = true,
 		desc = "ttt2_impostor_jesters_can_vent (Def: 1)"
+	})
+	
+	--# What should happen when the lights are sabotaged?
+	--  ttt2_impostor_sabo_lights_mode [0..1] (default: 0)
+	--  # 0: A Screen fade occurs, which blacks out the entire screen. Flashlights will not help you.
+	--  # 1: Map lighting is temporarily disabled. Flashlights work. Effectiveness depends on map (ex. some props may still be fully lit, and players may be easier to see instead of harder)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_lights_mode",
+		combobox = true,
+		desc = "ttt2_impostor_sabo_lights_mode (Def: 0)",
+		choices = {
+			"0 - Screen fade (flashlights do nothing)",
+			"1 - Disable map lighting (Strange behavior on certain maps)",
+		},
+		numStart = 0
 	})
 	
 	--# What is the cooldown (in seconds) on the impostor's Sabotage Lights ability?
@@ -264,6 +280,7 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalBool("ttt2_impostor_inform_about_trappers_venting", GetConVar("ttt2_impostor_inform_about_trappers_venting"):GetBool())
 	SetGlobalBool("ttt2_impostor_inform_trappers_about_venting", GetConVar("ttt2_impostor_inform_trappers_about_venting"):GetBool())
 	SetGlobalBool("ttt2_impostor_jesters_can_vent", GetConVar("ttt2_impostor_jesters_can_vent"):GetBool())
+	SetGlobalInt("ttt2_impostor_sabo_lights_mode", GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_lights_cooldown", GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt())
 	SetGlobalFloat("ttt2_impostor_sabo_lights_fade", GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat())
 	SetGlobalFloat("ttt2_impostor_sabo_lights_length", GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat())
@@ -316,6 +333,9 @@ cvars.AddChangeCallback("ttt2_impostor_inform_trappers_about_venting", function(
 end)
 cvars.AddChangeCallback("ttt2_impostor_jesters_can_vent", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_jesters_can_vent", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_lights_mode", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_lights_mode", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_lights_cooldown", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_sabo_lights_cooldown", tonumber(new))

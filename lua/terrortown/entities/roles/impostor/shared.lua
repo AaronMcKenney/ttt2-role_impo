@@ -57,6 +57,7 @@ end
 local IOTA = 0.3
 --Sabotage enum
 SABO_MODE = {NONE = 0, LIGHTS = 1, COMMS = 2, NUM = 3}
+SABO_LIGHTS_MODE = {SCREEN_FADE = 0, DISABLE_MAP = 1}
 
 local function CanKillTarget(impo, tgt, dist)
 	--impo is assumed to be a valid impostor and tgt is assumed to be a valid player
@@ -99,23 +100,39 @@ end
 
 local function SabotageLights(ply)
 	if SabotageLightsIsEnabled() then
-		--Sabotage ply's lights by performing screen fades.
 		local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
-		local fade_hold = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat() / 2
+		local fade_hold = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
 		
-		--SCREENFADE.IN: Cut to black immediately. After fade_hold, transition out over fade_time.
-		--SCREENFADE.OUT: Fade to black over fade_time. After fade_hold, cut back to normal immediately.
-		--SCREENFADE.MODULATE: Cut to black immediately. Cut back to normal some time after. Not sure how fade_time factors in here.
-		--SCREENFADE.STAYOUT: Cut to black immediately. Never returns to normal. Why is this a thing?
-		--SCREENFADE.PURGE: Not sure how this differs from SCREENFADE.MODULATE.
-		
-		--Create temporary lights-out effect: fade to black, hold, then fade to normal.
-		--Add IOTA in first ScreenFade call to handle lag between the two calls and create a hopefully seemless blackout effect.
-		ply:ScreenFade(SCREENFADE.OUT, COLOR_BLACK, fade_time, fade_hold + IOTA)
-		timer.Simple(fade_time + fade_hold, function()
-			--Have to create a lambda function() here. ply:ScreenFade by itself doesn't pass compile.
-			ply:ScreenFade(SCREENFADE.IN, COLOR_BLACK, fade_time, fade_hold)
-		end)
+		if GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt() == SABO_LIGHTS_MODE.SCREEN_FADE then
+			--Sabotage ply's lights by performing two screen fades.
+			fade_hold_half = fade_hold/2
+			
+			--SCREENFADE.IN: Cut to black immediately. After fade_hold, transition out over fade_time.
+			--SCREENFADE.OUT: Fade to black over fade_time. After fade_hold, cut back to normal immediately.
+			--SCREENFADE.MODULATE: Cut to black immediately. Cut back to normal some time after. Not sure how fade_time factors in here.
+			--SCREENFADE.STAYOUT: Cut to black immediately. Never returns to normal. Why is this a thing?
+			--SCREENFADE.PURGE: Not sure how this differs from SCREENFADE.MODULATE.
+			
+			--Create temporary lights-out effect: fade to black, hold, then fade to normal.
+			--Add IOTA in first ScreenFade call to handle lag between the two calls and create a hopefully seemless blackout effect.
+			ply:ScreenFade(SCREENFADE.OUT, COLOR_BLACK, fade_time, fade_hold_half + IOTA)
+			timer.Simple(fade_time + fade_hold_half, function()
+				--Have to create a lambda function() here. ply:ScreenFade by itself doesn't pass compile.
+				ply:ScreenFade(SCREENFADE.IN, COLOR_BLACK, fade_time, fade_hold_half)
+			end)
+		else --SABO_LIGHTS_MODE.DISABLE_MAP
+			if SERVER then
+				engine.LightStyle(0, "a")
+				timer.Simple(fade_time + fade_hold, function()
+					engine.LightStyle(0, "m")
+				end)
+			elseif CLIENT then
+				render.RedownloadAllLightmaps()
+				timer.Simple(fade_time + fade_hold + IOTA, function()
+					render.RedownloadAllLightmaps()
+				end)
+			end
+		end
 		
 		if SERVER then
 			--Send request to client to call this same function, just to keep things in sync.
