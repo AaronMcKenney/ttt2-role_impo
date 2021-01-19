@@ -98,11 +98,11 @@ local function SabotageModeIsValid(sabo_mode)
 end
 
 local function SabotageLights(ply)
-	--Sabotage ply's lights by performing screen fades.
-	local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
-	local fade_hold = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat() / 2
-	
 	if SabotageLightsIsEnabled() then
+		--Sabotage ply's lights by performing screen fades.
+		local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
+		local fade_hold = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat() / 2
+		
 		--SCREENFADE.IN: Cut to black immediately. After fade_hold, transition out over fade_time.
 		--SCREENFADE.OUT: Fade to black over fade_time. After fade_hold, cut back to normal immediately.
 		--SCREENFADE.MODULATE: Cut to black immediately. Cut back to normal some time after. Not sure how fade_time factors in here.
@@ -116,20 +116,12 @@ local function SabotageLights(ply)
 			--Have to create a lambda function() here. ply:ScreenFade by itself doesn't pass compile.
 			ply:ScreenFade(SCREENFADE.IN, COLOR_BLACK, fade_time, fade_hold)
 		end)
-	end
-	
-	if SERVER then
-		--Send request to client to call this same function, just to keep things in sync.
-		net.Start("TTT2ImpostorSabotageLights")
-		net.Send(ply)
-	end
-end
-
-local function SabotageComms(ply)
-	local sabo_duration = GetConVar("ttt2_impostor_sabo_comms_length"):GetInt()
-	
-	if SabotageCommsIsEnabled() then
 		
+		if SERVER then
+			--Send request to client to call this same function, just to keep things in sync.
+			net.Start("TTT2ImpostorSabotageLights")
+			net.Send(ply)
+		end
 	end
 end
 
