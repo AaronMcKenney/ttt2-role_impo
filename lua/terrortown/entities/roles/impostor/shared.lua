@@ -240,6 +240,14 @@ if SERVER then
 		end
 	end)
 	
+	local function PlayerCanBeSabotaged(ply)
+		if ply:GetSubRole() ~= ROLE_IMPOSTOR and (GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool() or ply:GetTeam() ~= TEAM_TRAITOR) then
+			return true
+		end
+		
+		return false
+	end
+	
 	net.Receive("TTT2ImpostorSendSabotageRequest", function(len, ply)
 		local sabo_mode = net.ReadInt(16)
 		
@@ -263,7 +271,7 @@ if SERVER then
 					net.Start("TTT2ImpostorSendSabotageLightsResponse")
 					net.Send(ply_i)
 					
-					if ply_i:GetSubRole() ~= ROLE_IMPOSTOR and (GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool() or ply_i:GetTeam() ~= TEAM_TRAITOR) then
+					if PlayerCanBeSabotaged(ply_i) then
 						SabotageLights(ply_i)
 					end
 				end
@@ -280,8 +288,20 @@ if SERVER then
 				sabo_duration = GetConVar("ttt2_impostor_sabo_comms_length"):GetInt()
 				sabo_cooldown = GetConVar("ttt2_impostor_sabo_comms_cooldown"):GetInt()
 				
+				if GetConVar("ttt2_impostor_sabo_comms_deafen"):GetBool() then
+					hook.Add("Think", "ImpostorSaboComms_Deafen", function()
+						for _, ply_i in ipairs(player.GetAll()) do
+							if PlayerCanBeSabotaged(ply_i) then
+								ply_i:ConCommand("soundfade 100 1")
+							end
+						end
+					end)
+				end
+				
 				--Create a timer that'll be used to explicitly silence those affected.
 				timer.Create("ImpostorSaboCommsTimer_Server", sabo_duration, 1, function()
+					--If hook doesn't exist, hook.Remove will not throw errors, and instead silently pass.
+					hook.Remove("Think", "ImpostorSaboComms_Deafen")
 					return
 				end)
 			end
@@ -526,6 +546,11 @@ if CLIENT then
 		local client = LocalPlayer()
 		if not SabotageModeIsValid(client.impo_sabo_mode) then
 			--all forms of sabotage have been disabled.
+			return
+		end
+		
+		if timer.Exists("ImpostorSaboLightsTimer_Client") or timer.Exists("ImpostorSaboCommsTimer_Client") then
+			--Don't toggle sabotage mode while a sabotage is in progress.
 			return
 		end
 		

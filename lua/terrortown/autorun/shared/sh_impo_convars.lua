@@ -19,13 +19,14 @@ CreateConVar("ttt2_impostor_inform_about_trappers_venting", "1", {FCVAR_ARCHIVE,
 CreateConVar("ttt2_impostor_inform_trappers_about_venting", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_jesters_can_vent", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage Lights
-CreateConVar("ttt2_impostor_sabo_lights_mode", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_cooldown", "180", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_lights_mode", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_fade", "2.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_length", "5.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage Comms
 CreateConVar("ttt2_impostor_sabo_comms_cooldown", "120", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_comms_deafen", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_comms_length", "20", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 
 hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
@@ -184,6 +185,17 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_jesters_can_vent (Def: 1)"
 	})
 	
+	--# What is the cooldown (in seconds) on the impostor's Sabotage Lights ability?
+	--  ttt2_impostor_sabo_lights_cooldown [0..n] (default: 180)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_lights_cooldown",
+		slider = true,
+		min = 0,
+		max = 300,
+		decimal = 0,
+		desc = "ttt2_impostor_sabo_lights_cooldown (Def: 180)"
+	})
+	
 	--# What should happen when the lights are sabotaged?
 	--  ttt2_impostor_sabo_lights_mode [0..1] (default: 0)
 	--  # 0: A Screen fade occurs, which blacks out the entire screen. Flashlights will not help you.
@@ -197,17 +209,6 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 			"1 - Disable map lighting (Strange behavior on certain maps)",
 		},
 		numStart = 0
-	})
-	
-	--# What is the cooldown (in seconds) on the impostor's Sabotage Lights ability?
-	--  ttt2_impostor_sabo_lights_cooldown [0..n] (default: 180)
-	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_sabo_lights_cooldown",
-		slider = true,
-		min = 0,
-		max = 300,
-		decimal = 0,
-		desc = "ttt2_impostor_sabo_lights_cooldown (Def: 180)"
 	})
 	
 	--# How long (in seconds) should it take for lights to fade to black upon activating Sabotage Lights (<= 0.0 to disable ability)?
@@ -252,6 +253,14 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_sabo_comms_cooldown (Def: 120)"
 	})
 	
+	--# During Sabotage Comms, should players not on the traitor team be deafened in addition to having chat disabled?
+	--  ttt2_impostor_sabo_comms_deafen [0/1] (default: 1)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_comms_deafen",
+		checkbox = true,
+		desc = "ttt2_impostor_sabo_comms_deafen (Def: 1)"
+	})
+	
 	--# How long (in seconds) should the comms be sabotaged for (<= 0 to disable ability)?
 	--  ttt2_impostor_sabo_comms_length [-n..m] (default: 20)
 	table.insert(tbl[ROLE_IMPOSTOR], {
@@ -280,12 +289,13 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalBool("ttt2_impostor_inform_about_trappers_venting", GetConVar("ttt2_impostor_inform_about_trappers_venting"):GetBool())
 	SetGlobalBool("ttt2_impostor_inform_trappers_about_venting", GetConVar("ttt2_impostor_inform_trappers_about_venting"):GetBool())
 	SetGlobalBool("ttt2_impostor_jesters_can_vent", GetConVar("ttt2_impostor_jesters_can_vent"):GetBool())
-	SetGlobalInt("ttt2_impostor_sabo_lights_mode", GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_lights_cooldown", GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt())
+	SetGlobalInt("ttt2_impostor_sabo_lights_mode", GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt())
 	SetGlobalFloat("ttt2_impostor_sabo_lights_fade", GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat())
 	SetGlobalFloat("ttt2_impostor_sabo_lights_length", GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat())
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool())
 	SetGlobalInt("ttt2_impostor_sabo_comms_cooldown", GetConVar("ttt2_impostor_sabo_comms_cooldown"):GetInt())
+	SetGlobalBool("ttt2_impostor_sabo_comms_deafen", GetConVar("ttt2_impostor_sabo_comms_deafen"):GetBool())
 	SetGlobalInt("ttt2_impostor_sabo_comms_length", GetConVar("ttt2_impostor_sabo_comms_length"):GetInt())
 end)
 
@@ -334,11 +344,11 @@ end)
 cvars.AddChangeCallback("ttt2_impostor_jesters_can_vent", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_jesters_can_vent", tobool(tonumber(new)))
 end)
-cvars.AddChangeCallback("ttt2_impostor_sabo_lights_mode", function(name, old, new)
-	SetGlobalInt("ttt2_impostor_sabo_lights_mode", tonumber(new))
-end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_lights_cooldown", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_sabo_lights_cooldown", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_lights_mode", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_lights_mode", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_lights_fade", function(name, old, new)
 	SetGlobalFloat("ttt2_impostor_sabo_lights_fade", tonumber(new))
@@ -351,6 +361,9 @@ cvars.AddChangeCallback("ttt2_impostor_traitor_team_is_affected_by_sabo_lights",
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_comms_cooldown", function(name, old, new)
 	SetGlobalFloat("ttt2_impostor_sabo_comms_cooldown", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_comms_deafen", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_sabo_comms_deafen", tobool(tonumber(new)))
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_comms_length", function(name, old, new)
 	SetGlobalFloat("ttt2_impostor_sabo_comms_length", tonumber(new))
