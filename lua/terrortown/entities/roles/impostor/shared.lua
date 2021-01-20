@@ -72,7 +72,7 @@ local function SabotageLightsIsEnabled()
 	local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
 	local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
 	
-	if fade_time <= 0.0 and sabo_lights_len < 0.0 then
+	if fade_time <= 0.0 or sabo_lights_len < 0.0 then
 		return false
 	end
 	return true
@@ -544,8 +544,9 @@ if CLIENT then
 	
 	local function ToggleSabotageMode()
 		local client = LocalPlayer()
-		if not SabotageModeIsValid(client.impo_sabo_mode) then
-			--all forms of sabotage have been disabled.
+		
+		if not client.impo_sabo_mode or client.impo_sabo_mode <= SABO_MODE.NONE or client.impo_sabo_mode >= SABO_MODE.NUM then
+			--all forms of sabotage have been disabled, or the client is very confused.
 			return
 		end
 		

@@ -224,14 +224,14 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# How long (in seconds) should the lights be sabotaged for (< 0.0 to disable ability)?
-	--  ttt2_impostor_sabo_lights_length [-n.m..n.m] (default: 3.0)
+	--  ttt2_impostor_sabo_lights_length [-n.m..n.m] (default: 5.0)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_sabo_lights_length",
 		slider = true,
 		min = -1.0,
 		max = 30.0,
 		decimal = 2,
-		desc = "ttt2_impostor_sabo_lights_length (Def: 3.0)"
+		desc = "ttt2_impostor_sabo_lights_length (Def: 5.0)"
 	})
 	
 	--# Should all traitor roles be affected by an Impostor's Sabotage Lights?

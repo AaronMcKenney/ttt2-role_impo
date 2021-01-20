@@ -92,6 +92,16 @@ if CLIENT then
 		return " (" .. math.ceil(math.abs(time_left)) .. ")"
 	end
 	
+	local function CurrentSabotageInProgress()
+		if timer.Exists("ImpostorSaboLightsTimer_Client") then
+			return SABO_MODE.LIGHTS
+		elseif timer.Exists("ImpostorSaboCommsTimer_Client") then
+			return SABO_MODE.COMMS
+		else
+			return SABO_MODE.NONE
+		end
+	end
+	
 	function HUDELEMENT:DrawInstaKillComponent()
 		local client = LocalPlayer()
 		local icon_color = COLOR_BLACK
@@ -134,6 +144,7 @@ if CLIENT then
 			--Sabotage is on cooldown
 			local time_left = timer.TimeLeft("ImpostorSaboTimer_Client")
 			sabo_str = sabo_str .. TimeLeftToString(time_left)
+			bg_color = COLOR_LGRAY
 		elseif timer.Exists("ImpostorSaboLightsTimer_Client") then
 			--Sabotage is in progress.
 			local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
@@ -151,6 +162,9 @@ if CLIENT then
 			elseif time_left <= fade_time then
 				--Screen is transitioning from complete darkness
 				local fract = 1 - (time_left / fade_time)
+				if GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt() > 0 then
+					bg_color = COLOR_LGRAY
+				end
 				local h, s, v = ColorToHSV(bg_color)
 				bg_color = HSVToColor(h, s, v * fract)
 			else
@@ -174,13 +188,14 @@ if CLIENT then
 	function HUDELEMENT:DrawSabotageCommsComponent()
 		local icon_color = COLOR_BLACK
 		local sabo_str = LANG.GetTranslation("SABO_COMMS_" .. IMPOSTOR.name)
-		local bg_color = COLOR_LGRAY
+		local bg_color = COLOR_WHITE
 		local icon = icon_lit_bulb
 		
 		if timer.Exists("ImpostorSaboTimer_Client") then
 			--Sabotage is on cooldown
 			local time_left = timer.TimeLeft("ImpostorSaboTimer_Client")
 			sabo_str = sabo_str .. TimeLeftToString(time_left)
+			bg_color = COLOR_LGRAY
 		elseif timer.Exists("ImpostorSaboCommsTimer_Client") then
 			--Sabotage is in progress.
 			local time_left = timer.TimeLeft("ImpostorSaboCommsTimer_Client")
@@ -202,11 +217,12 @@ if CLIENT then
 	
 	function HUDELEMENT:Draw()
 		local client = LocalPlayer()
+		local sabo_in_progress = CurrentSabotageInProgress()
 		
 		self:DrawInstaKillComponent()
-		if (client.impo_sabo_mode == SABO_MODE.LIGHTS and not timer.Exists("ImpostorSaboCommsTimer_Client")) or timer.Exists("ImpostorSaboLightsTimer_Client") then
+		if (client.impo_sabo_mode == SABO_MODE.LIGHTS and sabo_in_progress == SABO_MODE.NONE) or sabo_in_progress == SABO_MODE.LIGHTS then
 			self:DrawSabotageLightsComponent()
-		elseif client.impo_sabo_mode == SABO_MODE.COMMS or timer.Exists("ImpostorSaboCommsTimer_Client") then
+		elseif (client.impo_sabo_mode == SABO_MODE.COMMS and sabo_in_progress == SABO_MODE.NONE) or sabo_in_progress == SABO_MODE.COMMS then
 			self:DrawSabotageCommsComponent()
 		end
 	end
