@@ -192,6 +192,9 @@ function IMPOSTOR_DATA.EnterVent(ply, vent)
 	IMPOSTOR_DATA.MovePlayerToVent(ply, vent)
 	
 	if SERVER then
+		--Save the player's current weapon.
+		ply.impo_in_vent_prev_wep = ply:GetActiveWeapon():GetClass()
+		
 		--Switch player's weapon to holstered.
 		ply:SelectWeapon("weapon_ttt_unarmed")
 		
@@ -258,6 +261,15 @@ function IMPOSTOR_DATA.ExitVent(ply)
 	HandleTrapperVenting(ply, false)
 	
 	ply.impo_in_vent = nil
+	
+	if SERVER then
+		--Make the player switch back to their previous weapon if possible.
+		--This is called after impo_in_vent is set to nil to prevent situation where they are auto-switched back to holstered.
+		if ply.impo_in_vent_prev_wep ~= nil then
+			ply:SelectWeapon(ply.impo_in_vent_prev_wep)
+			ply.impo_in_vent_prev_wep = nil
+		end
+	end
 end
 
 function IMPOSTOR_DATA.MovePlayerFromVentTo(ply, ent_idx)

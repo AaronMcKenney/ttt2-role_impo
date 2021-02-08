@@ -10,6 +10,7 @@ if SERVER then
 	util.AddNetworkString("TTT2ImpostorSendSabotageLightsResponse")
 	util.AddNetworkString("TTT2ImpostorSabotageLights")
 	util.AddNetworkString("TTT2ImpostorSendSabotageCommsResponse")
+	util.AddNetworkString("TTT2ImpostorSendSabotageO2Response")
 end
 
 function ROLE:PreInitialize()
@@ -56,7 +57,7 @@ end
 --Used to reduce chances of lag interrupting otherwise seemless player interactions.
 local IOTA = 0.3
 --Sabotage enum
-SABO_MODE = {NONE = 0, LIGHTS = 1, COMMS = 2, NUM = 3}
+SABO_MODE = {NONE = 0, LIGHTS = 1, COMMS = 2, O2 = 3, NUM = 4}
 SABO_LIGHTS_MODE = {SCREEN_FADE = 0, DISABLE_MAP = 1}
 
 local function CanKillTarget(impo, tgt, dist)
@@ -87,14 +88,50 @@ local function SabotageCommsIsEnabled()
 	return true
 end
 
+local function SabotageO2IsEnabled()
+	local sabo_o2_hp_loss = GetConVar("ttt2_impostor_sabo_o2_hp_loss"):GetInt()
+	local sabo_o2_len = GetConVar("ttt2_impostor_sabo_o2_length"):GetInt()
+	
+	if sabo_o2_hp_loss <= 0 or sabo_o2_len <= 0 then
+		return false
+	end
+	return true
+end
+
 local function SabotageModeIsValid(sabo_mode)
 	if sabo_mode == SABO_MODE.LIGHTS then
 		return SabotageLightsIsEnabled()
 	elseif sabo_mode == SABO_MODE.COMMS then
 		return SabotageCommsIsEnabled()
+	elseif sabo_mode == SABO_MODE.O2 then
+		return SabotageO2IsEnabled()
 	end
 	
 	--sabo_mode is invalid
+	return false
+end
+	
+local function CanHaveLightsSabotaged(ply)
+	if ply:GetSubRole() ~= ROLE_IMPOSTOR and (GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool() or ply:GetTeam() ~= TEAM_TRAITOR) then
+		return true
+	end
+	
+	return false
+end
+
+local function CanHaveCommsSabotaged(ply)
+	if ply:GetSubRole() ~= ROLE_IMPOSTOR and (GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms"):GetBool() or ply:GetTeam() ~= TEAM_TRAITOR) then
+		return true
+	end
+	
+	return false
+end
+
+local function CanHaveO2Sabotaged(ply)
+	if ply:GetTeam() ~= TEAM_TRAITOR or (ply:GetSubRole() == ROLE_IMPOSTOR and GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool()) or (ply:GetSubRole() ~= ROLE_IMPOSTOR and GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool()) then
+		return true
+	end
+	
 	return false
 end
 
@@ -189,11 +226,30 @@ if SERVER then
 			mode = SABO_MODE.LIGHTS
 		elseif SabotageCommsIsEnabled() then
 			mode = SABO_MODE.COMMS
+		elseif SabotageO2IsEnabled() then
+			mode = SABO_MODE.O2
 		end
 		
 		net.Start("TTT2ImpostorDefaultSaboMode")
 		net.WriteInt(mode, 16)
 		net.Send(ply)
+	end
+	
+	local function SabotageO2(hp_loss, sabo_duration)
+		timer.Simple(1, function()
+			for _, ply in ipairs(player.GetAll()) do
+				if ply:Alive() and CanHaveO2Sabotaged(ply) then
+					ply:SetHealth(ply:Health() - hp_loss)
+				end
+			end
+			
+			--Probably the first or second time after graduating that I've had a legitimate reason to use recursion.
+			--This methodology is probably faster than using a Think hook, but I'm too lazy to do a performance comparison.
+			--Check for "> 1" instead of "> 0" as we already deduct an HP at the start.
+			if sabo_duration > 1 then
+				SabotageO2(hp_loss, sabo_duration - 1)
+			end
+		end)
 	end
 	
 	local function PutSabotageOnCooldown(sabo_cooldown)
@@ -205,7 +261,7 @@ if SERVER then
 			return
 		end
 		
-		--Turn off ability to sabotage lights
+		--Turn off ability to sabotage
 		impos_can_sabo = false
 		SendSabotageUpdateToClients(sabo_cooldown)
 		
@@ -240,14 +296,6 @@ if SERVER then
 		end
 	end)
 	
-	local function PlayerCanBeSabotaged(ply)
-		if ply:GetSubRole() ~= ROLE_IMPOSTOR and (GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool() or ply:GetTeam() ~= TEAM_TRAITOR) then
-			return true
-		end
-		
-		return false
-	end
-	
 	net.Receive("TTT2ImpostorSendSabotageRequest", function(len, ply)
 		local sabo_mode = net.ReadInt(16)
 		
@@ -271,7 +319,7 @@ if SERVER then
 					net.Start("TTT2ImpostorSendSabotageLightsResponse")
 					net.Send(ply_i)
 					
-					if PlayerCanBeSabotaged(ply_i) then
+					if CanHaveLightsSabotaged(ply_i) then
 						SabotageLights(ply_i)
 					end
 				end
@@ -291,7 +339,7 @@ if SERVER then
 				if GetConVar("ttt2_impostor_sabo_comms_deafen"):GetBool() then
 					hook.Add("Think", "ImpostorSaboComms_Deafen", function()
 						for _, ply_i in ipairs(player.GetAll()) do
-							if PlayerCanBeSabotaged(ply_i) then
+							if CanHaveCommsSabotaged(ply_i) then
 								ply_i:ConCommand("soundfade 100 1")
 							end
 						end
@@ -302,6 +350,21 @@ if SERVER then
 				timer.Create("ImpostorSaboCommsTimer_Server", sabo_duration, 1, function()
 					--If hook doesn't exist, hook.Remove will not throw errors, and instead silently pass.
 					hook.Remove("Think", "ImpostorSaboComms_Deafen")
+					return
+				end)
+			elseif sabo_mode == SABO_MODE.O2 then
+				for _, ply_i in ipairs(player.GetAll()) do
+					--Inform everyone that the sabotage is starting.
+					net.Start("TTT2ImpostorSendSabotageO2Response")
+					net.Send(ply_i)
+				end
+				
+				sabo_duration = GetConVar("ttt2_impostor_sabo_o2_length"):GetInt()
+				sabo_cooldown = GetConVar("ttt2_impostor_sabo_o2_cooldown"):GetInt()
+				
+				SabotageO2(GetConVar("ttt2_impostor_sabo_o2_hp_loss"):GetInt(), sabo_duration)
+				
+				timer.Create("ImpostorSaboO2Timer_Server", sabo_duration, 1, function()
 					return
 				end)
 			end
@@ -326,11 +389,12 @@ if SERVER then
 	hook.Add("EntityTakeDamage", "ImpostorModifyDamage", function(target, dmg_info)
 		local attacker = dmg_info:GetAttacker()
 		
-		if IsValid(attacker) and attacker:IsPlayer() and attacker:GetSubRole() == ROLE_IMPOSTOR then
+		if IsValid(attacker) and attacker:IsPlayer() then
 			if attacker.impo_in_vent then
-				--Force Impostor to deal no damage if they are in a vent (just to be safe)
+				--Force everyone to deal no damage if they are in a vent (just to be safe)
 				dmg_info:SetDamage(0)
-			else
+			elseif attacker:GetSubRole() == ROLE_IMPOSTOR then
+				--Impostor deals less damage.
 				dmg_info:SetDamage(dmg_info:GetDamage() * GetConVar("ttt2_impostor_normal_dmg_multi"):GetFloat())
 			end
 		end
@@ -350,26 +414,24 @@ if SERVER then
 	end)
 	
 	hook.Add("TTT2CanUseVoiceChat", "ImpostorCanUseVoiceChatForServer", function(speaker, isTeamVoice)
-		if not timer.Exists("ImpostorSaboCommsTimer_Server") or (isTeamVoice and IsValid(speaker) and speaker:GetTeam() == TEAM_TRAITOR) then
+		if not timer.Exists("ImpostorSaboCommsTimer_Server") or (IsValid(speaker) and not CanHaveCommsSabotaged(speaker)) then
 			return
 		end
 		
-		--Jam everyone but traitors while Sabotage Comms is in effect.
 		return false
 	end)
 	
 	hook.Add("TTT2CanSeeChat", "ImpostorCanSeeChat", function(reader, sender, teamOnly)
-		if timer.Exists("ImpostorSaboCommsTimer_Server") and IsValid(reader) and reader:GetTeam() ~= TEAM_TRAITOR then
-			--Jam everyone but traitors while Sabotage Comms is in effect.
-			LANG.Msg(ply, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+		if timer.Exists("ImpostorSaboCommsTimer_Server") and IsValid(reader) and CanHaveCommsSabotaged(reader) then
+			LANG.Msg(reader, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			return false
 		end
 	end)
 	
 	hook.Add("TTT2AvoidTeamChat", "ImpostorAvoidTeamChat", function(sender, tm, msg)
-		if timer.Exists("ImpostorSaboCommsTimer_Server") and tm ~= TEAM_TRAITOR then
+		if timer.Exists("ImpostorSaboCommsTimer_Server") and IsValid(sender) and CanHaveCommsSabotaged(sender) then
 			--Jam everyone but traitors while Sabotage Comms is in effect.
-			LANG.Msg(ply, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			LANG.Msg(sender, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			return false
 		end
 	end)
@@ -409,6 +471,15 @@ if CLIENT then
 	local VENT_SELECTED_BUTTON_SIZE = 80
 	local VENT_SELECTED_BUTTON_MIDPOINT = VENT_SELECTED_BUTTON_SIZE / 2
 	local ICON_IN_VENT = Material("vgui/ttt/icon_vent")
+	
+	local function SelectedSaboModeInRange(ply)
+		if not ply.impo_sabo_mode or ply.impo_sabo_mode <= SABO_MODE.NONE or ply.impo_sabo_mode >= SABO_MODE.NUM then
+			--All forms of sabotage have been disabled, or the ply is very confused.
+			return false
+		end
+		
+		return true
+	end
 	
 	local function ResetImpostorForClient()
 		local client = LocalPlayer()
@@ -500,13 +571,28 @@ if CLIENT then
 		end)
 	end)
 	
+	net.Receive("TTT2ImpostorSendSabotageO2Response", function()
+		--Inform the clients that the O2 will be sabotaged.
+		local client = LocalPlayer()
+		local sabo_o2_len = GetConVar("ttt2_impostor_sabo_o2_length"):GetInt()
+		
+		LANG.Msg("SABO_O2_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+		
+		--Create a timer which hopefully will match the server's timer.
+		--This is used in the HUD to allow impostors to track the o2 disruption other clients are experiencing.
+		timer.Create("ImpostorSaboO2Timer_Client", sabo_o2_len, 1, function()
+			LANG.Msg("SABO_O2_END_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			return
+		end)
+	end)
+	
 	net.Receive("TTT2ImpostorSabotageLights", function()
 		local client = LocalPlayer()
 		SabotageLights(client)
 	end)
 	
 	hook.Add("TTT2CanUseVoiceChat", "ImpostorCanUseVoiceChatForClient", function(speaker, isTeamVoice)
-		if not timer.Exists("ImpostorSaboCommsTimer_Client") or (isTeamVoice and IsValid(speaker) and speaker:GetTeam() == TEAM_TRAITOR) then
+		if not timer.Exists("ImpostorSaboCommsTimer_Client") or (IsValid(speaker) and not CanHaveCommsSabotaged(speaker)) then
 			return
 		end
 		
@@ -545,12 +631,12 @@ if CLIENT then
 	local function ToggleSabotageMode()
 		local client = LocalPlayer()
 		
-		if not client.impo_sabo_mode or client.impo_sabo_mode <= SABO_MODE.NONE or client.impo_sabo_mode >= SABO_MODE.NUM then
-			--all forms of sabotage have been disabled, or the client is very confused.
+		if not SelectedSaboModeInRange(client) then
+			--All forms of sabotage have been disabled, or the client is very confused.
 			return
 		end
 		
-		if timer.Exists("ImpostorSaboLightsTimer_Client") or timer.Exists("ImpostorSaboCommsTimer_Client") then
+		if timer.Exists("ImpostorSaboLightsTimer_Client") or timer.Exists("ImpostorSaboCommsTimer_Client") or timer.Exists("ImpostorSaboO2Timer_Client") then
 			--Don't toggle sabotage mode while a sabotage is in progress.
 			return
 		end
@@ -558,10 +644,20 @@ if CLIENT then
 		if client.impo_sabo_mode == SABO_MODE.LIGHTS then
 			if SabotageCommsIsEnabled() then
 				client.impo_sabo_mode = SABO_MODE.COMMS
+			elseif SabotageO2IsEnabled() then
+				client.impo_sabo_mode = SABO_MODE.O2
 			end
 		elseif client.impo_sabo_mode == SABO_MODE.COMMS then
+			if SabotageO2IsEnabled() then
+				client.impo_sabo_mode = SABO_MODE.O2
+			elseif SabotageLightsIsEnabled() then
+				client.impo_sabo_mode = SABO_MODE.LIGHTS
+			end
+		elseif client.impo_sabo_mode == SABO_MODE.O2 then
 			if SabotageLightsIsEnabled() then
 				client.impo_sabo_mode = SABO_MODE.LIGHTS
+			elseif SabotageCommsIsEnabled() then
+				client.impo_sabo_mode = SABO_MODE.COMMS
 			end
 		end
 	end
@@ -569,6 +665,12 @@ if CLIENT then
 	
 	local function SendSabotageRequest()
 		local client = LocalPlayer()
+		
+		if not SelectedSaboModeInRange(client) then
+			--All forms of sabotage have been disabled, or the client is confused/ill-informed.
+			return
+		end
+		
 		net.Start("TTT2ImpostorSendSabotageRequest")
 		net.WriteInt(client.impo_sabo_mode, 16)
 		net.SendToServer()

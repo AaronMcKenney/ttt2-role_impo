@@ -30,7 +30,7 @@ SWEP.Primary.Ammo = "vent"
 SWEP.Primary.Delay = 1.25
 SWEP.Primary.Automatic = false
 SWEP.Primary.ClipMax = GetConVar("ttt2_impostor_num_starting_vents"):GetInt() * 2
-SWEP.Primary.ClipSize = GetConVar("ttt2_impostor_num_starting_vents"):GetInt()
+SWEP.Primary.ClipSize = GetConVar("ttt2_impostor_num_starting_vents"):GetInt() * 2
 SWEP.Primary.DefaultClip = GetConVar("ttt2_impostor_num_starting_vents"):GetInt()
 SWEP.Secondary.Delay = 1.25
 

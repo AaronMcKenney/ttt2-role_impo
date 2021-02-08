@@ -15,6 +15,9 @@ if CLIENT then
 	--Used for Sabotage Lights
 	local icon_lit_bulb = Material("vgui/ttt/icon_lit_bulb")
 	local icon_unlit_bulb = Material("vgui/ttt/icon_unlit_bulb")
+	--Used for Sabotage O2
+	local icon_o2_safe = Material("vgui/ttt/icon_o2_safe")
+	local icon_o2_unsafe = Material("vgui/ttt/icon_o2_unsafe")
 	
 	local const_defaults = {
 		basepos = {x = 0, y = 0},
@@ -97,6 +100,8 @@ if CLIENT then
 			return SABO_MODE.LIGHTS
 		elseif timer.Exists("ImpostorSaboCommsTimer_Client") then
 			return SABO_MODE.COMMS
+		elseif timer.Exists("ImpostorSaboO2Timer_Client") then
+			return SABO_MODE.O2
 		else
 			return SABO_MODE.NONE
 		end
@@ -200,9 +205,40 @@ if CLIENT then
 			--Sabotage is in progress.
 			local time_left = timer.TimeLeft("ImpostorSaboCommsTimer_Client")
 			
-			--Screen is completely dark.
+			--Comms are hacked, and so bg is Impostor's color
 			bg_color = IMPOSTOR.color
 			icon = icon_unlit_bulb
+			
+			--Give seconds left until comms are operational again
+			sabo_str = sabo_str .. TimeLeftToString(time_left)
+		else
+			--Sabotage is ready to go
+			local sabo_key = string.upper(input.GetKeyName(bind.Find("ImpostorSendSabotageRequest")))
+			sabo_str = sabo_str .. " (" .. LANG.GetTranslation("PRESS_" .. IMPOSTOR.name) .. sabo_key .. ")"
+		end
+		
+		self:DrawComponent(sabo_str, bg_color, icon_color, icon, false)
+	end
+	
+	function HUDELEMENT:DrawSabotageO2Component()
+		local icon_color = COLOR_WHITE
+		local sabo_str = LANG.GetTranslation("SABO_O2_" .. IMPOSTOR.name)
+		local bg_color = COLOR_BLUE
+		local icon = icon_o2_safe
+		
+		if timer.Exists("ImpostorSaboTimer_Client") then
+			--Sabotage is on cooldown
+			local time_left = timer.TimeLeft("ImpostorSaboTimer_Client")
+			sabo_str = sabo_str .. TimeLeftToString(time_left)
+			bg_color = COLOR_LGRAY
+		elseif timer.Exists("ImpostorSaboO2Timer_Client") then
+			--Sabotage is in progress.
+			local time_left = timer.TimeLeft("ImpostorSaboO2Timer_Client")
+			
+			--Air is hazaradous.
+			bg_color = COLOR_YELLOW
+			icon = icon_o2_unsafe
+			icon_color = COLOR_BLACK
 			
 			--Give seconds left until darkness lifts
 			sabo_str = sabo_str .. TimeLeftToString(time_left)
@@ -224,6 +260,8 @@ if CLIENT then
 			self:DrawSabotageLightsComponent()
 		elseif (client.impo_sabo_mode == SABO_MODE.COMMS and sabo_in_progress == SABO_MODE.NONE) or sabo_in_progress == SABO_MODE.COMMS then
 			self:DrawSabotageCommsComponent()
+		elseif (client.impo_sabo_mode == SABO_MODE.O2 and sabo_in_progress == SABO_MODE.NONE) or sabo_in_progress == SABO_MODE.O2 then
+			self:DrawSabotageO2Component()
 		end
 	end
 end

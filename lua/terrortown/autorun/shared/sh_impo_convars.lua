@@ -28,6 +28,13 @@ CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", "0", {FCVA
 CreateConVar("ttt2_impostor_sabo_comms_cooldown", "120", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_comms_deafen", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_comms_length", "20", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+--Sabotage O2
+CreateConVar("ttt2_impostor_sabo_o2_cooldown", "240", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_o2_hp_loss", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_o2_length", "20", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_is_affected_by_sabo_o2", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 
 hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	tbl[ROLE_IMPOSTOR] = tbl[ROLE_IMPOSTOR] or {}
@@ -229,12 +236,12 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		cvar = "ttt2_impostor_sabo_lights_length",
 		slider = true,
 		min = -1.0,
-		max = 30.0,
+		max = 120.0,
 		decimal = 2,
 		desc = "ttt2_impostor_sabo_lights_length (Def: 5.0)"
 	})
 	
-	--# Should all traitor roles be affected by an Impostor's Sabotage Lights?
+	--# Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage Lights?
 	--  ttt2_impostor_traitor_team_is_affected_by_sabo_lights [0/1] (default: 0)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_traitor_team_is_affected_by_sabo_lights",
@@ -253,7 +260,7 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_sabo_comms_cooldown (Def: 120)"
 	})
 	
-	--# During Sabotage Comms, should players not on the traitor team be deafened in addition to having chat disabled?
+	--# During Sabotage Comms, should the affected be deafened in addition to having text/voice chat disabled?
 	--  ttt2_impostor_sabo_comms_deafen [0/1] (default: 1)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_sabo_comms_deafen",
@@ -267,9 +274,66 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		cvar = "ttt2_impostor_sabo_comms_length",
 		slider = true,
 		min = 0,
-		max = 30,
+		max = 120,
 		decimal = 0,
 		desc = "ttt2_impostor_sabo_comms_length (Def: 20)"
+	})
+	
+	--# Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage Comms?
+	--  ttt2_impostor_traitor_team_is_affected_by_sabo_comms [0/1] (default: 0)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_traitor_team_is_affected_by_sabo_comms",
+		checkbox = true,
+		desc = "ttt2_impostor_traitor_team_is_affected_by_sabo_comms (Def: 0)"
+	})
+	
+	--# What is the cooldown (in seconds) on an Impostor's Sabotage O2 ability?
+	--  ttt2_impostor_sabo_o2_cooldown [0..n] (default: 240)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_o2_cooldown",
+		slider = true,
+		min = 0,
+		max = 300,
+		decimal = 0,
+		desc = "ttt2_impostor_sabo_o2_cooldown (Def: 240)"
+	})
+	
+	--# During Sabotage O2, How much HP per second should be lost (<=0 to disable ability)?
+	--  ttt2_impostor_sabo_o2_hp_loss [0..n] (default: 1)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_o2_hp_loss",
+		slider = true,
+		min = 0,
+		max = 5,
+		decimal = 0,
+		desc = "ttt2_impostor_sabo_o2_hp_loss (Def: 1)"
+	})
+	
+	--# How long (in seconds) should O2 be sabotaged for (<= 0 to disable ability)?
+	--  ttt2_impostor_sabo_o2_length [-n..m] (default: 20)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_o2_length",
+		slider = true,
+		min = 0,
+		max = 120,
+		decimal = 0,
+		desc = "ttt2_impostor_sabo_o2_length (Def: 20)"
+	})
+	
+	--# Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage O2?
+	--  ttt2_impostor_traitor_team_is_affected_by_sabo_o2 [0/1] (default: 0)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_traitor_team_is_affected_by_sabo_o2",
+		checkbox = true,
+		desc = "ttt2_impostor_traitor_team_is_affected_by_sabo_o2 (Def: 0)"
+	})
+	
+	--# Should impostors be affected by their own Sabotage O2?
+	--  ttt2_impostor_is_affected_by_sabo_o2 [0/1] (default: 0)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_is_affected_by_sabo_o2",
+		checkbox = true,
+		desc = "ttt2_impostor_is_affected_by_sabo_o2 (Def: 0)"
 	})
 end)
 
@@ -297,6 +361,12 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalInt("ttt2_impostor_sabo_comms_cooldown", GetConVar("ttt2_impostor_sabo_comms_cooldown"):GetInt())
 	SetGlobalBool("ttt2_impostor_sabo_comms_deafen", GetConVar("ttt2_impostor_sabo_comms_deafen"):GetBool())
 	SetGlobalInt("ttt2_impostor_sabo_comms_length", GetConVar("ttt2_impostor_sabo_comms_length"):GetInt())
+	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_comms", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms"):GetBool())
+	SetGlobalInt("ttt2_impostor_sabo_o2_cooldown", GetConVar("ttt2_impostor_sabo_o2_cooldown"):GetInt())
+	SetGlobalInt("ttt2_impostor_sabo_o2_hp_loss", GetConVar("ttt2_impostor_sabo_o2_hp_loss"):GetInt())
+	SetGlobalInt("ttt2_impostor_sabo_o2_length", GetConVar("ttt2_impostor_sabo_o2_length"):GetInt())
+	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool())
+	SetGlobalBool("ttt2_impostor_is_affected_by_sabo_o2", GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool())
 end)
 
 cvars.AddChangeCallback("ttt2_impostor_inform_everyone", function(name, old, new)
@@ -327,13 +397,13 @@ cvars.AddChangeCallback("ttt2_impostor_hide_unused_vents", function(name, old, n
 	SetGlobalBool("ttt2_impostor_hide_unused_vents", tobool(tonumber(new)))
 end)
 cvars.AddChangeCallback("ttt2_impostor_vent_secondary_fire_mode", function(name, old, new)
-	SetGlobalFloat("ttt2_impostor_vent_secondary_fire_mode", tonumber(new))
+	SetGlobalInt("ttt2_impostor_vent_secondary_fire_mode", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_traitor_team_can_use_vents", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_traitor_team_can_use_vents", tobool(tonumber(new)))
 end)
 cvars.AddChangeCallback("ttt2_impostor_trapper_venting_time", function(name, old, new)
-	SetGlobalFloat("ttt2_impostor_trapper_venting_time", tonumber(new))
+	SetGlobalInt("ttt2_impostor_trapper_venting_time", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_inform_about_trappers_venting", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_inform_about_trappers_venting", tobool(tonumber(new)))
@@ -360,11 +430,29 @@ cvars.AddChangeCallback("ttt2_impostor_traitor_team_is_affected_by_sabo_lights",
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", tobool(tonumber(new)))
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_comms_cooldown", function(name, old, new)
-	SetGlobalFloat("ttt2_impostor_sabo_comms_cooldown", tonumber(new))
+	SetGlobalInt("ttt2_impostor_sabo_comms_cooldown", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_comms_deafen", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_sabo_comms_deafen", tobool(tonumber(new)))
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_comms_length", function(name, old, new)
-	SetGlobalFloat("ttt2_impostor_sabo_comms_length", tonumber(new))
+	SetGlobalInt("ttt2_impostor_sabo_comms_length", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_traitor_team_is_affected_by_sabo_comms", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_comms", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_o2_cooldown", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_o2_cooldown", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_o2_hp_loss", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_o2_hp_loss", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_o2_length", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_o2_length", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_is_affected_by_sabo_o2", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_is_affected_by_sabo_o2", tobool(tonumber(new)))
 end)
