@@ -29,8 +29,8 @@ SWEP.Base = "weapon_tttbase"
 SWEP.Primary.Ammo = "vent"
 SWEP.Primary.Delay = 1.25
 SWEP.Primary.Automatic = false
-SWEP.Primary.ClipMax = GetConVar("ttt2_impostor_num_starting_vents"):GetInt() * 2
-SWEP.Primary.ClipSize = GetConVar("ttt2_impostor_num_starting_vents"):GetInt() * 2
+SWEP.Primary.ClipMax = GetConVar("ttt2_impostor_vent_capacity"):GetInt()
+SWEP.Primary.ClipSize = GetConVar("ttt2_impostor_vent_capacity"):GetInt()
 SWEP.Primary.DefaultClip = GetConVar("ttt2_impostor_num_starting_vents"):GetInt()
 SWEP.Secondary.Delay = 1.25
 
@@ -99,11 +99,13 @@ end
 
 if SERVER then
 	function SWEP:PlacedVent()
+		local mode = GetConVar("ttt2_impostor_vent_secondary_fire_mode"):GetInt()
+		
 		--Reduce ammo count now that the vent has been placed.
 		self:TakePrimaryAmmo(1)
 		
 		--Remove the vent weapon if there's no more vents to be placed.
-		if not self:CanPrimaryAttack() then
+		if not self:CanPrimaryAttack() and mode == TAKE_MODE.NEVER then
 			self:Remove()
 		end
 	end

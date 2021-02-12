@@ -7,6 +7,7 @@ CreateConVar("ttt2_impostor_kill_dist", "125", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_kill_cooldown", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Venting (General)
 CreateConVar("ttt2_impostor_num_starting_vents", "3", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_vent_capacity", "6", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_global_max_num_vents", "9", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_vent_placement_range", "100", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -89,6 +90,17 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		max = 10,
 		decimal = 0,
 		desc = "ttt2_impostor_num_starting_vents (Def: 3)"
+	})
+	
+	--# How many vents does can the impostor hold?
+	--  ttt2_impostor_vent_capacity [0..n] (default: 6)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_vent_capacity",
+		slider = true,
+		min = 0,
+		max = 10,
+		decimal = 0,
+		desc = "ttt2_impostor_vent_capacity (Def: 6)"
 	})
 	
 	--# What is the maximum number of vents allowed on the map (-1 for unlimited)?
@@ -343,6 +355,7 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalInt("ttt2_impostor_kill_dist", GetConVar("ttt2_impostor_kill_dist"):GetInt())
 	SetGlobalInt("ttt2_impostor_kill_cooldown", GetConVar("ttt2_impostor_kill_cooldown"):GetInt())
 	SetGlobalInt("ttt2_impostor_num_starting_vents", GetConVar("ttt2_impostor_num_starting_vents"):GetInt())
+	SetGlobalInt("ttt2_impostor_vent_capacity", GetConVar("ttt2_impostor_vent_capacity"):GetInt())
 	SetGlobalInt("ttt2_impostor_global_max_num_vents", GetConVar("ttt2_impostor_global_max_num_vents"):GetInt())
 	SetGlobalInt("ttt2_impostor_vent_placement_range", GetConVar("ttt2_impostor_vent_placement_range"):GetInt())
 	SetGlobalBool("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", GetConVar("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit"):GetBool())
@@ -383,6 +396,9 @@ cvars.AddChangeCallback("ttt2_impostor_kill_cooldown", function(name, old, new)
 end)
 cvars.AddChangeCallback("ttt2_impostor_num_starting_vents", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_num_starting_vents", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_vent_capacity", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_vent_capacity", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_global_max_num_vents", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_global_max_num_vents", tonumber(new))
