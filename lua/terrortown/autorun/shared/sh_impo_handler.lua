@@ -403,8 +403,9 @@ if CLIENT then
 	hook.Add("PreDrawOutlines", "PreDrawOutlinesImpostorVent", function()
 		local client = LocalPlayer()
 		
-		--Outline vents for traitor team (They will be able to see it regardless of where they are)
-		if client:GetTeam() == TEAM_TRAITOR and #IMPOSTOR_DATA.VENT_NETWORK > 0 and not IsValid(client.impo_in_vent) then
+		--Outline vents for impostors and traitor team (They will be able to see it regardless of where they are)
+		--Special roles such as Trappers and Jesters have to work for their access.
+		if (client:GetSubRole() == ROLE_IMPOSTOR or client:GetTeam() == TEAM_TRAITOR) and #IMPOSTOR_DATA.VENT_NETWORK > 0 and not IsValid(client.impo_in_vent) then
 			outline.Add(IMPOSTOR_DATA.VENT_NETWORK, IMPOSTOR.color, OUTLINE_MODE_VISIBLE)
 		end
 	end)

@@ -128,7 +128,7 @@ local function CanHaveCommsSabotaged(ply)
 end
 
 local function CanHaveO2Sabotaged(ply)
-	if ply:GetTeam() ~= TEAM_TRAITOR or (ply:GetSubRole() == ROLE_IMPOSTOR and GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool()) or (ply:GetSubRole() ~= ROLE_IMPOSTOR and GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool()) then
+	if ((GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool() or ply:GetSubRole() ~= ROLE_IMPOSTOR) and (GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool() or ply:GetTeam() ~= TEAM_TRAITOR)) then
 		return true
 	end
 	
