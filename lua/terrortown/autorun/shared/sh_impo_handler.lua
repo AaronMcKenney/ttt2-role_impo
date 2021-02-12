@@ -44,6 +44,10 @@ function GetVentFromIndex(new_vent_idx)
 end
 
 local function TrapperCanVent(ply)
+	if not TRAPPER then
+		return false
+	end
+	
 	local total_trapper_time_allowed = GetConVar("ttt2_impostor_trapper_venting_time"):GetInt()
 	
 	if ply:GetSubRole() == ROLE_TRAPPER and total_trapper_time_allowed > 0 and not ply.impo_trapper_timer_expired then
@@ -112,19 +116,19 @@ local function HandleTrapperVenting(ply, is_entering_vent)
 end
 
 local function InformTrappers(ply, is_entering_vent)
-	if not SERVER or not GetConVar("ttt2_impostor_inform_trappers_about_venting"):GetBool() then
+	if not SERVER or not TRAPPER or not GetConVar("ttt2_impostor_inform_trappers_about_venting"):GetBool() then
 		return
 	end
 	
 	if is_entering_vent then
 		for _, ply_i in ipairs(player.GetAll()) do
-			if ply_i:GetSubRole() == ROLE_TRAPPER and ply:SteamID64() == ply_i:SteamID64() then
+			if ply_i:GetSubRole() == ROLE_TRAPPER and ply:SteamID64() ~= ply_i:SteamID64() then
 				LANG.Msg(ply_i, "VENT_ANYONE_ENTER_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			end
 		end
 	else
 		for _, ply_i in ipairs(player.GetAll()) do
-			if ply_i:GetSubRole() == ROLE_TRAPPER and ply:SteamID64() == ply_i:SteamID64() then
+			if ply_i:GetSubRole() == ROLE_TRAPPER and ply:SteamID64() ~= ply_i:SteamID64() then
 				LANG.Msg(ply_i, "VENT_ANYONE_EXIT_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			end
 		end
@@ -132,7 +136,7 @@ local function InformTrappers(ply, is_entering_vent)
 end
 
 function IMPOSTOR_DATA.CanUseVentNetwork(ply)
-	if ply:IsTerror() and ply:Alive() and (ply:GetSubRole() == ROLE_IMPOSTOR or (GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() and ply:GetTeam() == TEAM_TRAITOR) or TrapperCanVent(ply) or GetConVar("ttt2_impostor_jesters_can_vent"):GetBool()) then
+	if ply:IsTerror() and ply:Alive() and (ply:GetSubRole() == ROLE_IMPOSTOR or (GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() and ply:GetTeam() == TEAM_TRAITOR) or TrapperCanVent(ply) or (JESTER and GetConVar("ttt2_impostor_jesters_can_vent"):GetBool() and ply:GetSubRole() == ROLE_JESTER)) then
 		return true
 	end
 	return false
