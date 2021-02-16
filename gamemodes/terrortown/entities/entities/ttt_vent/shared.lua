@@ -54,7 +54,7 @@ function ENT:Initialize()
 		--This vent-to-be-destroyed is occupied. Force all players in it out and kill them!
 		for _, ply in ipairs(player.GetAll()) do
 			if IsValid(ply.impo_in_vent) and ply.impo_in_vent:EntIndex() == ent_idx then
-				IMPOSTOR_DATA.ExitVent(ply)
+				IMPO_VENT_DATA.ExitVent(ply)
 				if SERVER then
 					ply:Kill()
 				end
@@ -62,11 +62,11 @@ function ENT:Initialize()
 		end
 		
 		--Remove vent from existence.
-		IMPOSTOR_DATA.RemoveVentFromNetwork(ent_idx)
+		IMPO_VENT_DATA.RemoveVentFromNetwork(ent_idx)
 	end)
 	
 	--Now that the vent has been created, add it to the network so that it may be used.
-	IMPOSTOR_DATA.AddVentToNetwork(self, self:GetOwner())
+	IMPO_VENT_DATA.AddVentToNetwork(self, self:GetOwner())
 end
 
 --ENT:Use is only called for SERVER. This function does not execute on the CLIENT side.
@@ -75,5 +75,5 @@ function ENT:Use(activator, caller, type, value)
 		return
 	end
 	
-	IMPOSTOR_DATA.EnterVent(activator, self)
+	IMPO_VENT_DATA.EnterVent(activator, self)
 end

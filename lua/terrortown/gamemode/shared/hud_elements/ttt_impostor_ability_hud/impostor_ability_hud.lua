@@ -95,18 +95,6 @@ if CLIENT then
 		return " (" .. math.ceil(math.abs(time_left)) .. ")"
 	end
 	
-	local function CurrentSabotageInProgress()
-		if timer.Exists("ImpostorSaboLightsTimer_Client") then
-			return SABO_MODE.LIGHTS
-		elseif timer.Exists("ImpostorSaboCommsTimer_Client") then
-			return SABO_MODE.COMMS
-		elseif timer.Exists("ImpostorSaboO2Timer_Client") then
-			return SABO_MODE.O2
-		else
-			return SABO_MODE.NONE
-		end
-	end
-	
 	function HUDELEMENT:DrawInstaKillComponent()
 		local client = LocalPlayer()
 		local icon_color = COLOR_BLACK
@@ -251,6 +239,16 @@ if CLIENT then
 		self:DrawComponent(sabo_str, bg_color, icon_color, icon, false)
 	end
 	
+	function HUDELEMENT:DrawSabotageStationManagerComponent()
+		local icon_color = COLOR_BLACK
+		local sabo_key = string.upper(input.GetKeyName(bind.Find("ImpostorSendSabotageRequest")))
+		local sabo_str = LANG.GetTranslation("SABO_MNGR_" .. IMPOSTOR.name) .. " (" .. LANG.GetTranslation("PRESS_" .. IMPOSTOR.name) .. sabo_key .. ")"
+		local bg_color = COLOR_LGRAY
+		local icon = icon_kill_waiting
+		
+		self:DrawComponent(sabo_str, bg_color, icon_color, icon, false)
+	end
+	
 	function HUDELEMENT:Draw()
 		local client = LocalPlayer()
 		local sabo_in_progress = CurrentSabotageInProgress()
@@ -262,6 +260,8 @@ if CLIENT then
 			self:DrawSabotageCommsComponent()
 		elseif (client.impo_sabo_mode == SABO_MODE.O2 and sabo_in_progress == SABO_MODE.NONE) or sabo_in_progress == SABO_MODE.O2 then
 			self:DrawSabotageO2Component()
+		elseif (client.impo_sabo_mode == SABO_MODE.MNGR and sabo_in_progress == SABO_MODE.NONE) then
+			self:DrawSabotageStationManagerComponent()
 		end
 	end
 end

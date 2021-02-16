@@ -57,7 +57,7 @@ end
 --Used to reduce chances of lag interrupting otherwise seemless player interactions.
 local IOTA = 0.3
 --Sabotage enum
-SABO_MODE = {NONE = 0, LIGHTS = 1, COMMS = 2, O2 = 3, NUM = 4}
+SABO_MODE = {NONE = 0, LIGHTS = 1, COMMS = 2, O2 = 3, MNGR = 4, NUM = 5}
 SABO_LIGHTS_MODE = {SCREEN_FADE = 0, DISABLE_MAP = 1}
 
 local function CanKillTarget(impo, tgt, dist)
@@ -98,6 +98,10 @@ local function SabotageO2IsEnabled()
 	return true
 end
 
+local function SabotageStationManagerIsEnabled()
+	return GetConVar("ttt2_impostor_station_enable"):GetBool() and GetConVar("ttt2_impostor_station_manager_enable"):GetBool()
+end
+
 local function SabotageModeIsValid(sabo_mode)
 	if sabo_mode == SABO_MODE.LIGHTS then
 		return SabotageLightsIsEnabled()
@@ -105,6 +109,8 @@ local function SabotageModeIsValid(sabo_mode)
 		return SabotageCommsIsEnabled()
 	elseif sabo_mode == SABO_MODE.O2 then
 		return SabotageO2IsEnabled()
+	elseif sabo_mode == SABO_MODE.MNGR then
+		return SabotageStationManagerIsEnabled()
 	end
 	
 	--sabo_mode is invalid
@@ -298,12 +304,18 @@ if SERVER then
 	
 	net.Receive("TTT2ImpostorSendSabotageRequest", function(len, ply)
 		local sabo_mode = net.ReadInt(16)
+		local selected_station = net.ReadInt(16)
 		
 		if not IsValid(ply) or not ply:IsPlayer() or not ply:IsTerror() or ply:GetSubRole() ~= ROLE_IMPOSTOR or not SabotageModeIsValid(sabo_mode) then
 			return
 		end
 		
-		if impos_can_sabo then
+		if impos_can_sabo and sabo_mode ~= SABO_MODE.MNGR then
+			if GetConVar("ttt2_impostor_station_enable"):GetBool() and GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool() and IMPO_SABO_DATA.StationHasBeenUsed(selected_station) then
+				--Do not sabotage if the Impostor is trying to reuse a station.
+				return
+			end
+			
 			--Prevent button spamming tricks by immediately disabling sabo.
 			impos_can_sabo = false
 			
@@ -369,10 +381,17 @@ if SERVER then
 				end)
 			end
 			
+			if GetConVar("ttt2_impostor_station_enable"):GetBool() then
+				--Mark station as used
+				IMPO_SABO_DATA.MarkStationAsUsed(selected_station)
+			end
+			
 			--Only begin cooldown timer after fade effect ends.
 			timer.Simple(sabo_duration, function()
 				PutSabotageOnCooldown(sabo_cooldown)
 			end)
+		elseif sabo_mode == SABO_MODE.MNGR then
+			IMPO_SABO_DATA.MaybeAddNewStationSpawn(ply)
 		end
 	end)
 	
@@ -380,6 +399,9 @@ if SERVER then
 		ply:GiveEquipmentWeapon('weapon_ttt_vent')
 		PutInstantKillOnCooldown(ply)
 		SendDefaultSaboMode(ply)
+		if #IMPO_SABO_DATA.STATION_NETWORK > 0 then
+			IMPO_SABO_DATA.SendStationNetwork(ply)
+		end
 	end
 	
 	function ROLE:RemoveRoleLoadout(ply, isRoleChange)
@@ -403,7 +425,7 @@ if SERVER then
 	hook.Add("TTT2PostPlayerDeath", "ImpostorPostPlayerDeath", function(victim, inflictor, attacker)
 		--Force any dead player who is venting out of the Vent Network in case they revive.
 		if IsValid(victim) and victim:IsPlayer() and IsValid(victim.impo_in_vent) then
-			IMPOSTOR_DATA.ForceExitFromVent(victim)
+			IMPO_VENT_DATA.ForceExitFromVent(victim)
 		end
 	end)
 	
@@ -471,6 +493,24 @@ if CLIENT then
 	local VENT_SELECTED_BUTTON_SIZE = 80
 	local VENT_SELECTED_BUTTON_MIDPOINT = VENT_SELECTED_BUTTON_SIZE / 2
 	local ICON_IN_VENT = Material("vgui/ttt/icon_vent")
+	local STAT_BUTTON_SIZE = 64
+	local STAT_BUTTON_MIDPOINT = STAT_BUTTON_SIZE / 2
+	local STAT_SELECTED_BUTTON_SIZE = 80
+	local STAT_SELECTED_BUTTON_MIDPOINT = STAT_SELECTED_BUTTON_SIZE / 2
+	local ICON_STATION = Material("vgui/ttt/dynamic/roles/icon_impo")
+	
+	--Client global
+	function CurrentSabotageInProgress()
+		if timer.Exists("ImpostorSaboLightsTimer_Client") then
+			return SABO_MODE.LIGHTS
+		elseif timer.Exists("ImpostorSaboCommsTimer_Client") then
+			return SABO_MODE.COMMS
+		elseif timer.Exists("ImpostorSaboO2Timer_Client") then
+			return SABO_MODE.O2
+		else
+			return SABO_MODE.NONE
+		end
+	end
 	
 	local function SelectedSaboModeInRange(ply)
 		if not ply.impo_sabo_mode or ply.impo_sabo_mode <= SABO_MODE.NONE or ply.impo_sabo_mode >= SABO_MODE.NUM then
@@ -481,15 +521,16 @@ if CLIENT then
 		return true
 	end
 	
-	local function ResetImpostorForClient()
+	hook.Add("TTTPrepareRound", "ImpostorPrepareRoundClient", function()
 		local client = LocalPlayer()
 		
 		client.impo_in_vent = nil
 		client.impo_selected_vent = nil
 		client.impo_last_switch_time = nil
 		client.impo_trapper_timer_expired = nil
-	end
-	hook.Add("TTTBeginRound", "ImpostorBeginRoundClient", ResetImpostorForClient)
+		client.impo_sabo_mode = nil
+		client.impo_selected_station = nil
+	end)
 	
 	net.Receive("TTT2ImpostorInformEveryone", function()
 		local client = LocalPlayer()
@@ -548,6 +589,10 @@ if CLIENT then
 		
 		LANG.Msg("SABO_LIGHTS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 		
+		if client:GetSubRole() == ROLE_IMPOSTOR and GetConVar("ttt2_impostor_station_enable"):GetBool() then
+			IMPO_SABO_DATA.MarkAndToggleSelectedSabotageStation()
+		end
+		
 		--Create a timer which hopefully will match the server's timer.
 		--This is used in the HUD to allow impostors to track the darkness other clients are experiencing.
 		timer.Create("ImpostorSaboLightsTimer_Client", sabo_lights_len + 2*fade_time, 1, function()
@@ -563,6 +608,10 @@ if CLIENT then
 		
 		LANG.Msg("SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 		
+		if client:GetSubRole() == ROLE_IMPOSTOR and GetConVar("ttt2_impostor_station_enable"):GetBool() then
+			IMPO_SABO_DATA.MarkAndToggleSelectedSabotageStation()
+		end
+		
 		--Create a timer which hopefully will match the server's timer.
 		--This is used in the HUD to allow impostors to track the comms disruption other clients are experiencing.
 		timer.Create("ImpostorSaboCommsTimer_Client", sabo_comms_len, 1, function()
@@ -577,6 +626,10 @@ if CLIENT then
 		local sabo_o2_len = GetConVar("ttt2_impostor_sabo_o2_length"):GetInt()
 		
 		LANG.Msg("SABO_O2_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+		
+		if client:GetSubRole() == ROLE_IMPOSTOR and GetConVar("ttt2_impostor_station_enable"):GetBool() then
+			IMPO_SABO_DATA.MarkAndToggleSelectedSabotageStation()
+		end
 		
 		--Create a timer which hopefully will match the server's timer.
 		--This is used in the HUD to allow impostors to track the o2 disruption other clients are experiencing.
@@ -646,18 +699,32 @@ if CLIENT then
 				client.impo_sabo_mode = SABO_MODE.COMMS
 			elseif SabotageO2IsEnabled() then
 				client.impo_sabo_mode = SABO_MODE.O2
+			elseif SabotageStationManagerIsEnabled() then
+				client.impo_sabo_mode = SABO_MODE.MNGR
 			end
 		elseif client.impo_sabo_mode == SABO_MODE.COMMS then
 			if SabotageO2IsEnabled() then
 				client.impo_sabo_mode = SABO_MODE.O2
+			elseif SabotageStationManagerIsEnabled() then
+				client.impo_sabo_mode = SABO_MODE.MNGR
 			elseif SabotageLightsIsEnabled() then
 				client.impo_sabo_mode = SABO_MODE.LIGHTS
 			end
 		elseif client.impo_sabo_mode == SABO_MODE.O2 then
+			if SabotageStationManagerIsEnabled() then
+				client.impo_sabo_mode = SABO_MODE.MNGR
+			elseif SabotageLightsIsEnabled() then
+				client.impo_sabo_mode = SABO_MODE.LIGHTS
+			elseif SabotageCommsIsEnabled() then
+				client.impo_sabo_mode = SABO_MODE.COMMS
+			end
+		elseif client.impo_sabo_mode == SABO_MODE.MNGR then
 			if SabotageLightsIsEnabled() then
 				client.impo_sabo_mode = SABO_MODE.LIGHTS
 			elseif SabotageCommsIsEnabled() then
 				client.impo_sabo_mode = SABO_MODE.COMMS
+			elseif SabotageO2IsEnabled() then
+				client.impo_sabo_mode = SABO_MODE.O2
 			end
 		end
 	end
@@ -671,9 +738,14 @@ if CLIENT then
 			return
 		end
 		
-		net.Start("TTT2ImpostorSendSabotageRequest")
-		net.WriteInt(client.impo_sabo_mode, 16)
-		net.SendToServer()
+		if client.impo_sabo_mode == SABO_MODE.MNGR and IMPO_SABO_DATA.MaybeGetNewStationSpawnPos(client) == nil and CurrentSabotageInProgress() == SABO_MODE.NONE then
+			IMPO_SABO_DATA.ToggleSelectedSabotageStation()
+		else
+			net.Start("TTT2ImpostorSendSabotageRequest")
+			net.WriteInt(client.impo_sabo_mode, 16)
+			net.WriteInt(client.impo_selected_station, 16)
+			net.SendToServer()
+		end
 	end
 	bind.Register("ImpostorSendSabotageRequest", SendSabotageRequest, nil, "Impostor", "Sabotage", KEY_V)
 	
@@ -693,7 +765,7 @@ if CLIENT then
 			--Not quite sure if this is a bug in GMod, my testing server, or my keyboard...
 			local cur_time = CurTime()
 			if client.impo_last_move_time == nil or cur_time > client.impo_last_move_time + IOTA then
-				IMPOSTOR_DATA.MovePlayerFromVentTo(client, ent_idx)
+				IMPO_VENT_DATA.MovePlayerFromVentTo(client, ent_idx)
 				client.impo_last_move_time = cur_time
 			end
 		end
@@ -723,12 +795,8 @@ if CLIENT then
 		return true
 	end
 	
-	hook.Add("HUDPaint", "ImpostorHUDPaint", function()
+	local function DrawVentHUD()
 		local client = LocalPlayer()
-		
-		if not client:Alive() or not client:IsTerror() or not IsValid(client.impo_in_vent) then
-			return
-		end
 		
 		--If the player was selecting a valid vent on the previous frame then see if they still are
 		local selected_vent_idx = -1
@@ -742,7 +810,7 @@ if CLIENT then
 		
 		--See if we are currently selecting any vents
 		if not IsValid(client.impo_selected_vent) then
-			for _, vent in ipairs(IMPOSTOR_DATA.VENT_NETWORK) do
+			for _, vent in ipairs(IMPO_VENT_DATA.VENT_NETWORK) do
 				--Make sure not to run IsSelectingVent on selected_vent_idx (which we already checked above)
 				if IsValid(vent) and vent:EntIndex() ~= selected_vent_idx and IsSelectingVent(client, vent, false) then
 					client.impo_selected_vent = vent
@@ -753,7 +821,7 @@ if CLIENT then
 		end
 		
 		--Finally, draw all vents, making sure to draw the selected one last (to handle overlaps).
-		for _, vent in ipairs(IMPOSTOR_DATA.VENT_NETWORK) do
+		for _, vent in ipairs(IMPO_VENT_DATA.VENT_NETWORK) do
 			if IsValid(vent) and vent:EntIndex() ~= selected_vent_idx and vent:EntIndex() ~= client.impo_in_vent:EntIndex() then
 				local vent_pos = vent:GetPos()
 				local vent_scr_pos = vent_pos:ToScreen()
@@ -770,6 +838,56 @@ if CLIENT then
 			local vent_scr_pos = vent_pos:ToScreen()
 			
 			draw.FilteredTexture(vent_scr_pos.x - VENT_SELECTED_BUTTON_MIDPOINT, vent_scr_pos.y - VENT_SELECTED_BUTTON_MIDPOINT, VENT_SELECTED_BUTTON_SIZE, VENT_SELECTED_BUTTON_SIZE, ICON_IN_VENT, 200, IMPOSTOR.color)
+		end
+	end
+	
+	local function DrawStationManagerHUD()
+		local client = LocalPlayer()
+		local dissuade_station_reuse = GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool()
+		
+		for i, stat_spawn in ipairs(IMPO_SABO_DATA.STATION_NETWORK) do
+			local stat_spawn_scr_pos = stat_spawn.pos:ToScreen()
+			
+			if util.IsOffScreen(stat_spawn_scr_pos) then
+				continue
+			end
+			
+			local color = COLOR_ORANGE
+			local size = STAT_BUTTON_SIZE
+			local midpoint = STAT_BUTTON_MIDPOINT
+			
+			if i == client.impo_selected_station then
+				color = IMPOSTOR.color
+				size = STAT_SELECTED_BUTTON_SIZE
+				midpoint = STAT_SELECTED_BUTTON_MIDPOINT
+			end
+			
+			if dissuade_station_reuse and stat_spawn.used then
+				color = COLOR_BLACK
+			end
+			
+			draw.FilteredTexture(stat_spawn_scr_pos.x - midpoint, stat_spawn_scr_pos.y - midpoint, size, size, ICON_STATION, 200, color)
+			
+			local text = math.ceil(client:GetPos():Distance(stat_spawn.pos))
+			local text_width, text_height = surface.GetTextSize(text)
+			surface.SetTextPos(stat_spawn_scr_pos.x - size, stat_spawn_scr_pos.y - size)
+			surface.DrawText(text)
+		end
+	end
+	
+	hook.Add("HUDPaint", "ImpostorHUDPaint", function()
+		local client = LocalPlayer()
+		
+		if not client:Alive() or not client:IsTerror() then
+			return
+		end
+		
+		if IsValid(client.impo_in_vent) then
+			DrawVentHUD()
+		end
+		
+		if client:GetSubRole() == ROLE_IMPOSTOR and client.impo_sabo_mode == SABO_MODE.MNGR and CurrentSabotageInProgress() == SABO_MODE.NONE then
+			DrawStationManagerHUD()
 		end
 	end)
 end

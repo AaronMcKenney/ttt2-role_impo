@@ -156,14 +156,14 @@ if SERVER then
 		end
 		
 		local max_num_vents = GetConVar("ttt2_impostor_global_max_num_vents"):GetInt()
-		if max_num_vents >= 0 and #IMPOSTOR_DATA.VENT_NETWORK >= max_num_vents then
+		if max_num_vents >= 0 and #IMPO_VENT_DATA.VENT_NETWORK >= max_num_vents then
 			LANG.Msg(ply, "VENT_MAX_HIT_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			return
 		end
 		
 		local vent_placement_range = GetConVar("ttt2_impostor_vent_placement_range"):GetInt()
 		local tr = self:TraceLineForVent(vent_placement_range)
-		local vent_exit_pos = IMPOSTOR_DATA.DetermineVentExitPos(tr.HitPos, tr.HitNormal, vent_placement_range, ply:GetPos())
+		local vent_exit_pos = IMPO_VENT_DATA.DetermineVentExitPos(tr.HitPos, tr.HitNormal, vent_placement_range, ply:GetPos())
 		--Explicitly check if the player's current position is safe for exiting from this potential vent.
 		local is_spawn_point_safe = spawn.IsSpawnPointSafe(ply, vent_exit_pos, false, player.GetAll())
 		local vent_was_placed = false

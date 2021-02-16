@@ -6,18 +6,18 @@ if SERVER then
 	util.AddNetworkString("TTT2ImpostorRevealVentUpdate")
 end
 
-IMPOSTOR_DATA = {}
-IMPOSTOR_DATA.VENT_NETWORK = {}
+IMPO_VENT_DATA = {}
+IMPO_VENT_DATA.VENT_NETWORK = {}
 
-function IMPOSTOR_DATA.RemoveVentFromNetwork(vent_idx)
-	for i, v in ipairs(IMPOSTOR_DATA.VENT_NETWORK) do
+function IMPO_VENT_DATA.RemoveVentFromNetwork(vent_idx)
+	for i, v in ipairs(IMPO_VENT_DATA.VENT_NETWORK) do
 		if v:EntIndex() == vent_idx then
-			table.remove(IMPOSTOR_DATA.VENT_NETWORK, i)
+			table.remove(IMPO_VENT_DATA.VENT_NETWORK, i)
 			--BMF
 			if SERVER then
-				print("BMF RemoveVentFromNetwork: There are now " .. #IMPOSTOR_DATA.VENT_NETWORK .. " vents on the Server.")
+				print("BMF RemoveVentFromNetwork: There are now " .. #IMPO_VENT_DATA.VENT_NETWORK .. " vents on the Server.")
 			elseif CLIENT then
-				print("BMF RemoveVentFromNetwork: There are now " .. #IMPOSTOR_DATA.VENT_NETWORK .. " vents on the Client.")
+				print("BMF RemoveVentFromNetwork: There are now " .. #IMPO_VENT_DATA.VENT_NETWORK .. " vents on the Client.")
 			end
 			--BMF
 			break
@@ -25,16 +25,16 @@ function IMPOSTOR_DATA.RemoveVentFromNetwork(vent_idx)
 	end
 end
 
-function IMPOSTOR_DATA.ResetVentNetwork()
-	IMPOSTOR_DATA.VENT_NETWORK = {}
+function IMPO_VENT_DATA.ResetVentNetwork()
+	IMPO_VENT_DATA.VENT_NETWORK = {}
 	
-	print("BMF ResetVentNetwork: Number of vents is now " .. #IMPOSTOR_DATA.VENT_NETWORK)
+	print("BMF ResetVentNetwork: Number of vents is now " .. #IMPO_VENT_DATA.VENT_NETWORK)
 end
-hook.Add("TTTPrepareRound", "ImpostorDataPrepareRound", IMPOSTOR_DATA.ResetVentNetwork)
-hook.Add("TTTBeginRound", "ImpostorDataPrepareRound", IMPOSTOR_DATA.ResetVentNetwork)
+hook.Add("TTTPrepareRound", "ImpostorVentDataPrepareRound", IMPO_VENT_DATA.ResetVentNetwork)
+hook.Add("TTTBeginRound", "ImpostorVentDataPrepareRound", IMPO_VENT_DATA.ResetVentNetwork)
 
 function GetVentFromIndex(new_vent_idx)
-	for _, vent in ipairs(IMPOSTOR_DATA.VENT_NETWORK) do
+	for _, vent in ipairs(IMPO_VENT_DATA.VENT_NETWORK) do
 		if vent:EntIndex() == new_vent_idx then
 			return vent
 		end
@@ -75,7 +75,7 @@ local function HandleTrapperVenting(ply, is_entering_vent)
 			if IsValid(ply) and ply:IsPlayer() and ply:GetSubRole() == ROLE_TRAPPER then
 				ply.impo_trapper_timer_expired = true
 				if IsValid(ply.impo_in_vent) then
-					IMPOSTOR_DATA.ExitVent(ply)
+					IMPO_VENT_DATA.ExitVent(ply)
 					
 					if CLIENT then
 						LANG.Msg("VENT_TRAPPER_TIME_UP_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
@@ -135,14 +135,14 @@ local function InformTrappers(ply, is_entering_vent)
 	end
 end
 
-function IMPOSTOR_DATA.CanUseVentNetwork(ply)
+function IMPO_VENT_DATA.CanUseVentNetwork(ply)
 	if ply:IsTerror() and ply:Alive() and (ply:GetSubRole() == ROLE_IMPOSTOR or (GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() and ply:GetTeam() == TEAM_TRAITOR) or TrapperCanVent(ply) or (JESTER and GetConVar("ttt2_impostor_jesters_can_vent"):GetBool() and ply:GetSubRole() == ROLE_JESTER)) then
 		return true
 	end
 	return false
 end
 
-function IMPOSTOR_DATA.RevealVent(vent)
+function IMPO_VENT_DATA.RevealVent(vent)
 	if IsValid(vent) then
 		print("BMF RevealVent: Revealing vent with index " .. vent:EntIndex())
 		vent:SetNoDraw(false)
@@ -155,7 +155,7 @@ function IMPOSTOR_DATA.RevealVent(vent)
 	end
 end
 
-function IMPOSTOR_DATA.MovePlayerToVent(ply, vent)
+function IMPO_VENT_DATA.MovePlayerToVent(ply, vent)
 	--BMF
 	local server_client_str = "SERVER"
 	if CLIENT then
@@ -173,8 +173,8 @@ function IMPOSTOR_DATA.MovePlayerToVent(ply, vent)
 	ply.impo_in_vent = vent
 end
 
-function IMPOSTOR_DATA.EnterVent(ply, vent)
-	if IsValid(ply.impo_in_vent) or not IsValid(vent) or not IMPOSTOR_DATA.CanUseVentNetwork(ply) then
+function IMPO_VENT_DATA.EnterVent(ply, vent)
+	if IsValid(ply.impo_in_vent) or not IsValid(vent) or not IMPO_VENT_DATA.CanUseVentNetwork(ply) then
 		return
 	end
 	
@@ -193,7 +193,7 @@ function IMPOSTOR_DATA.EnterVent(ply, vent)
 	--FL_NOTARGET ==> Prevent AI from targeting the player.
 	ply:AddFlags(bit.bor(FL_ATCONTROLS, FL_NOTARGET))
 	
-	IMPOSTOR_DATA.MovePlayerToVent(ply, vent)
+	IMPO_VENT_DATA.MovePlayerToVent(ply, vent)
 	
 	if SERVER then
 		--Save the player's current weapon.
@@ -213,7 +213,7 @@ function IMPOSTOR_DATA.EnterVent(ply, vent)
 		net.Send(ply)
 		
 		--In addition, reveal the vent to everyone since it was entered from
-		IMPOSTOR_DATA.RevealVent(vent)
+		IMPO_VENT_DATA.RevealVent(vent)
 		
 		InformTrappers(ply, true)
 	elseif CLIENT then
@@ -228,7 +228,7 @@ function IMPOSTOR_DATA.EnterVent(ply, vent)
 	HandleTrapperVenting(ply, true)
 end
 
-function IMPOSTOR_DATA.ExitVent(ply)
+function IMPO_VENT_DATA.ExitVent(ply)
 	--This is especially needed in case somehow both the vent and the player are removed and destroyed simultaneously, which would trigger this function twice.
 	if not IsValid(ply) or not ply:IsPlayer() or not IsValid(ply.impo_in_vent) then
 		return
@@ -253,7 +253,7 @@ function IMPOSTOR_DATA.ExitVent(ply)
 		end
 		
 		--In addition, reveal the vent if it has been exited from for the first time.
-		IMPOSTOR_DATA.RevealVent(ply.impo_in_vent)
+		IMPO_VENT_DATA.RevealVent(ply.impo_in_vent)
 		
 		InformTrappers(ply, false)
 	elseif CLIENT then
@@ -276,7 +276,7 @@ function IMPOSTOR_DATA.ExitVent(ply)
 	end
 end
 
-function IMPOSTOR_DATA.MovePlayerFromVentTo(ply, ent_idx)
+function IMPO_VENT_DATA.MovePlayerFromVentTo(ply, ent_idx)
 	if not IsValid(ply.impo_in_vent) then
 		return
 	end
@@ -286,9 +286,9 @@ function IMPOSTOR_DATA.MovePlayerFromVentTo(ply, ent_idx)
 	print("BMF MovePlayerFromVentTo: from_ent_idx=" .. ply.impo_in_vent:EntIndex() .. ", to_ent_idx=" .. ent_idx)
 	
 	if IsValid(new_vent) then
-		IMPOSTOR_DATA.MovePlayerToVent(ply, new_vent)
+		IMPO_VENT_DATA.MovePlayerToVent(ply, new_vent)
 	else
-		IMPOSTOR_DATA.ExitVent(ply)
+		IMPO_VENT_DATA.ExitVent(ply)
 	end
 	
 	if CLIENT then
@@ -299,14 +299,14 @@ function IMPOSTOR_DATA.MovePlayerFromVentTo(ply, ent_idx)
 	end
 end
 
-function IMPOSTOR_DATA.ForceExitFromVent(ply)
+function IMPO_VENT_DATA.ForceExitFromVent(ply)
 	--Unlike MovePlayerFromVentTo, which is called by the client to request a change in vent status,
 	--this function is used in the Server to force the player out.
 	if not IsValid(ply.impo_in_vent) then
 		return
 	end
 	
-	IMPOSTOR_DATA.ExitVent(ply)
+	IMPO_VENT_DATA.ExitVent(ply)
 	
 	if SERVER then
 		--Send request to client to call this function
@@ -315,7 +315,7 @@ function IMPOSTOR_DATA.ForceExitFromVent(ply)
 	end
 end
 
-function IMPOSTOR_DATA.DetermineVentExitPos(vent_pos, vent_normal, vent_placement_range, ply_pos)
+function IMPO_VENT_DATA.DetermineVentExitPos(vent_pos, vent_normal, vent_placement_range, ply_pos)
 	local PLY_IS_CLOSE_TO_VENT = 10000 --100^2
 	print("BMF DetermineVentExitPos: DistToSqr=" .. vent_pos:DistToSqr(ply_pos))
 	if GetConVar("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit"):GetBool() and vent_pos:DistToSqr(ply_pos) <= PLY_IS_CLOSE_TO_VENT then
@@ -328,9 +328,9 @@ function IMPOSTOR_DATA.DetermineVentExitPos(vent_pos, vent_normal, vent_placemen
 	end
 end
 
-function IMPOSTOR_DATA.AddVentToNetwork(vent, owner)
+function IMPO_VENT_DATA.AddVentToNetwork(vent, owner)
 	--Record player position and find good camera angle for vent exit handling.
-	vent.exit_pos = IMPOSTOR_DATA.DetermineVentExitPos(vent:GetPos(), vent:GetAngles():Forward(), GetConVar("ttt2_impostor_vent_placement_range"):GetInt(), owner:GetPos())
+	vent.exit_pos = IMPO_VENT_DATA.DetermineVentExitPos(vent:GetPos(), vent:GetAngles():Forward(), GetConVar("ttt2_impostor_vent_placement_range"):GetInt(), owner:GetPos())
 	
 	--BMF
 	print("BMF AddVentToNetwork Vent ID = " .. vent:EntIndex() .. ", Exit Angle = ")
@@ -338,13 +338,13 @@ function IMPOSTOR_DATA.AddVentToNetwork(vent, owner)
 	--print(tr.HitNormal:Angle()) --Absolutely the only way to print this thing from what I can tell...
 	--BMF
 	
-	IMPOSTOR_DATA.VENT_NETWORK[#IMPOSTOR_DATA.VENT_NETWORK + 1] = vent
+	IMPO_VENT_DATA.VENT_NETWORK[#IMPO_VENT_DATA.VENT_NETWORK + 1] = vent
 	
 	--BMF
 	if SERVER then
-		print("BMF AddVentToNetwork: There are now " .. #IMPOSTOR_DATA.VENT_NETWORK .. " vents on the Server")
+		print("BMF AddVentToNetwork: There are now " .. #IMPO_VENT_DATA.VENT_NETWORK .. " vents on the Server")
 	elseif CLIENT then
-		print("BMF AddVentToNetwork: There are now " .. #IMPOSTOR_DATA.VENT_NETWORK .. " vents on the Client")
+		print("BMF AddVentToNetwork: There are now " .. #IMPO_VENT_DATA.VENT_NETWORK .. " vents on the Client")
 	end
 end
 
@@ -352,10 +352,10 @@ if SERVER then
 	net.Receive("TTT2ImpostorMoveFromVentUpdate", function(len, ply)
 			local ent_idx = net.ReadInt(16)
 			
-			IMPOSTOR_DATA.MovePlayerFromVentTo(ply, ent_idx)
+			IMPO_VENT_DATA.MovePlayerFromVentTo(ply, ent_idx)
 	end)
 
-	hook.Add("PlayerSwitchWeapon", "ImpostorDataPlayerSwitchWeapon", function(ply, old, new)
+	hook.Add("PlayerSwitchWeapon", "ImpostorVentDataPlayerSwitchWeapon", function(ply, old, new)
 		if not IsValid(ply) or not ply:IsPlayer() or not IsValid(ply.impo_in_vent) then
 			return
 		end
@@ -388,20 +388,20 @@ if CLIENT then
 		local new_vent = GetVentFromIndex(new_vent_idx)
 		
 		--client is entering the vent from real space. Put them into vent space.
-		IMPOSTOR_DATA.EnterVent(client, new_vent)
+		IMPO_VENT_DATA.EnterVent(client, new_vent)
 	end)
 	
 	net.Receive("TTT2ImpostorForceExitFromVentUpdate", function()
 		local client = LocalPlayer()
 		
-		IMPOSTOR_DATA.ForceExitFromVent(client)
+		IMPO_VENT_DATA.ForceExitFromVent(client)
 	end)
 	
 	net.Receive("TTT2ImpostorRevealVentUpdate", function()
 		local client = LocalPlayer()
 		local new_vent_idx = net.ReadInt(16)
 		
-		IMPOSTOR_DATA.RevealVent(GetVentFromIndex(new_vent_idx))
+		IMPO_VENT_DATA.RevealVent(GetVentFromIndex(new_vent_idx))
 	end)
 	
 	hook.Add("PreDrawOutlines", "PreDrawOutlinesImpostorVent", function()
@@ -409,8 +409,8 @@ if CLIENT then
 		
 		--Outline vents for impostors and traitor team (They will be able to see it regardless of where they are)
 		--Special roles such as Trappers and Jesters have to work for their access.
-		if (client:GetSubRole() == ROLE_IMPOSTOR or client:GetTeam() == TEAM_TRAITOR) and #IMPOSTOR_DATA.VENT_NETWORK > 0 and not IsValid(client.impo_in_vent) then
-			outline.Add(IMPOSTOR_DATA.VENT_NETWORK, IMPOSTOR.color, OUTLINE_MODE_VISIBLE)
+		if (client:GetSubRole() == ROLE_IMPOSTOR or client:GetTeam() == TEAM_TRAITOR) and #IMPO_VENT_DATA.VENT_NETWORK > 0 and not IsValid(client.impo_in_vent) then
+			outline.Add(IMPO_VENT_DATA.VENT_NETWORK, IMPOSTOR.color, OUTLINE_MODE_VISIBLE)
 		end
 	end)
 end

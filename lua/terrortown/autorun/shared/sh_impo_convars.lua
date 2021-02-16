@@ -19,6 +19,14 @@ CreateConVar("ttt2_impostor_trapper_venting_time", "30", {FCVAR_ARCHIVE, FCVAR_N
 CreateConVar("ttt2_impostor_inform_about_trappers_venting", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_inform_trappers_about_venting", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_jesters_can_vent", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+--Sabotage Station Management
+CreateConVar("ttt2_impostor_station_enable", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_station_manager_enable", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_dissuade_station_reuse", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_min_station_dist", "1000", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_station_radius", "750", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_stop_station_ply_prop", "0.25", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_station_hold_time", "5", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage Lights
 CreateConVar("ttt2_impostor_sabo_lights_cooldown", "180", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_mode", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -196,12 +204,80 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_inform_trappers_about_venting (Def: 0)"
 	})
 	
-	--# Should trappers be informed when anyone enters and exits a vent?
+	--# Should jesters be able to use vents?
 	--  ttt2_impostor_jesters_can_vent [0/1] (default: 1)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_jesters_can_vent",
 		checkbox = true,
 		desc = "ttt2_impostor_jesters_can_vent (Def: 1)"
+	})
+	
+	--# Should the Impostor's sabotage abilities create a Sabotage Station entity (If disabled, the sabotage abilities can only end once their duration has been exceeded)?
+	--  ttt2_impostor_station_enable [0/1] (default: 1)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_station_enable",
+		checkbox = true,
+		desc = "ttt2_impostor_station_enable (Def: 1)"
+	})
+	
+	--# Should the Impostor be able to know where the sabotage station will spawn, be able to switch the spawn location, and add new station spawns?
+	--  ttt2_impostor_station_manager_enable [0/1] (default: 1)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_station_manager_enable",
+		checkbox = true,
+		desc = "ttt2_impostor_station_manager_enable (Def: 1)"
+	})
+	
+	--# Should Impostors be unable to create sabotage stations in the same place twice (until all available locations have been exhausted)?
+	--  ttt2_impostor_dissuade_station_reuse [0/1] (default: 1)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_dissuade_station_reuse",
+		checkbox = true,
+		desc = "ttt2_impostor_dissuade_station_reuse (Def: 1)"
+	})
+	
+	--# How far away can sabotage station spawn locations be from each other?
+	--  ttt2_impostor_min_station_dist [0..n] (default: 1000)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_min_station_dist",
+		slider = true,
+		min = 0,
+		max = 2000,
+		decimal = 0,
+		desc = "ttt2_impostor_min_station_dist (Def: 1000)"
+	})
+	
+	--# What is the radius of the circle that players need to enter in order to disable the current sabotage?
+	--  ttt2_impostor_station_radius [0..n] (default: 750)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_station_radius",
+		slider = true,
+		min = 0,
+		max = 2000,
+		decimal = 0,
+		desc = "ttt2_impostor_station_radius (Def: 750)"
+	})
+	
+	--# What proportion of the players (rounded up) at the beginning of the round need to enter the sabotage station's radius in order to end the current sabotage (ex. If 0.25, and there are 6 players, then at least 2 need to enter the station's radius)?
+	--  ttt2_impostor_stop_station_ply_prop [0.0..n.m] (default: 0.25)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_stop_station_ply_prop",
+		slider = true,
+		min = 0.0,
+		max = 1.0,
+		decimal = 2,
+		desc = "ttt2_impostor_stop_station_ply_prop (Def: 0.25)"
+	})
+	
+	--# How long must enough players be in the sabotage station's radius to end it?
+	--  ttt2_impostor_station_hold_time [0..n] (default: 5)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_station_hold_time",
+		slider = true,
+		min = 0,
+		max = 10,
+		decimal = 0,
+		desc = "ttt2_impostor_station_hold_time (Def: 5)"
 	})
 	
 	--# What is the cooldown (in seconds) on the impostor's Sabotage Lights ability?
@@ -366,6 +442,13 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalBool("ttt2_impostor_inform_about_trappers_venting", GetConVar("ttt2_impostor_inform_about_trappers_venting"):GetBool())
 	SetGlobalBool("ttt2_impostor_inform_trappers_about_venting", GetConVar("ttt2_impostor_inform_trappers_about_venting"):GetBool())
 	SetGlobalBool("ttt2_impostor_jesters_can_vent", GetConVar("ttt2_impostor_jesters_can_vent"):GetBool())
+	SetGlobalBool("ttt2_impostor_station_enable", GetConVar("ttt2_impostor_station_enable"):GetBool())
+	SetGlobalBool("ttt2_impostor_station_manager_enable", GetConVar("ttt2_impostor_station_manager_enable"):GetBool())
+	SetGlobalBool("ttt2_impostor_dissuade_station_reuse", GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool())
+	SetGlobalInt("ttt2_impostor_min_station_dist", GetConVar("ttt2_impostor_min_station_dist"):GetInt())
+	SetGlobalInt("ttt2_impostor_station_radius", GetConVar("ttt2_impostor_station_radius"):GetInt())
+	SetGlobalFloat("ttt2_impostor_stop_station_ply_prop", GetConVar("ttt2_impostor_stop_station_ply_prop"):GetFloat())
+	SetGlobalInt("ttt2_impostor_station_hold_time", GetConVar("ttt2_impostor_station_hold_time"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_lights_cooldown", GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_lights_mode", GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt())
 	SetGlobalFloat("ttt2_impostor_sabo_lights_fade", GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat())
@@ -429,6 +512,27 @@ cvars.AddChangeCallback("ttt2_impostor_inform_trappers_about_venting", function(
 end)
 cvars.AddChangeCallback("ttt2_impostor_jesters_can_vent", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_jesters_can_vent", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_station_enable", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_station_enable", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_station_manager_enable", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_station_manager_enable", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_dissuade_station_reuse", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_dissuade_station_reuse", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_min_station_dist", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_min_station_dist", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_station_radius", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_station_radius", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_stop_station_ply_prop", function(name, old, new)
+	SetGlobalFloat("ttt2_impostor_stop_station_ply_prop", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_station_hold_time", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_station_hold_time", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_lights_cooldown", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_sabo_lights_cooldown", tonumber(new))
