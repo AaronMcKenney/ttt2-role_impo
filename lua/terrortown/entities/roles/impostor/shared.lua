@@ -55,7 +55,7 @@ end
 --SHARED CONSTS, GLOBALS, FUNCS, AND HOOKS--
 --------------------------------------------
 --Used to reduce chances of lag interrupting otherwise seemless player interactions.
-local IOTA = 0.3
+IMPO_IOTA = 0.3
 --Sabotage enum
 SABO_MODE = {NONE = 0, LIGHTS = 1, COMMS = 2, O2 = 3, MNGR = 4, NUM = 5}
 SABO_LIGHTS_MODE = {SCREEN_FADE = 0, DISABLE_MAP = 1}
@@ -157,8 +157,8 @@ local function SabotageLights(ply)
 			--SCREENFADE.PURGE: Not sure how this differs from SCREENFADE.MODULATE.
 			
 			--Create temporary lights-out effect: fade to black, hold, then fade to normal.
-			--Add IOTA in first ScreenFade call to handle lag between the two calls and create a hopefully seemless blackout effect.
-			ply:ScreenFade(SCREENFADE.OUT, COLOR_BLACK, fade_time, fade_hold_half + IOTA)
+			--Add IMPO_IOTA in first ScreenFade call to handle lag between the two calls and create a hopefully seemless blackout effect.
+			ply:ScreenFade(SCREENFADE.OUT, COLOR_BLACK, fade_time, fade_hold_half + IMPO_IOTA)
 			timer.Simple(fade_time + fade_hold_half, function()
 				--Have to create a lambda function() here. ply:ScreenFade by itself doesn't pass compile.
 				ply:ScreenFade(SCREENFADE.IN, COLOR_BLACK, fade_time, fade_hold_half)
@@ -166,12 +166,12 @@ local function SabotageLights(ply)
 		else --SABO_LIGHTS_MODE.DISABLE_MAP
 			if SERVER then
 				engine.LightStyle(0, "a")
-				timer.Simple(fade_time + fade_hold, function()
+				timer.Create("ImpostorSaboMapLightingTimer_Server", fade_hold, 1, function()
 					engine.LightStyle(0, "m")
 				end)
 			elseif CLIENT then
 				render.RedownloadAllLightmaps()
-				timer.Simple(fade_time + fade_hold + IOTA, function()
+				timer.Create("ImpostorSaboMapLightingTimer_Client", fade_hold + IMPO_IOTA, 1, function()
 					render.RedownloadAllLightmaps()
 				end)
 			end
@@ -271,7 +271,7 @@ if SERVER then
 		impos_can_sabo = false
 		SendSabotageUpdateToClients(sabo_cooldown)
 		
-		--Create a timer that is unique to the player. When it finishes, turn on ability to sabotage.
+		--Create a timer that enables sabotages after the cooldown ends.
 		timer.Create("ImpostorSaboTimer_Server", sabo_cooldown, 1, function()
 			impos_can_sabo = true
 			SendSabotageUpdateToClients(0)
@@ -295,7 +295,7 @@ if SERVER then
 		if CanKillTarget(ply, tgt, dist) then
 			tgt:Kill()
 			--Create a timer which will aid in preventing the Impostor from searching the corpse that they just made.
-			timer.Create("ImpostorJustKilled_Server_" .. ply:SteamID64(), IOTA*2, 1, function()
+			timer.Create("ImpostorJustKilled_Server_" .. ply:SteamID64(), IMPO_IOTA*2, 1, function()
 				return
 			end)
 			PutInstantKillOnCooldown(ply)
@@ -305,14 +305,21 @@ if SERVER then
 	net.Receive("TTT2ImpostorSendSabotageRequest", function(len, ply)
 		local sabo_mode = net.ReadInt(16)
 		local selected_station = net.ReadInt(16)
+		local station_enabled = GetConVar("ttt2_impostor_station_enable"):GetBool()
 		
 		if not IsValid(ply) or not ply:IsPlayer() or not ply:IsTerror() or ply:GetSubRole() ~= ROLE_IMPOSTOR or not SabotageModeIsValid(sabo_mode) then
 			return
 		end
 		
 		if impos_can_sabo and sabo_mode ~= SABO_MODE.MNGR then
-			if GetConVar("ttt2_impostor_station_enable"):GetBool() and GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool() and IMPO_SABO_DATA.StationHasBeenUsed(selected_station) then
+			if station_enabled and GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool() and IMPO_SABO_DATA.StationHasBeenUsed(selected_station) then
 				--Do not sabotage if the Impostor is trying to reuse a station.
+				return
+			end
+			
+			if station_enabled and not IMPO_SABO_DATA.CreateStation(ply, selected_station) then
+				--Station could not be made. 
+				--Return early so that we don't cause a sabotage that players can't force end.
 				return
 			end
 			
@@ -336,8 +343,20 @@ if SERVER then
 					end
 				end
 				
-				sabo_duration = sabo_lights_len + 2*fade_time
+				local sabo_duration = sabo_lights_len
+				if GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt() == SABO_LIGHTS_MODE.SCREEN_FADE then
+					sabo_duration = sabo_duration + 2*fade_time
+				else --SABO_LIGHTS_MODE.DISABLE_MAP
+					sabo_duration = sabo_duration
+				end
 				sabo_cooldown = GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt()
+				
+				timer.Create("ImpostorSaboLightsTimer_Server", sabo_duration, 1, function()
+					IMPO_SABO_DATA.DestroyStation()
+					PutSabotageOnCooldown(sabo_cooldown)
+					
+					return
+				end)
 			elseif sabo_mode == SABO_MODE.COMMS then
 				for _, ply_i in ipairs(player.GetAll()) do
 					--Inform everyone that the sabotage is starting.
@@ -362,6 +381,9 @@ if SERVER then
 				timer.Create("ImpostorSaboCommsTimer_Server", sabo_duration, 1, function()
 					--If hook doesn't exist, hook.Remove will not throw errors, and instead silently pass.
 					hook.Remove("Think", "ImpostorSaboComms_Deafen")
+					IMPO_SABO_DATA.DestroyStation()
+					PutSabotageOnCooldown(sabo_cooldown)
+					
 					return
 				end)
 			elseif sabo_mode == SABO_MODE.O2 then
@@ -377,19 +399,12 @@ if SERVER then
 				SabotageO2(GetConVar("ttt2_impostor_sabo_o2_hp_loss"):GetInt(), sabo_duration)
 				
 				timer.Create("ImpostorSaboO2Timer_Server", sabo_duration, 1, function()
+					IMPO_SABO_DATA.DestroyStation()
+					PutSabotageOnCooldown(sabo_cooldown)
+					
 					return
 				end)
 			end
-			
-			if GetConVar("ttt2_impostor_station_enable"):GetBool() then
-				--Mark station as used
-				IMPO_SABO_DATA.MarkStationAsUsed(selected_station)
-			end
-			
-			--Only begin cooldown timer after fade effect ends.
-			timer.Simple(sabo_duration, function()
-				PutSabotageOnCooldown(sabo_cooldown)
-			end)
 		elseif sabo_mode == SABO_MODE.MNGR then
 			IMPO_SABO_DATA.MaybeAddNewStationSpawn(ply)
 		end
@@ -581,6 +596,11 @@ if CLIENT then
 		end
 	end)
 	
+	net.Receive("TTT2ImpostorSabotageLights", function()
+		local client = LocalPlayer()
+		SabotageLights(client)
+	end)
+	
 	net.Receive("TTT2ImpostorSendSabotageLightsResponse", function()
 		--Inform the clients that the lights will be sabotaged.
 		local client = LocalPlayer()
@@ -590,12 +610,19 @@ if CLIENT then
 		LANG.Msg("SABO_LIGHTS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 		
 		if client:GetSubRole() == ROLE_IMPOSTOR and GetConVar("ttt2_impostor_station_enable"):GetBool() then
-			IMPO_SABO_DATA.MarkAndToggleSelectedSabotageStation()
+			IMPO_SABO_DATA.MarkAndCycleSelectedSabotageStation()
 		end
 		
 		--Create a timer which hopefully will match the server's timer.
 		--This is used in the HUD to allow impostors to track the darkness other clients are experiencing.
-		timer.Create("ImpostorSaboLightsTimer_Client", sabo_lights_len + 2*fade_time, 1, function()
+		local sabo_duration = sabo_lights_len
+		if GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt() == SABO_LIGHTS_MODE.SCREEN_FADE then
+			sabo_duration = sabo_duration + 2*fade_time
+		else --SABO_LIGHTS_MODE.DISABLE_MAP
+			sabo_duration = sabo_duration + IMPO_IOTA
+		end
+		
+		timer.Create("ImpostorSaboLightsTimer_Client", sabo_duration, 1, function()
 			LANG.Msg("SABO_LIGHTS_END_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			return
 		end)
@@ -609,7 +636,7 @@ if CLIENT then
 		LANG.Msg("SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 		
 		if client:GetSubRole() == ROLE_IMPOSTOR and GetConVar("ttt2_impostor_station_enable"):GetBool() then
-			IMPO_SABO_DATA.MarkAndToggleSelectedSabotageStation()
+			IMPO_SABO_DATA.MarkAndCycleSelectedSabotageStation()
 		end
 		
 		--Create a timer which hopefully will match the server's timer.
@@ -628,7 +655,7 @@ if CLIENT then
 		LANG.Msg("SABO_O2_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 		
 		if client:GetSubRole() == ROLE_IMPOSTOR and GetConVar("ttt2_impostor_station_enable"):GetBool() then
-			IMPO_SABO_DATA.MarkAndToggleSelectedSabotageStation()
+			IMPO_SABO_DATA.MarkAndCycleSelectedSabotageStation()
 		end
 		
 		--Create a timer which hopefully will match the server's timer.
@@ -637,11 +664,6 @@ if CLIENT then
 			LANG.Msg("SABO_O2_END_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			return
 		end)
-	end)
-	
-	net.Receive("TTT2ImpostorSabotageLights", function()
-		local client = LocalPlayer()
-		SabotageLights(client)
 	end)
 	
 	hook.Add("TTT2CanUseVoiceChat", "ImpostorCanUseVoiceChatForClient", function(speaker, isTeamVoice)
@@ -681,7 +703,7 @@ if CLIENT then
 	end
 	bind.Register("ImpostorSendInstantKillRequest", SendInstantKillRequest, nil, "Impostor", "Instant Kill", KEY_E)
 	
-	local function ToggleSabotageMode()
+	local function CycleSabotageMode()
 		local client = LocalPlayer()
 		
 		if not SelectedSaboModeInRange(client) then
@@ -690,7 +712,7 @@ if CLIENT then
 		end
 		
 		if timer.Exists("ImpostorSaboLightsTimer_Client") or timer.Exists("ImpostorSaboCommsTimer_Client") or timer.Exists("ImpostorSaboO2Timer_Client") then
-			--Don't toggle sabotage mode while a sabotage is in progress.
+			--Don't cycle sabotage mode while a sabotage is in progress.
 			return
 		end
 		
@@ -728,7 +750,7 @@ if CLIENT then
 			end
 		end
 	end
-	bind.Register("ImpostorSabotageToggle", ToggleSabotageMode, nil, "Impostor", "Toggle Sabotage Mode", KEY_R)
+	bind.Register("ImpostorSabotageCycle", CycleSabotageMode, nil, "Impostor", "Cycle Sabotage Mode", KEY_R)
 	
 	local function SendSabotageRequest()
 		local client = LocalPlayer()
@@ -739,7 +761,7 @@ if CLIENT then
 		end
 		
 		if client.impo_sabo_mode == SABO_MODE.MNGR and IMPO_SABO_DATA.MaybeGetNewStationSpawnPos(client) == nil and CurrentSabotageInProgress() == SABO_MODE.NONE then
-			IMPO_SABO_DATA.ToggleSelectedSabotageStation()
+			IMPO_SABO_DATA.CycleSelectedSabotageStation()
 		else
 			net.Start("TTT2ImpostorSendSabotageRequest")
 			net.WriteInt(client.impo_sabo_mode, 16)
@@ -764,7 +786,7 @@ if CLIENT then
 			--Use timer to prevent cases where key presses are registered multiple times on accident
 			--Not quite sure if this is a bug in GMod, my testing server, or my keyboard...
 			local cur_time = CurTime()
-			if client.impo_last_move_time == nil or cur_time > client.impo_last_move_time + IOTA then
+			if client.impo_last_move_time == nil or cur_time > client.impo_last_move_time + IMPO_IOTA then
 				IMPO_VENT_DATA.MovePlayerFromVentTo(client, ent_idx)
 				client.impo_last_move_time = cur_time
 			end

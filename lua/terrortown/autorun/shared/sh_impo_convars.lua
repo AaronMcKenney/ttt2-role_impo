@@ -18,7 +18,7 @@ CreateConVar("ttt2_impostor_traitor_team_can_use_vents", "1", {FCVAR_ARCHIVE, FC
 CreateConVar("ttt2_impostor_trapper_venting_time", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_inform_about_trappers_venting", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_inform_trappers_about_venting", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_jesters_can_vent", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_jesters_can_vent", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage Station Management
 CreateConVar("ttt2_impostor_station_enable", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_station_manager_enable", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -205,11 +205,11 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# Should jesters be able to use vents?
-	--  ttt2_impostor_jesters_can_vent [0/1] (default: 1)
+	--  ttt2_impostor_jesters_can_vent [0/1] (default: 0)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_jesters_can_vent",
 		checkbox = true,
-		desc = "ttt2_impostor_jesters_can_vent (Def: 1)"
+		desc = "ttt2_impostor_jesters_can_vent (Def: 0)"
 	})
 	
 	--# Should the Impostor's sabotage abilities create a Sabotage Station entity (If disabled, the sabotage abilities can only end once their duration has been exceeded)?
@@ -258,7 +258,8 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_station_radius (Def: 750)"
 	})
 	
-	--# What proportion of the players (rounded up) at the beginning of the round need to enter the sabotage station's radius in order to end the current sabotage (ex. If 0.25, and there are 6 players, then at least 2 need to enter the station's radius)?
+	--# What proportion of the players (alive and dead, rounded up) need to enter the sabotage station's radius in order to end the current sabotage (ex. If 0.25, and there are 6 players, then at least 2 need to enter the station's radius)?
+	--  Note: Both dead and alive players are counted for determining this threshold.
 	--  ttt2_impostor_stop_station_ply_prop [0.0..n.m] (default: 0.25)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_stop_station_ply_prop",

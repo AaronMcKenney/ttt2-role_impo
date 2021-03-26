@@ -404,7 +404,7 @@ if CLIENT then
 		IMPO_VENT_DATA.RevealVent(GetVentFromIndex(new_vent_idx))
 	end)
 	
-	hook.Add("PreDrawOutlines", "PreDrawOutlinesImpostorVent", function()
+	hook.Add("PreDrawOutlines", "ImpostorVentDataPreDrawOutlines", function()
 		local client = LocalPlayer()
 		
 		--Outline vents for impostors and traitor team (They will be able to see it regardless of where they are)

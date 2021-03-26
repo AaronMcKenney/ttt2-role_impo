@@ -166,7 +166,6 @@ if SERVER then
 		local vent_exit_pos = IMPO_VENT_DATA.DetermineVentExitPos(tr.HitPos, tr.HitNormal, vent_placement_range, ply:GetPos())
 		--Explicitly check if the player's current position is safe for exiting from this potential vent.
 		local is_spawn_point_safe = spawn.IsSpawnPointSafe(ply, vent_exit_pos, false, player.GetAll())
-		local vent_was_placed = false
 		
 		if tr.HitWorld and is_spawn_point_safe then
 			local vent = ents.Create("ttt_vent")
@@ -180,7 +179,6 @@ if SERVER then
 				vent.fingerprints = self.fingerprints
 				
 				self:PlacedVent()
-				vent_was_placed = true
 				return
 			end
 		end

@@ -6,6 +6,7 @@ end
 
 IMPO_SABO_DATA = {}
 IMPO_SABO_DATA.STATION_NETWORK = {}
+IMPO_SABO_DATA.ACTIVE_SABO_ENT = nil
 
 local function SafePosCanBeAdded(new_pos)
 	local min_dist = GetConVar("ttt2_impostor_min_station_dist"):GetInt()
@@ -91,6 +92,23 @@ function IMPO_SABO_DATA.MaybeGetNewStationSpawnPos(ply)
 	return maybe_spawn_pos
 end
 
+function IMPO_SABO_DATA.ForceEndSabotage()
+	if SERVER then
+		timer.Adjust("ImpostorSaboMapLightingTimer_Server", 0, nil, nil)
+		timer.Adjust("ImpostorSaboLightsTimer_Server", 0, nil, nil)
+		timer.Adjust("ImpostorSaboCommsTimer_Server", 0, nil, nil)
+		timer.Adjust("ImpostorSaboO2Timer_Server", 0, nil, nil)
+	elseif CLIENT then
+		--IOTA for map lighting timer to give server time to setup map lights.
+		timer.Adjust("ImpostorSaboMapLightingTimer_Client", IMPO_IOTA, nil, nil)
+		timer.Adjust("ImpostorSaboLightsTimer_Client", IMPO_IOTA, nil, nil)
+		timer.Adjust("ImpostorSaboCommsTimer_Client", 0, nil, nil)
+		timer.Adjust("ImpostorSaboO2Timer_Client", 0, nil, nil)
+	end
+	
+	IMPO_SABO_DATA.ACTIVE_SABO_ENT = nil
+end
+
 if SERVER then
 	hook.Add("TTTPrepareRound", "ImpostorSaboDataPrepareRoundForServer", function()
 		local min_dist = GetConVar("ttt2_impostor_min_station_dist"):GetInt()
@@ -157,6 +175,38 @@ if SERVER then
 			end
 		end
 	end
+	
+	function IMPO_SABO_DATA.CreateStation(ply, selected_station)
+		local dissuade_station_reuse = GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool()
+		if dissuade_station_reuse and IMPO_SABO_DATA.STATION_NETWORK[selected_station].used then
+			--Can't spawn stations in a location that has already been used.
+			return false
+		end
+		
+		local station_pos = IMPO_SABO_DATA.STATION_NETWORK[selected_station].pos
+		IMPO_SABO_DATA.ACTIVE_SABO_ENT = ents.Create("ttt_sabotage_station")
+		if IsValid(IMPO_SABO_DATA.ACTIVE_SABO_ENT) then
+			IMPO_SABO_DATA.ACTIVE_SABO_ENT:SetPos(station_pos)
+			IMPO_SABO_DATA.ACTIVE_SABO_ENT:SetOwner(ply)
+			IMPO_SABO_DATA.ACTIVE_SABO_ENT:Spawn()
+		else
+			LANG.Msg(ply, "SABO_CANNOT_PLACE_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			IMPO_SABO_DATA.ACTIVE_SABO_ENT = nil
+			return false
+		end
+		
+		--Mark station as used
+		IMPO_SABO_DATA.MarkStationAsUsed(selected_station)
+		
+		return true
+	end
+	
+	function IMPO_SABO_DATA.DestroyStation()
+		if IsValid(IMPO_SABO_DATA.ACTIVE_SABO_ENT) then
+			IMPO_SABO_DATA.ACTIVE_SABO_ENT:Remove()
+			IMPO_SABO_DATA.ACTIVE_SABO_ENT = nil
+		end
+	end
 end
 
 if CLIENT then
@@ -172,14 +222,14 @@ if CLIENT then
 		
 		print("BMF TTT2ImpostorSendEntireStationNetwork: Reading station network of size " .. network_size)
 		
-		for _ = 1, network_size do
+		for i = 1, network_size do
 			local stat_spawn = {}
 			stat_spawn.pos = net.ReadVector()
 			stat_spawn.used = net.ReadBool()
 			
 			IMPO_SABO_DATA.STATION_NETWORK[#IMPO_SABO_DATA.STATION_NETWORK + 1] = stat_spawn
 			
-			print("  stat_spawn[" .. _ .. "].pos = <" .. stat_spawn.pos.x .. ", " .. stat_spawn.pos.y .. ", " .. stat_spawn.pos.z .. ">")
+			print("  stat_spawn[" .. i .. "].pos = <" .. stat_spawn.pos.x .. ", " .. stat_spawn.pos.y .. ", " .. stat_spawn.pos.z .. ">")
 		end
 		
 		--Reset impo_selected_station if needed (Recall that Lua is 1-indexed, not 0-indexed!).
@@ -196,7 +246,7 @@ if CLIENT then
 		IMPO_SABO_DATA.STATION_NETWORK[#IMPO_SABO_DATA.STATION_NETWORK + 1] = stat_spawn
 	end)
 	
-	function IMPO_SABO_DATA.ToggleSelectedSabotageStation()
+	function IMPO_SABO_DATA.CycleSelectedSabotageStation()
 		local client = LocalPlayer()
 		local dissuade_station_reuse = GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool()
 		local station_count = #IMPO_SABO_DATA.STATION_NETWORK
@@ -211,7 +261,7 @@ if CLIENT then
 			end
 		end
 		station_network_str = station_network_str .. "]"
-		print("BMF ToggleSelectedSabotageStation: impo_selected_station = " .. client.impo_selected_station .. ", # stations = " .. #IMPO_SABO_DATA.STATION_NETWORK .. ", station use = " .. station_network_str)
+		print("BMF CycleSelectedSabotageStation: impo_selected_station = " .. client.impo_selected_station .. ", # stations = " .. #IMPO_SABO_DATA.STATION_NETWORK .. ", station use = " .. station_network_str)
 		--BMF
 		
 		--Safeguard
@@ -238,14 +288,21 @@ if CLIENT then
 		end
 	end
 	
-	function IMPO_SABO_DATA.MarkAndToggleSelectedSabotageStation()
+	function IMPO_SABO_DATA.MarkAndCycleSelectedSabotageStation()
 		local client = LocalPlayer()
 		local dissuade_station_reuse = GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool()
 		
 		IMPO_SABO_DATA.MarkStationAsUsed(client.impo_selected_station)
-		--If dissuade_station_reuse is enabled, then the impostor probably won't bother using other sabotage stations.
+		--If dissuade_station_reuse is disabled, then the impostor probably won't bother using other sabotage stations.
 		if dissuade_station_reuse then
-			IMPO_SABO_DATA.ToggleSelectedSabotageStation()
+			IMPO_SABO_DATA.CycleSelectedSabotageStation()
 		end
 	end
+	
+	hook.Add("PreDrawOutlines", "ImpostorSaboDataPreDrawOutlines", function()
+		--Outline station for all to see.
+		if IsValid(IMPO_SABO_DATA.ACTIVE_SABO_ENT) then
+			outline.Add(IMPO_SABO_DATA.ACTIVE_SABO_ENT, IMPOSTOR.color, OUTLINE_MODE_VISIBLE)
+		end
+	end)
 end

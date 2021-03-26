@@ -37,6 +37,7 @@ L["VENT_ANYONE_ENTER_" .. IMPOSTOR.name] = "Someone has entered a vent."
 L["VENT_ANYONE_EXIT_" .. IMPOSTOR.name] = "Someone has exited a vent."
 
 -- SABOTAGE LANGUAGE STRINGS
+L["SABO_CANNOT_PLACE_" .. IMPOSTOR.name] = "Unable to place sabotage station."
 L["SABO_LIGHTS_" .. IMPOSTOR.name] = "SABOTAGE LIGHTS"
 L["SABO_LIGHTS_START_" .. IMPOSTOR.name] = "An Impostor has sabotaged the lights!"
 L["SABO_LIGHTS_END_" .. IMPOSTOR.name] = "The lights are back on!"
