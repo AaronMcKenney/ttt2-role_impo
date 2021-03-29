@@ -8,7 +8,8 @@ if SERVER then
 	util.AddNetworkString("TTT2ImpostorSendInstantKillRequest")
 	util.AddNetworkString("TTT2ImpostorSendSabotageRequest")
 	util.AddNetworkString("TTT2ImpostorSendSabotageLightsResponse")
-	util.AddNetworkString("TTT2ImpostorSabotageLights")
+	util.AddNetworkString("TTT2ImpostorSabotageLightsScreenFade")
+	util.AddNetworkString("TTT2ImpostorSabotageLightsRedownloadMap")
 	util.AddNetworkString("TTT2ImpostorSendSabotageCommsResponse")
 	util.AddNetworkString("TTT2ImpostorSendSabotageO2Response")
 end
@@ -141,45 +142,30 @@ local function CanHaveO2Sabotaged(ply)
 	return false
 end
 
-local function SabotageLights(ply)
-	if SabotageLightsIsEnabled() then
-		local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
+local function InduceScreenFade(ply)
+	if SabotageLightsIsEnabled() and GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt() == SABO_LIGHTS_MODE.SCREEN_FADE then
 		local fade_hold = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
+		local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
+		--Sabotage ply's lights by performing two screen fades.
+		fade_hold_half = fade_hold/2
 		
-		if GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt() == SABO_LIGHTS_MODE.SCREEN_FADE then
-			--Sabotage ply's lights by performing two screen fades.
-			fade_hold_half = fade_hold/2
-			
-			--SCREENFADE.IN: Cut to black immediately. After fade_hold, transition out over fade_time.
-			--SCREENFADE.OUT: Fade to black over fade_time. After fade_hold, cut back to normal immediately.
-			--SCREENFADE.MODULATE: Cut to black immediately. Cut back to normal some time after. Not sure how fade_time factors in here.
-			--SCREENFADE.STAYOUT: Cut to black immediately. Never returns to normal. Why is this a thing?
-			--SCREENFADE.PURGE: Not sure how this differs from SCREENFADE.MODULATE.
-			
-			--Create temporary lights-out effect: fade to black, hold, then fade to normal.
-			--Add IMPO_IOTA in first ScreenFade call to handle lag between the two calls and create a hopefully seemless blackout effect.
-			ply:ScreenFade(SCREENFADE.OUT, COLOR_BLACK, fade_time, fade_hold_half + IMPO_IOTA)
-			timer.Simple(fade_time + fade_hold_half, function()
-				--Have to create a lambda function() here. ply:ScreenFade by itself doesn't pass compile.
-				ply:ScreenFade(SCREENFADE.IN, COLOR_BLACK, fade_time, fade_hold_half)
-			end)
-		else --SABO_LIGHTS_MODE.DISABLE_MAP
-			if SERVER then
-				engine.LightStyle(0, "a")
-				timer.Create("ImpostorSaboMapLightingTimer_Server", fade_hold, 1, function()
-					engine.LightStyle(0, "m")
-				end)
-			elseif CLIENT then
-				render.RedownloadAllLightmaps()
-				timer.Create("ImpostorSaboMapLightingTimer_Client", fade_hold + IMPO_IOTA, 1, function()
-					render.RedownloadAllLightmaps()
-				end)
-			end
-		end
+		--SCREENFADE.IN: Cut to black immediately. After fade_hold, transition out over fade_time.
+		--SCREENFADE.OUT: Fade to black over fade_time. After fade_hold, cut back to normal immediately.
+		--SCREENFADE.MODULATE: Cut to black immediately. Cut back to normal some time after. Not sure how fade_time factors in here.
+		--SCREENFADE.STAYOUT: Cut to black immediately. Never returns to normal. Why is this a thing?
+		--SCREENFADE.PURGE: Not sure how this differs from SCREENFADE.MODULATE.
+		
+		--Create temporary lights-out effect: fade to black, hold, then fade to normal.
+		--Add IMPO_IOTA in first ScreenFade call to handle lag between the two calls and create a hopefully seemless blackout effect.
+		ply:ScreenFade(SCREENFADE.OUT, COLOR_BLACK, fade_time, fade_hold_half + IMPO_IOTA)
+		timer.Simple(fade_time + fade_hold_half, function()
+			--Have to create a lambda function() here. ply:ScreenFade by itself doesn't pass compile.
+			ply:ScreenFade(SCREENFADE.IN, COLOR_BLACK, fade_time, fade_hold_half)
+		end)
 		
 		if SERVER then
 			--Send request to client to call this same function, just to keep things in sync.
-			net.Start("TTT2ImpostorSabotageLights")
+			net.Start("TTT2ImpostorSabotageLightsScreenFade")
 			net.Send(ply)
 		end
 	end
@@ -241,23 +227,6 @@ if SERVER then
 		net.Send(ply)
 	end
 	
-	local function SabotageO2(hp_loss, sabo_duration)
-		timer.Simple(1, function()
-			for _, ply in ipairs(player.GetAll()) do
-				if ply:Alive() and CanHaveO2Sabotaged(ply) then
-					ply:SetHealth(ply:Health() - hp_loss)
-				end
-			end
-			
-			--Probably the first or second time after graduating that I've had a legitimate reason to use recursion.
-			--This methodology is probably faster than using a Think hook, but I'm too lazy to do a performance comparison.
-			--Check for "> 1" instead of "> 0" as we already deduct an HP at the start.
-			if sabo_duration > 1 then
-				SabotageO2(hp_loss, sabo_duration - 1)
-			end
-		end)
-	end
-	
 	local function PutSabotageOnCooldown(sabo_cooldown)
 		print("BMF PutSabotageOnCooldown")
 		--Handle case where admin wants impostor to be overpowered trash.
@@ -302,6 +271,127 @@ if SERVER then
 		end
 	end)
 	
+	local function SabotageLights()
+		local sabo_lights_mode = GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt()
+		local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
+		
+		local sabo_duration = sabo_lights_len
+		if sabo_lights_mode == SABO_LIGHTS_MODE.SCREEN_FADE then
+			local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
+			sabo_duration = sabo_duration + 2*fade_time
+		else --SABO_LIGHTS_MODE.DISABLE_MAP
+			engine.LightStyle(0, "a")
+		end
+		local sabo_cooldown = GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt()
+		
+		for _, ply in ipairs(player.GetAll()) do
+			--Inform everyone that the sabotage is starting.
+			net.Start("TTT2ImpostorSendSabotageLightsResponse")
+			net.Send(ply)
+			
+			if CanHaveLightsSabotaged(ply) then
+				if sabo_lights_mode == SABO_LIGHTS_MODE.SCREEN_FADE then
+					InduceScreenFade(ply)
+				else --SABO_LIGHTS_MODE.DISABLE_MAP
+					net.Start("TTT2ImpostorSabotageLightsRedownloadMap")
+					net.Send(ply)
+					--Keep track of who had their map disabled, in case a role changes during sabo.
+					ply.impo_tmp_light_map_disabled = true
+				end
+			end
+		end
+		
+		timer.Create("ImpostorSaboLightsTimer_Server", sabo_duration, 1, function()
+			IMPO_SABO_DATA.DestroyStation()
+			
+			if sabo_lights_mode == SABO_LIGHTS_MODE.DISABLE_MAP then
+				engine.LightStyle(0, "m")
+				for _, ply in ipairs(player.GetAll()) do
+					if ply.impo_tmp_light_map_disabled then
+						net.Start("TTT2ImpostorSabotageLightsRedownloadMap")
+						net.Send(ply)
+						ply.impo_tmp_light_map_disabled = nil
+					end
+				end
+			end
+			
+			PutSabotageOnCooldown(sabo_cooldown)
+			
+			return
+		end)
+	end
+	
+	local function SabotageComms()
+		for _, ply in ipairs(player.GetAll()) do
+			--Inform everyone that the sabotage is starting.
+			net.Start("TTT2ImpostorSendSabotageCommsResponse")
+			net.Send(ply)
+		end
+		
+		local sabo_duration = GetConVar("ttt2_impostor_sabo_comms_length"):GetInt()
+		local sabo_cooldown = GetConVar("ttt2_impostor_sabo_comms_cooldown"):GetInt()
+		
+		if GetConVar("ttt2_impostor_sabo_comms_deafen"):GetBool() then
+			hook.Add("Think", "ImpostorSaboComms_Deafen", function()
+				for _, ply in ipairs(player.GetAll()) do
+					if CanHaveCommsSabotaged(ply) then
+						ply:ConCommand("soundfade 100 1")
+					end
+				end
+			end)
+		end
+		
+		--Create a timer that'll be used to explicitly silence those affected.
+		timer.Create("ImpostorSaboCommsTimer_Server", sabo_duration, 1, function()
+			--If hook doesn't exist, hook.Remove will not throw errors, and instead silently pass.
+			hook.Remove("Think", "ImpostorSaboComms_Deafen")
+			IMPO_SABO_DATA.DestroyStation()
+			PutSabotageOnCooldown(sabo_cooldown)
+			
+			return
+		end)
+	end
+	
+	local function SabotageO2_DamageOverTime(hp_loss, sabo_duration)
+		local dmg_info = DamageInfo()
+		dmg_info:SetDamage(hp_loss)
+		dmg_info:SetDamageType(DMG_DROWN)
+		for _, ply in ipairs(player.GetAll()) do
+			if ply:Alive() and CanHaveO2Sabotaged(ply) then
+				--Attacker must be specified, or TTT2 starts complaining.
+				dmg_info:SetAttacker(IMPO_SABO_DATA.ACTIVE_SABO_ENT or ply)
+				ply:TakeDamageInfo(dmg_info)
+			end
+		end
+		
+		timer.Simple(1, function()
+			--Check for "> 1" instead of "> 0" as we already deduct an HP at the start.
+			if sabo_duration > 1 and timer.Exists("ImpostorSaboO2Timer_Server") then
+				SabotageO2_DamageOverTime(hp_loss, sabo_duration - 1)
+			end
+		end)
+	end
+	
+	local function SabotageO2()
+		for _, ply in ipairs(player.GetAll()) do
+			--Inform everyone that the sabotage is starting.
+			net.Start("TTT2ImpostorSendSabotageO2Response")
+			net.Send(ply)
+		end
+		
+		local sabo_duration = GetConVar("ttt2_impostor_sabo_o2_length"):GetInt()
+		local sabo_cooldown = GetConVar("ttt2_impostor_sabo_o2_cooldown"):GetInt()
+		
+		timer.Create("ImpostorSaboO2Timer_Server", sabo_duration, 1, function()
+			IMPO_SABO_DATA.DestroyStation()
+			PutSabotageOnCooldown(sabo_cooldown)
+			
+			return
+		end)
+		
+		SabotageO2_DamageOverTime(GetConVar("ttt2_impostor_sabo_o2_hp_loss"):GetInt(), sabo_duration)
+	end
+	
 	net.Receive("TTT2ImpostorSendSabotageRequest", function(len, ply)
 		local sabo_mode = net.ReadInt(16)
 		local selected_station = net.ReadInt(16)
@@ -326,84 +416,12 @@ if SERVER then
 			--Prevent button spamming tricks by immediately disabling sabo.
 			impos_can_sabo = false
 			
-			local sabo_duration = 0
-			local sabo_cooldown = 0
-			
 			if sabo_mode == SABO_MODE.LIGHTS then
-				local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
-				local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
-				
-				for _, ply_i in ipairs(player.GetAll()) do
-					--Inform everyone that the sabotage is starting.
-					net.Start("TTT2ImpostorSendSabotageLightsResponse")
-					net.Send(ply_i)
-					
-					if CanHaveLightsSabotaged(ply_i) then
-						SabotageLights(ply_i)
-					end
-				end
-				
-				local sabo_duration = sabo_lights_len
-				if GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt() == SABO_LIGHTS_MODE.SCREEN_FADE then
-					sabo_duration = sabo_duration + 2*fade_time
-				else --SABO_LIGHTS_MODE.DISABLE_MAP
-					sabo_duration = sabo_duration
-				end
-				sabo_cooldown = GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt()
-				
-				timer.Create("ImpostorSaboLightsTimer_Server", sabo_duration, 1, function()
-					IMPO_SABO_DATA.DestroyStation()
-					PutSabotageOnCooldown(sabo_cooldown)
-					
-					return
-				end)
+				SabotageLights()
 			elseif sabo_mode == SABO_MODE.COMMS then
-				for _, ply_i in ipairs(player.GetAll()) do
-					--Inform everyone that the sabotage is starting.
-					net.Start("TTT2ImpostorSendSabotageCommsResponse")
-					net.Send(ply_i)
-				end
-				
-				sabo_duration = GetConVar("ttt2_impostor_sabo_comms_length"):GetInt()
-				sabo_cooldown = GetConVar("ttt2_impostor_sabo_comms_cooldown"):GetInt()
-				
-				if GetConVar("ttt2_impostor_sabo_comms_deafen"):GetBool() then
-					hook.Add("Think", "ImpostorSaboComms_Deafen", function()
-						for _, ply_i in ipairs(player.GetAll()) do
-							if CanHaveCommsSabotaged(ply_i) then
-								ply_i:ConCommand("soundfade 100 1")
-							end
-						end
-					end)
-				end
-				
-				--Create a timer that'll be used to explicitly silence those affected.
-				timer.Create("ImpostorSaboCommsTimer_Server", sabo_duration, 1, function()
-					--If hook doesn't exist, hook.Remove will not throw errors, and instead silently pass.
-					hook.Remove("Think", "ImpostorSaboComms_Deafen")
-					IMPO_SABO_DATA.DestroyStation()
-					PutSabotageOnCooldown(sabo_cooldown)
-					
-					return
-				end)
+				SabotageComms()
 			elseif sabo_mode == SABO_MODE.O2 then
-				for _, ply_i in ipairs(player.GetAll()) do
-					--Inform everyone that the sabotage is starting.
-					net.Start("TTT2ImpostorSendSabotageO2Response")
-					net.Send(ply_i)
-				end
-				
-				sabo_duration = GetConVar("ttt2_impostor_sabo_o2_length"):GetInt()
-				sabo_cooldown = GetConVar("ttt2_impostor_sabo_o2_cooldown"):GetInt()
-				
-				SabotageO2(GetConVar("ttt2_impostor_sabo_o2_hp_loss"):GetInt(), sabo_duration)
-				
-				timer.Create("ImpostorSaboO2Timer_Server", sabo_duration, 1, function()
-					IMPO_SABO_DATA.DestroyStation()
-					PutSabotageOnCooldown(sabo_cooldown)
-					
-					return
-				end)
+				SabotageO2()
 			end
 		elseif sabo_mode == SABO_MODE.MNGR then
 			IMPO_SABO_DATA.MaybeAddNewStationSpawn(ply)
@@ -596,9 +614,13 @@ if CLIENT then
 		end
 	end)
 	
-	net.Receive("TTT2ImpostorSabotageLights", function()
+	net.Receive("TTT2ImpostorSabotageLightsScreenFade", function()
 		local client = LocalPlayer()
-		SabotageLights(client)
+		InduceScreenFade(client)
+	end)
+	
+	net.Receive("TTT2ImpostorSabotageLightsRedownloadMap", function()
+		render.RedownloadAllLightmaps()
 	end)
 	
 	net.Receive("TTT2ImpostorSendSabotageLightsResponse", function()
@@ -618,8 +640,6 @@ if CLIENT then
 		local sabo_duration = sabo_lights_len
 		if GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt() == SABO_LIGHTS_MODE.SCREEN_FADE then
 			sabo_duration = sabo_duration + 2*fade_time
-		else --SABO_LIGHTS_MODE.DISABLE_MAP
-			sabo_duration = sabo_duration + IMPO_IOTA
 		end
 		
 		timer.Create("ImpostorSaboLightsTimer_Client", sabo_duration, 1, function()

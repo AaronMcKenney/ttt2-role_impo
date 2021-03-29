@@ -94,14 +94,11 @@ end
 
 function IMPO_SABO_DATA.ForceEndSabotage()
 	if SERVER then
-		timer.Adjust("ImpostorSaboMapLightingTimer_Server", 0, nil, nil)
 		timer.Adjust("ImpostorSaboLightsTimer_Server", 0, nil, nil)
 		timer.Adjust("ImpostorSaboCommsTimer_Server", 0, nil, nil)
 		timer.Adjust("ImpostorSaboO2Timer_Server", 0, nil, nil)
 	elseif CLIENT then
-		--IOTA for map lighting timer to give server time to setup map lights.
-		timer.Adjust("ImpostorSaboMapLightingTimer_Client", IMPO_IOTA, nil, nil)
-		timer.Adjust("ImpostorSaboLightsTimer_Client", IMPO_IOTA, nil, nil)
+		timer.Adjust("ImpostorSaboLightsTimer_Client", 0, nil, nil)
 		timer.Adjust("ImpostorSaboCommsTimer_Client", 0, nil, nil)
 		timer.Adjust("ImpostorSaboO2Timer_Client", 0, nil, nil)
 	end
@@ -184,14 +181,13 @@ if SERVER then
 		end
 		
 		local station_pos = IMPO_SABO_DATA.STATION_NETWORK[selected_station].pos
-		IMPO_SABO_DATA.ACTIVE_SABO_ENT = ents.Create("ttt_sabotage_station")
-		if IsValid(IMPO_SABO_DATA.ACTIVE_SABO_ENT) then
-			IMPO_SABO_DATA.ACTIVE_SABO_ENT:SetPos(station_pos)
-			IMPO_SABO_DATA.ACTIVE_SABO_ENT:SetOwner(ply)
-			IMPO_SABO_DATA.ACTIVE_SABO_ENT:Spawn()
+		local sabo_station = ents.Create("ttt_sabotage_station")
+		if IsValid(sabo_station) then
+			sabo_station:SetPos(station_pos)
+			sabo_station:SetOwner(ply)
+			sabo_station:Spawn()
 		else
 			LANG.Msg(ply, "SABO_CANNOT_PLACE_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
-			IMPO_SABO_DATA.ACTIVE_SABO_ENT = nil
 			return false
 		end
 		
@@ -204,7 +200,6 @@ if SERVER then
 	function IMPO_SABO_DATA.DestroyStation()
 		if IsValid(IMPO_SABO_DATA.ACTIVE_SABO_ENT) then
 			IMPO_SABO_DATA.ACTIVE_SABO_ENT:Remove()
-			IMPO_SABO_DATA.ACTIVE_SABO_ENT = nil
 		end
 	end
 end
@@ -302,7 +297,7 @@ if CLIENT then
 	hook.Add("PreDrawOutlines", "ImpostorSaboDataPreDrawOutlines", function()
 		--Outline station for all to see.
 		if IsValid(IMPO_SABO_DATA.ACTIVE_SABO_ENT) then
-			outline.Add(IMPO_SABO_DATA.ACTIVE_SABO_ENT, IMPOSTOR.color, OUTLINE_MODE_VISIBLE)
+			outline.Add(IMPO_SABO_DATA.ACTIVE_SABO_ENT, IMPOSTOR.color, OUTLINE_MODE_BOTH)
 		end
 	end)
 end

@@ -25,7 +25,10 @@ function ENT:Initialize()
 	
 	self:CallOnRemove("SaboStationCallOnRemove", function(ent)
 		IMPO_SABO_DATA.ForceEndSabotage()
+		IMPO_SABO_DATA.ACTIVE_SABO_ENT = nil
 	end)
+	
+	IMPO_SABO_DATA.ACTIVE_SABO_ENT = self
 end
 
 --Called on the Server to check if the sabotage can end prematurely.
@@ -54,7 +57,9 @@ function ENT:Think()
 		if num_plys_in_range >= threshold then
 			if not timer.Exists("ImpostorSaboStationEndProtocolInProgress") then
 				timer.Create("ImpostorSaboStationEndProtocolInProgress", hold_time, 1, function()
-					IMPO_SABO_DATA.ACTIVE_SABO_ENT:Remove()
+					if SERVER then
+						IMPO_SABO_DATA.DestroyStation()
+					end
 				end)
 			end
 		else
