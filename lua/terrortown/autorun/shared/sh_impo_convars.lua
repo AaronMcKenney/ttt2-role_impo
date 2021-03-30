@@ -41,7 +41,10 @@ CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms", "0", {FCVAR
 --Sabotage O2
 CreateConVar("ttt2_impostor_sabo_o2_cooldown", "240", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_o2_hp_loss", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_sabo_o2_length", "20", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_o2_interval", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_o2_grace_period", "10", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_o2_stop_thresh", "10", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_o2_length", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_is_affected_by_sabo_o2", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 
@@ -387,26 +390,59 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_sabo_o2_cooldown (Def: 240)"
 	})
 	
-	--# During Sabotage O2, How much HP per second should be lost (<=0 to disable ability)?
+	--# For Sabotage O2, How much HP per second should be lost (<=0 to disable ability)?
 	--  ttt2_impostor_sabo_o2_hp_loss [0..n] (default: 1)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_sabo_o2_hp_loss",
 		slider = true,
 		min = 0,
-		max = 5,
+		max = 10,
 		decimal = 0,
 		desc = "ttt2_impostor_sabo_o2_hp_loss (Def: 1)"
 	})
 	
+	--# For Sabotage O2, How many seconds should occur between HP deductions?
+	--  ttt2_impostor_sabo_o2_interval [1..n] (default: 1)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_o2_interval",
+		slider = true,
+		min = 1,
+		max = 10,
+		decimal = 0,
+		desc = "ttt2_impostor_sabo_o2_interval (Def: 1)"
+	})
+	
+	--# How many seconds until Sabotage O2 starts incurring hp loss?
+	--  ttt2_impostor_sabo_o2_grace_period [0..n] (default: 10)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_o2_grace_period",
+		slider = true,
+		min = 0,
+		max = 120,
+		decimal = 0,
+		desc = "ttt2_impostor_sabo_o2_grace_period (Def: 10)"
+	})
+	
+	--# At what HP threshold should Sabotage O2 stop damaging a given player?
+	--  ttt2_impostor_sabo_o2_stop_thresh [-n..m] (default: 10)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_o2_stop_thresh",
+		slider = true,
+		min = 0,
+		max = 100,
+		decimal = 0,
+		desc = "ttt2_impostor_sabo_o2_stop_thresh (Def: 10)"
+	})
+	
 	--# How long (in seconds) should O2 be sabotaged for (<= 0 to disable ability)?
-	--  ttt2_impostor_sabo_o2_length [-n..m] (default: 20)
+	--  ttt2_impostor_sabo_o2_length [-n..m] (default: 30)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_sabo_o2_length",
 		slider = true,
 		min = 0,
 		max = 120,
 		decimal = 0,
-		desc = "ttt2_impostor_sabo_o2_length (Def: 20)"
+		desc = "ttt2_impostor_sabo_o2_length (Def: 30)"
 	})
 	
 	--# Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage O2?
@@ -461,6 +497,9 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_comms", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms"):GetBool())
 	SetGlobalInt("ttt2_impostor_sabo_o2_cooldown", GetConVar("ttt2_impostor_sabo_o2_cooldown"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_o2_hp_loss", GetConVar("ttt2_impostor_sabo_o2_hp_loss"):GetInt())
+	SetGlobalInt("ttt2_impostor_sabo_o2_interval", GetConVar("ttt2_impostor_sabo_o2_interval"):GetInt())
+	SetGlobalInt("ttt2_impostor_sabo_o2_grace_period", GetConVar("ttt2_impostor_sabo_o2_grace_period"):GetInt())
+	SetGlobalInt("ttt2_impostor_sabo_o2_stop_thresh", GetConVar("ttt2_impostor_sabo_o2_stop_thresh"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_o2_length", GetConVar("ttt2_impostor_sabo_o2_length"):GetInt())
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool())
 	SetGlobalBool("ttt2_impostor_is_affected_by_sabo_o2", GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool())
@@ -567,6 +606,15 @@ cvars.AddChangeCallback("ttt2_impostor_sabo_o2_cooldown", function(name, old, ne
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_o2_hp_loss", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_sabo_o2_hp_loss", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_o2_interval", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_o2_interval", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_o2_grace_period", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_o2_grace_period", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_o2_stop_thresh", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_o2_stop_thresh", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_o2_length", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_sabo_o2_length", tonumber(new))

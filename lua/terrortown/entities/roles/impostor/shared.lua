@@ -135,11 +135,11 @@ local function CanHaveCommsSabotaged(ply)
 end
 
 local function CanHaveO2Sabotaged(ply)
-	if ((GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool() or ply:GetSubRole() ~= ROLE_IMPOSTOR) and (GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool() or ply:GetTeam() ~= TEAM_TRAITOR)) then
-		return true
+	if (ply:GetSubRole() == ROLE_IMPOSTOR and not GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool()) or (ply:GetSubRole() ~= ROLE_IMPOSTOR and ply:GetTeam() == TEAM_TRAITOR and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool()) then
+		return false
 	end
 	
-	return false
+	return true
 end
 
 local function InduceScreenFade(ply)
@@ -352,22 +352,25 @@ if SERVER then
 		end)
 	end
 	
-	local function SabotageO2_DamageOverTime(hp_loss, sabo_duration)
-		local dmg_info = DamageInfo()
-		dmg_info:SetDamage(hp_loss)
-		dmg_info:SetDamageType(DMG_DROWN)
-		for _, ply in ipairs(player.GetAll()) do
-			if ply:Alive() and CanHaveO2Sabotaged(ply) then
-				--Attacker must be specified, or TTT2 starts complaining.
-				dmg_info:SetAttacker(IMPO_SABO_DATA.ACTIVE_SABO_ENT or ply)
-				ply:TakeDamageInfo(dmg_info)
+	local function SabotageO2_DamageOverTime(hits_left, sabo_duration, grace_period, interval, hp_loss, stop_thresh)
+		--Calculate damage before creating a timer, as we do not know when the sabotage ends, and deducting HP loss at the tail end may lead to non-uniform HP loss across all players on the final tick.
+		if hits_left <= sabo_duration - grace_period and (((sabo_duration - grace_period) - hits_left) % interval) == 0 then
+			local dmg_info = DamageInfo()
+			dmg_info:SetDamageType(DMG_DROWN)
+			for _, ply in ipairs(player.GetAll()) do
+				if ply:Alive() and CanHaveO2Sabotaged(ply) and ply:Health() > stop_thresh then
+					--Attacker must be specified, or TTT2 starts complaining.
+					dmg_info:SetAttacker(IMPO_SABO_DATA.ACTIVE_SABO_ENT or ply)
+					dmg_info:SetDamage(math.min(hp_loss, ply:Health() - stop_thresh))
+					ply:TakeDamageInfo(dmg_info)
+				end
 			end
 		end
 		
 		timer.Simple(1, function()
 			--Check for "> 1" instead of "> 0" as we already deduct an HP at the start.
-			if sabo_duration > 1 and timer.Exists("ImpostorSaboO2Timer_Server") then
-				SabotageO2_DamageOverTime(hp_loss, sabo_duration - 1)
+			if hits_left > 1 and timer.Exists("ImpostorSaboO2Timer_Server") then
+				SabotageO2_DamageOverTime(hits_left - 1, sabo_duration, grace_period, interval, hp_loss, stop_thresh)
 			end
 		end)
 	end
@@ -389,7 +392,7 @@ if SERVER then
 			return
 		end)
 		
-		SabotageO2_DamageOverTime(GetConVar("ttt2_impostor_sabo_o2_hp_loss"):GetInt(), sabo_duration)
+		SabotageO2_DamageOverTime(sabo_duration, sabo_duration, GetConVar("ttt2_impostor_sabo_o2_grace_period"):GetInt(), GetConVar("ttt2_impostor_sabo_o2_interval"):GetInt(), GetConVar("ttt2_impostor_sabo_o2_hp_loss"):GetInt(), GetConVar("ttt2_impostor_sabo_o2_stop_thresh"):GetInt())
 	end
 	
 	net.Receive("TTT2ImpostorSendSabotageRequest", function(len, ply)
