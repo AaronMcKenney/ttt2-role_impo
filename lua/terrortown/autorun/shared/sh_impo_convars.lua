@@ -5,7 +5,7 @@ CreateConVar("ttt2_impostor_normal_dmg_multi", "0.5", {FCVAR_ARCHIVE, FCVAR_NOTF
 --Instant Kill
 CreateConVar("ttt2_impostor_kill_dist", "125", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_kill_cooldown", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
---Venting (General)
+--Venting
 CreateConVar("ttt2_impostor_num_starting_vents", "3", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_vent_capacity", "6", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_global_max_num_vents", "9", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -14,11 +14,6 @@ CreateConVar("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit", "1", {FCVAR_A
 CreateConVar("ttt2_impostor_hide_unused_vents", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_vent_secondary_fire_mode", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_traitor_team_can_use_vents", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
---Venting (Special Role Handling)
-CreateConVar("ttt2_impostor_trapper_venting_time", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_inform_about_trappers_venting", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_inform_trappers_about_venting", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_jesters_can_vent", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage Station Management
 CreateConVar("ttt2_impostor_station_enable", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_station_manager_enable", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -47,6 +42,12 @@ CreateConVar("ttt2_impostor_sabo_o2_stop_thresh", "10", {FCVAR_ARCHIVE, FCVAR_NO
 CreateConVar("ttt2_impostor_sabo_o2_length", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_is_affected_by_sabo_o2", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+--Special Role Handling
+CreateConVar("ttt2_impostor_inform_about_non_traitors_venting", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_trapper_venting_time", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_inform_trappers_about_venting", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_jesters_can_vent", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_dopt_special_handling", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 
 hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	tbl[ROLE_IMPOSTOR] = tbl[ROLE_IMPOSTOR] or {}
@@ -178,41 +179,6 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		cvar = "ttt2_impostor_traitor_team_can_use_vents",
 		checkbox = true,
 		desc = "ttt2_impostor_traitor_team_can_use_vents (Def: 1)"
-	})
-	
-	--# Can the Trapper use the vents, and if so, for how long (Disabled if 0)?
-	--  ttt2_impostor_trapper_venting_time [0..n] (default: 30)
-	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_trapper_venting_time",
-		slider = true,
-		min = 0,
-		max = 90,
-		decimal = 0,
-		desc = "ttt2_impostor_trapper_venting_time (Def: 30)"
-	})
-	
-	--# Should traitors be informed when a trapper enters and exits a vent?
-	--  ttt2_impostor_inform_about_trappers_venting [0/1] (default: 1)
-	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_inform_about_trappers_venting",
-		checkbox = true,
-		desc = "ttt2_impostor_inform_about_trappers_venting (Def: 1)"
-	})
-	
-	--# Should trappers be informed when anyone enters and exits a vent?
-	--  ttt2_impostor_inform_trappers_about_venting [0/1] (default: 0)
-	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_inform_trappers_about_venting",
-		checkbox = true,
-		desc = "ttt2_impostor_inform_trappers_about_venting (Def: 0)"
-	})
-	
-	--# Should jesters be able to use vents?
-	--  ttt2_impostor_jesters_can_vent [0/1] (default: 0)
-	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_jesters_can_vent",
-		checkbox = true,
-		desc = "ttt2_impostor_jesters_can_vent (Def: 0)"
 	})
 	
 	--# Should the Impostor's sabotage abilities create a Sabotage Station entity (If disabled, the sabotage abilities can only end once their duration has been exceeded)?
@@ -460,6 +426,49 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		checkbox = true,
 		desc = "ttt2_impostor_is_affected_by_sabo_o2 (Def: 0)"
 	})
+	
+	--# Should traitors be informed when a player who doesn't have a Traitor subrole enters and exits a vent?
+	--  ttt2_impostor_inform_about_non_traitors_venting [0/1] (default: 1)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_inform_about_non_traitors_venting",
+		checkbox = true,
+		desc = "ttt2_impostor_inform_about_non_traitors_venting (Def: 1)"
+	})
+	
+	--# Can the Trapper use the vents, and if so, for how long (Disabled if 0)?
+	--  ttt2_impostor_trapper_venting_time [0..n] (default: 30)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_trapper_venting_time",
+		slider = true,
+		min = 0,
+		max = 90,
+		decimal = 0,
+		desc = "ttt2_impostor_trapper_venting_time (Def: 30)"
+	})
+	
+	--# Should trappers be informed when anyone enters and exits a vent?
+	--  ttt2_impostor_inform_trappers_about_venting [0/1] (default: 1)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_inform_trappers_about_venting",
+		checkbox = true,
+		desc = "ttt2_impostor_inform_trappers_about_venting (Def: 1)"
+	})
+	
+	--# Should jesters be able to use vents?
+	--  ttt2_impostor_jesters_can_vent [0/1] (default: 0)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_jesters_can_vent",
+		checkbox = true,
+		desc = "ttt2_impostor_jesters_can_vent (Def: 0)"
+	})
+	
+	--# Should Doppelgangers that have stolen a Traitor role be treated like Traitors for the Impostor (ex. have access to vents and sabotage immunity by default)?
+	--  ttt2_impostor_dopt_special_handling [0/1] (default: 1)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_dopt_special_handling",
+		checkbox = true,
+		desc = "ttt2_impostor_dopt_special_handling (Def: 1)"
+	})
 end)
 
 hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
@@ -475,10 +484,6 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalBool("ttt2_impostor_hide_unused_vents", GetConVar("ttt2_impostor_hide_unused_vents"):GetBool())
 	SetGlobalInt("ttt2_impostor_vent_secondary_fire_mode", GetConVar("ttt2_impostor_vent_secondary_fire_mode"):GetInt())
 	SetGlobalBool("ttt2_impostor_traitor_team_can_use_vents", GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool())
-	SetGlobalInt("ttt2_impostor_trapper_venting_time", GetConVar("ttt2_impostor_trapper_venting_time"):GetInt())
-	SetGlobalBool("ttt2_impostor_inform_about_trappers_venting", GetConVar("ttt2_impostor_inform_about_trappers_venting"):GetBool())
-	SetGlobalBool("ttt2_impostor_inform_trappers_about_venting", GetConVar("ttt2_impostor_inform_trappers_about_venting"):GetBool())
-	SetGlobalBool("ttt2_impostor_jesters_can_vent", GetConVar("ttt2_impostor_jesters_can_vent"):GetBool())
 	SetGlobalBool("ttt2_impostor_station_enable", GetConVar("ttt2_impostor_station_enable"):GetBool())
 	SetGlobalBool("ttt2_impostor_station_manager_enable", GetConVar("ttt2_impostor_station_manager_enable"):GetBool())
 	SetGlobalBool("ttt2_impostor_dissuade_station_reuse", GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool())
@@ -503,6 +508,11 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalInt("ttt2_impostor_sabo_o2_length", GetConVar("ttt2_impostor_sabo_o2_length"):GetInt())
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool())
 	SetGlobalBool("ttt2_impostor_is_affected_by_sabo_o2", GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool())
+	SetGlobalBool("ttt2_impostor_inform_about_non_traitors_venting", GetConVar("ttt2_impostor_inform_about_non_traitors_venting"):GetBool())
+	SetGlobalInt("ttt2_impostor_trapper_venting_time", GetConVar("ttt2_impostor_trapper_venting_time"):GetInt())
+	SetGlobalBool("ttt2_impostor_inform_trappers_about_venting", GetConVar("ttt2_impostor_inform_trappers_about_venting"):GetBool())
+	SetGlobalBool("ttt2_impostor_jesters_can_vent", GetConVar("ttt2_impostor_jesters_can_vent"):GetBool())
+	SetGlobalBool("ttt2_impostor_dopt_special_handling", GetConVar("ttt2_impostor_dopt_special_handling"):GetBool())
 end)
 
 cvars.AddChangeCallback("ttt2_impostor_inform_everyone", function(name, old, new)
@@ -541,17 +551,8 @@ end)
 cvars.AddChangeCallback("ttt2_impostor_traitor_team_can_use_vents", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_traitor_team_can_use_vents", tobool(tonumber(new)))
 end)
-cvars.AddChangeCallback("ttt2_impostor_trapper_venting_time", function(name, old, new)
-	SetGlobalInt("ttt2_impostor_trapper_venting_time", tonumber(new))
-end)
-cvars.AddChangeCallback("ttt2_impostor_inform_about_trappers_venting", function(name, old, new)
-	SetGlobalBool("ttt2_impostor_inform_about_trappers_venting", tobool(tonumber(new)))
-end)
-cvars.AddChangeCallback("ttt2_impostor_inform_trappers_about_venting", function(name, old, new)
-	SetGlobalBool("ttt2_impostor_inform_trappers_about_venting", tobool(tonumber(new)))
-end)
-cvars.AddChangeCallback("ttt2_impostor_jesters_can_vent", function(name, old, new)
-	SetGlobalBool("ttt2_impostor_jesters_can_vent", tobool(tonumber(new)))
+cvars.AddChangeCallback("ttt2_impostor_inform_about_non_traitors_venting", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_inform_about_non_traitors_venting", tobool(tonumber(new)))
 end)
 cvars.AddChangeCallback("ttt2_impostor_station_enable", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_station_enable", tobool(tonumber(new)))
@@ -624,4 +625,16 @@ cvars.AddChangeCallback("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", fun
 end)
 cvars.AddChangeCallback("ttt2_impostor_is_affected_by_sabo_o2", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_is_affected_by_sabo_o2", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_trapper_venting_time", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_trapper_venting_time", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_inform_trappers_about_venting", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_inform_trappers_about_venting", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_jesters_can_vent", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_jesters_can_vent", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_dopt_special_handling", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_dopt_special_handling", tobool(tonumber(new)))
 end)

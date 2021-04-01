@@ -117,25 +117,40 @@ local function SabotageModeIsValid(sabo_mode)
 	--sabo_mode is invalid
 	return false
 end
-	
-local function CanHaveLightsSabotaged(ply)
-	if ply:GetSubRole() ~= ROLE_IMPOSTOR and (GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool() or ply:GetTeam() ~= TEAM_TRAITOR) then
-		return true
+
+local function LooksLikeTraitorButNotImpostor(ply)
+	--Only handle Dop!Traitor (who explicitly isn't an Impostor) for now.
+	--Handling Spy scenario would lead to them being able to vent and not be affected by sabos. Historically they only look like a traitor, they don't have special traitor abilities.
+	--Handling Defective scenario would lead to them being unable to vent and being affected by sabos. Probably not worth it.
+	local team = ply:GetTeam()
+	if DOPPELGANGER and team == TEAM_DOPPELGANGER and GetConVar("ttt2_impostor_dopt_special_handling"):GetBool() then
+		local role_data = roles.GetByIndex(ply:GetSubRole())
+		if role_data.defaultTeam == TEAM_TRAITOR then
+			team = TEAM_TRAITOR
+		end
 	end
 	
-	return false
+	return team == TEAM_TRAITOR and ply:GetSubRole() ~= ROLE_IMPOSTOR
+end
+
+local function CanHaveLightsSabotaged(ply)
+	if ply:GetSubRole() == ROLE_IMPOSTOR or (LooksLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool()) then
+		return false
+	end
+	
+	return true
 end
 
 local function CanHaveCommsSabotaged(ply)
-	if ply:GetSubRole() ~= ROLE_IMPOSTOR and (GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms"):GetBool() or ply:GetTeam() ~= TEAM_TRAITOR) then
-		return true
+	if ply:GetSubRole() == ROLE_IMPOSTOR or (LooksLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms"):GetBool()) then
+		return false
 	end
 	
-	return false
+	return true
 end
 
 local function CanHaveO2Sabotaged(ply)
-	if (ply:GetSubRole() == ROLE_IMPOSTOR and not GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool()) or (ply:GetSubRole() ~= ROLE_IMPOSTOR and ply:GetTeam() == TEAM_TRAITOR and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool()) then
+	if (ply:GetSubRole() == ROLE_IMPOSTOR and not GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool()) or (LooksLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool()) then
 		return false
 	end
 	

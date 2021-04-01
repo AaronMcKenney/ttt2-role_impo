@@ -44,71 +44,113 @@ function GetVentFromIndex(new_vent_idx)
 end
 
 local function TrapperCanVent(ply)
-	if not TRAPPER then
-		return false
-	end
-	
 	local total_trapper_time_allowed = GetConVar("ttt2_impostor_trapper_venting_time"):GetInt()
-	
-	if ply:GetSubRole() == ROLE_TRAPPER and total_trapper_time_allowed > 0 and not ply.impo_trapper_timer_expired then
+	if TRAPPER and ply:GetSubRole() == ROLE_TRAPPER and total_trapper_time_allowed > 0 and not ply.impo_trapper_timer_expired then
 		return true
 	end
 	
 	return false
 end
 
-local function HandleTrapperVenting(ply, is_entering_vent)
-	if not TrapperCanVent(ply) then
+local function isDopTraitor(ply)
+	if DOPPELGANGER and ply:GetTeam() == TEAM_DOPPELGANGER and ply:GetSubRole() ~= ROLE_IMPOSTOR and ply:GetBaseRole() == ROLE_TRAITOR then
+		return true
+	end
+	
+	return false
+end
+
+local function DopTraitorCanVent(ply)
+	if isDopTraitor(ply) and GetConVar("ttt2_impostor_dopt_special_handling"):GetBool() and GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() then
+		return true
+	end
+	
+	return false
+end
+
+local function JesterCanVent(ply)
+	if JESTER and GetConVar("ttt2_impostor_jesters_can_vent"):GetBool() and ply:GetSubRole() == ROLE_JESTER then
+		return true
+	end
+	
+	return false
+end
+
+local function HandleSpecialRoleVenting(ply, is_entering_vent)
+	local role_has_special_handling = false
+	local role_str = ""
+	local total_time_allowed = 0
+	local treat_like_traitor = false
+	if TrapperCanVent(ply) then
+		role_has_special_handling = true
+		role_str = "Trapper"
+		total_time_allowed = GetConVar("ttt2_impostor_trapper_venting_time"):GetInt()
+	elseif DopTraitorCanVent(ply) then
+		role_has_special_handling = true
+		role_str = "DopTraitor"
+		total_time_allowed = -1
+		treat_like_traitor = true
+	elseif JesterCanVent(ply) then
+		role_has_special_handling = true
+		role_str = "Jester"
+		total_time_allowed = -1
+	end
+	
+	if not role_has_special_handling then
 		return
 	end
 	
-	local inform_traitors = GetConVar("ttt2_impostor_inform_about_trappers_venting"):GetBool()
-	local server_client_str = "SERVER_"
-	if CLIENT then
-		server_client_str = "CLIENT_"
-	end
-	
-	if not timer.Exists("ImpostorTrapperVent_" .. server_client_str .. ply:SteamID64()) then
-		local total_trapper_time_allowed = GetConVar("ttt2_impostor_trapper_venting_time"):GetInt()
-		timer.Create("ImpostorTrapperVent_" .. server_client_str .. ply:SteamID64(), total_trapper_time_allowed, 1, function()
-			--Verify the player's existence, in case they are dropped from the Server.
-			if IsValid(ply) and ply:IsPlayer() and ply:GetSubRole() == ROLE_TRAPPER then
-				ply.impo_trapper_timer_expired = true
-				if IsValid(ply.impo_in_vent) then
-					IMPO_VENT_DATA.ExitVent(ply)
-					
+	if total_time_allowed > 0 then
+		local server_client_str = "SERVER_"
+		if CLIENT then
+			server_client_str = "CLIENT_"
+		end
+		local vent_timer_str = "Impostor" .. role_str .. "Vent_" .. server_client_str .. ply:SteamID64()
+		
+		if not timer.Exists(vent_timer_str) then
+			timer.Create(vent_timer_str, total_time_allowed, 1, function()
+				--Verify the player's existence, in case they are dropped from the Server.
+				if IsValid(ply) and ply:IsPlayer() then
+					--Currently only the trapper has a timer.
+					ply.impo_trapper_timer_expired = true
+					if IsValid(ply.impo_in_vent) then
+						IMPO_VENT_DATA.ExitVent(ply)
+					end
+						
 					if CLIENT then
-						LANG.Msg("VENT_TRAPPER_TIME_UP_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+						LANG.Msg("VENT_TIME_UP_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 					end
 				end
-			end
-		end)
-	end
-	
-	if CLIENT then
-		local time_left = math.ceil(math.abs(timer.TimeLeft("ImpostorTrapperVent_" .. server_client_str .. ply:SteamID64())))
-		LANG.Msg("VENT_TRAPPER_TIME_LEFT_" .. IMPOSTOR.name, {t = time_left}, MSG_MSTACK_WARN)
-	end
-	
-	--Timer should only run while the trapper is in a vent.
-	--Also inform traitors when a trapper enters/exits a vent.
-	if is_entering_vent then
-		timer.UnPause("ImpostorTrapperVent_" .. server_client_str .. ply:SteamID64())
+			end)
+		end
 		
-		if SERVER and inform_traitors then
+		if CLIENT then
+			local time_left = math.ceil(math.abs(timer.TimeLeft(vent_timer_str)))
+			LANG.Msg("VENT_TIME_LEFT_" .. IMPOSTOR.name, {t = time_left}, MSG_MSTACK_WARN)
+		end
+		
+		--Timer should only run while the trapper is in a vent.
+		--Could use timer.Toggle here, but decided that this is safer.
+		if is_entering_vent then
+			timer.UnPause(vent_timer_str)
+		else
+			timer.Pause(vent_timer_str)
+		end
+	end
+	
+	--Inform traitors when a non-Traitor role enters/exits a vent.
+	--Explicitly treats doppelgangers like traitors
+	if SERVER and GetConVar("ttt2_impostor_inform_about_non_traitors_venting"):GetBool() and not treat_like_traitor then
+		if is_entering_vent then
 			for _, ply_i in ipairs(player.GetAll()) do
-				if ply_i:GetSubRole() == ROLE_IMPOSTOR or ply_i:GetTeam() == TEAM_TRAITOR then
-					LANG.Msg(ply_i, "VENT_TRAPPER_ENTER_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+				if ply_i:GetSubRole() == ROLE_IMPOSTOR or ply_i:GetTeam() == TEAM_TRAITOR or DopTraitorCanVent(ply_i) then
+					LANG.Msg(ply_i, "VENT_FOREIGNER_ENTER_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 				end
 			end
-		end
-	else
-		timer.Pause("ImpostorTrapperVent_" .. server_client_str .. ply:SteamID64())
-		
-		if SERVER and inform_traitors then
+		else
 			for _, ply_i in ipairs(player.GetAll()) do
-				if ply_i:GetSubRole() == ROLE_IMPOSTOR or ply_i:GetTeam() == TEAM_TRAITOR then
-					LANG.Msg(ply_i, "VENT_TRAPPER_EXIT_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+				if ply_i:GetSubRole() == ROLE_IMPOSTOR or ply_i:GetTeam() == TEAM_TRAITOR or DopTraitorCanVent(ply_i) then
+					LANG.Msg(ply_i, "VENT_FOREIGNER_EXIT_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 				end
 			end
 		end
@@ -136,7 +178,7 @@ local function InformTrappers(ply, is_entering_vent)
 end
 
 function IMPO_VENT_DATA.CanUseVentNetwork(ply)
-	if ply:IsTerror() and ply:Alive() and (ply:GetSubRole() == ROLE_IMPOSTOR or (GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() and ply:GetTeam() == TEAM_TRAITOR) or TrapperCanVent(ply) or (JESTER and GetConVar("ttt2_impostor_jesters_can_vent"):GetBool() and ply:GetSubRole() == ROLE_JESTER)) then
+	if ply:IsTerror() and ply:Alive() and (ply:GetSubRole() == ROLE_IMPOSTOR or (GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() and ply:GetTeam() == TEAM_TRAITOR) or TrapperCanVent(ply) or DopTraitorCanVent(ply) or JesterCanVent(ply)) then
 		return true
 	end
 	return false
@@ -225,7 +267,7 @@ function IMPO_VENT_DATA.EnterVent(ply, vent)
 		end
 	end
 	
-	HandleTrapperVenting(ply, true)
+	HandleSpecialRoleVenting(ply, true)
 end
 
 function IMPO_VENT_DATA.ExitVent(ply)
@@ -262,7 +304,7 @@ function IMPO_VENT_DATA.ExitVent(ply)
 		end
 	end
 	
-	HandleTrapperVenting(ply, false)
+	HandleSpecialRoleVenting(ply, false)
 	
 	ply.impo_in_vent = nil
 	
@@ -409,7 +451,7 @@ if CLIENT then
 		
 		--Outline vents for impostors and traitor team (They will be able to see it regardless of where they are)
 		--Special roles such as Trappers and Jesters have to work for their access.
-		if (client:GetSubRole() == ROLE_IMPOSTOR or client:GetTeam() == TEAM_TRAITOR) and #IMPO_VENT_DATA.VENT_NETWORK > 0 and not IsValid(client.impo_in_vent) then
+		if (client:GetSubRole() == ROLE_IMPOSTOR or client:GetTeam() == TEAM_TRAITOR or DopTraitorCanVent(client)) and #IMPO_VENT_DATA.VENT_NETWORK > 0 and not IsValid(client.impo_in_vent) then
 			outline.Add(IMPO_VENT_DATA.VENT_NETWORK, IMPOSTOR.color, OUTLINE_MODE_VISIBLE)
 		end
 	end)
