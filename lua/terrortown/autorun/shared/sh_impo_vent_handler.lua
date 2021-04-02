@@ -9,6 +9,14 @@ end
 IMPO_VENT_DATA = {}
 IMPO_VENT_DATA.VENT_NETWORK = {}
 
+local function IsInSpecDM(ply)
+	if SpecDM and (ply.IsGhost and ply:IsGhost()) then
+		return true
+	end
+	
+	return false
+end
+
 function IMPO_VENT_DATA.RemoveVentFromNetwork(vent_idx)
 	for i, v in ipairs(IMPO_VENT_DATA.VENT_NETWORK) do
 		if v:EntIndex() == vent_idx then
@@ -178,9 +186,10 @@ local function InformTrappers(ply, is_entering_vent)
 end
 
 function IMPO_VENT_DATA.CanUseVentNetwork(ply)
-	if ply:IsTerror() and ply:Alive() and (ply:GetSubRole() == ROLE_IMPOSTOR or (GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() and ply:GetTeam() == TEAM_TRAITOR) or TrapperCanVent(ply) or DopTraitorCanVent(ply) or JesterCanVent(ply)) then
+	if ply:IsTerror() and ply:Alive() and not IsInSpecDM(ply) and (ply:GetSubRole() == ROLE_IMPOSTOR or (GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() and ply:GetTeam() == TEAM_TRAITOR) or TrapperCanVent(ply) or DopTraitorCanVent(ply) or JesterCanVent(ply)) then
 		return true
 	end
+	
 	return false
 end
 
@@ -451,7 +460,7 @@ if CLIENT then
 		
 		--Outline vents for impostors and traitor team (They will be able to see it regardless of where they are)
 		--Special roles such as Trappers and Jesters have to work for their access.
-		if (client:GetSubRole() == ROLE_IMPOSTOR or client:GetTeam() == TEAM_TRAITOR or DopTraitorCanVent(client)) and #IMPO_VENT_DATA.VENT_NETWORK > 0 and not IsValid(client.impo_in_vent) then
+		if (client:GetSubRole() == ROLE_IMPOSTOR or client:GetTeam() == TEAM_TRAITOR or DopTraitorCanVent(client)) and not IsInSpecDM(client) and #IMPO_VENT_DATA.VENT_NETWORK > 0 and not IsValid(client.impo_in_vent) then
 			outline.Add(IMPO_VENT_DATA.VENT_NETWORK, IMPOSTOR.color, OUTLINE_MODE_VISIBLE)
 		end
 	end)

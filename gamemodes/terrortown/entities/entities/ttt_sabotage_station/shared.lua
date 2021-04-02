@@ -11,6 +11,14 @@ ENT.Model = Model("models/props_combine/CombineThumper002.mdl")
 ENT.CanHavePrints = true
 ENT.CanUseKey = true
 
+local function IsInSpecDM(ply)
+	if SpecDM and (ply.IsGhost and ply:IsGhost()) then
+		return true
+	end
+	
+	return false
+end
+
 function ENT:Initialize()
 	self:SetModel(self.Model)
 	
@@ -47,7 +55,7 @@ function ENT:Think()
 				ply_count = ply_count + 1
 			end
 			
-			if ply:IsTerror() and ply:Alive() and ply:GetPos():DistToSqr(IMPO_SABO_DATA.ACTIVE_SABO_ENT:GetPos()) <= radius_sqrd then
+			if ply:IsTerror() and ply:Alive() and not IsInSpecDM(ply) and ply:GetPos():DistToSqr(IMPO_SABO_DATA.ACTIVE_SABO_ENT:GetPos()) <= radius_sqrd then
 				num_plys_in_range = num_plys_in_range + 1
 			end
 		end

@@ -73,6 +73,14 @@ if CLIENT then
 		return HUDEditor.IsEditing or (client:Alive() and client:GetSubRole() == ROLE_IMPOSTOR)
 	end
 	
+	local function IsInSpecDM(ply)
+		if SpecDM and (ply.IsGhost and ply:IsGhost()) then
+			return true
+		end
+		
+		return false
+	end
+	
 	function HUDELEMENT:DrawComponent(text, bg_color, icon_color, icon, first_bar)
 		local pos = self:GetPos()
 		local size = self:GetSize()
@@ -263,7 +271,11 @@ if CLIENT then
 	
 	function HUDELEMENT:Draw()
 		local client = LocalPlayer()
-		local sabo_in_progress = CurrentSabotageInProgress()
+		if IsInSpecDM(client) then
+			return
+		end
+		
+		local sabo_in_progress = IMPO_SABO_DATA.CurrentSabotageInProgress()
 		
 		self:DrawInstaKillComponent()
 		if (client.impo_sabo_mode == SABO_MODE.LIGHTS and sabo_in_progress == SABO_MODE.NONE) or sabo_in_progress == SABO_MODE.LIGHTS then

@@ -61,9 +61,17 @@ IMPO_IOTA = 0.3
 SABO_MODE = {NONE = 0, LIGHTS = 1, COMMS = 2, O2 = 3, MNGR = 4, NUM = 5}
 SABO_LIGHTS_MODE = {SCREEN_FADE = 0, DISABLE_MAP = 1}
 
+local function IsInSpecDM(ply)
+	if SpecDM and (ply.IsGhost and ply:IsGhost()) then
+		return true
+	end
+	
+	return false
+end
+
 local function CanKillTarget(impo, tgt, dist)
 	--impo is assumed to be a valid impostor and tgt is assumed to be a valid player
-	if impo.impo_can_insta_kill and dist <= GetConVar("ttt2_impostor_kill_dist"):GetInt() and impo.impo_in_vent == nil then
+	if impo.impo_can_insta_kill and dist <= GetConVar("ttt2_impostor_kill_dist"):GetInt() and impo.impo_in_vent == nil and not IsInSpecDM(impo) then
 		return true
 	else
 		return false
@@ -114,7 +122,6 @@ local function SabotageModeIsValid(sabo_mode)
 		return SabotageStationManagerIsEnabled()
 	end
 	
-	--sabo_mode is invalid
 	return false
 end
 
@@ -134,7 +141,7 @@ local function LooksLikeTraitorButNotImpostor(ply)
 end
 
 local function CanHaveLightsSabotaged(ply)
-	if ply:GetSubRole() == ROLE_IMPOSTOR or (LooksLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool()) then
+	if ply:GetSubRole() == ROLE_IMPOSTOR or (LooksLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool()) or IsInSpecDM(ply) then
 		return false
 	end
 	
@@ -142,7 +149,7 @@ local function CanHaveLightsSabotaged(ply)
 end
 
 local function CanHaveCommsSabotaged(ply)
-	if ply:GetSubRole() == ROLE_IMPOSTOR or (LooksLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms"):GetBool()) then
+	if ply:GetSubRole() == ROLE_IMPOSTOR or (LooksLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms"):GetBool()) or IsInSpecDM(ply) then
 		return false
 	end
 	
@@ -150,7 +157,7 @@ local function CanHaveCommsSabotaged(ply)
 end
 
 local function CanHaveO2Sabotaged(ply)
-	if (ply:GetSubRole() == ROLE_IMPOSTOR and not GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool()) or (LooksLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool()) then
+	if (ply:GetSubRole() == ROLE_IMPOSTOR and not GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool()) or (LooksLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool()) or IsInSpecDM(ply) then
 		return false
 	end
 	
@@ -466,7 +473,7 @@ if SERVER then
 			if attacker.impo_in_vent then
 				--Force everyone to deal no damage if they are in a vent (just to be safe)
 				dmg_info:SetDamage(0)
-			elseif attacker:GetSubRole() == ROLE_IMPOSTOR then
+			elseif attacker:GetSubRole() == ROLE_IMPOSTOR and not IsInSpecDM(attacker) then
 				--Impostor deals less damage.
 				dmg_info:SetDamage(dmg_info:GetDamage() * GetConVar("ttt2_impostor_normal_dmg_multi"):GetFloat())
 			end
@@ -481,6 +488,7 @@ if SERVER then
 	end)
 	
 	hook.Add("TTTCanSearchCorpse", "ImpostorCanSearchCorpse", function(ply, corpse, isCovert, isLongRange)
+		--Lessens chance of Impostor accidentally searching the corpse of a player that they just killed.
 		if IsValid(ply) and ply:IsPlayer() and timer.Exists("ImpostorJustKilled_Server_" .. ply:SteamID64()) then
 			return false
 		end
@@ -549,19 +557,6 @@ if CLIENT then
 	local STAT_SELECTED_BUTTON_SIZE = 80
 	local STAT_SELECTED_BUTTON_MIDPOINT = STAT_SELECTED_BUTTON_SIZE / 2
 	local ICON_STATION = Material("vgui/ttt/dynamic/roles/icon_impo")
-	
-	--Client global
-	function CurrentSabotageInProgress()
-		if timer.Exists("ImpostorSaboLightsTimer_Client") then
-			return SABO_MODE.LIGHTS
-		elseif timer.Exists("ImpostorSaboCommsTimer_Client") then
-			return SABO_MODE.COMMS
-		elseif timer.Exists("ImpostorSaboO2Timer_Client") then
-			return SABO_MODE.O2
-		else
-			return SABO_MODE.NONE
-		end
-	end
 	
 	local function SelectedSaboModeInRange(ply)
 		if not ply.impo_sabo_mode or ply.impo_sabo_mode <= SABO_MODE.NONE or ply.impo_sabo_mode >= SABO_MODE.NUM then
@@ -736,6 +731,11 @@ if CLIENT then
 	end)
 	
 	local function SendInstantKillRequest()
+		local client = LocalPlayer()
+		if IsInSpecDM(client) then
+			return
+		end
+		
 		net.Start("TTT2ImpostorSendInstantKillRequest")
 		net.SendToServer()
 	end
@@ -743,6 +743,10 @@ if CLIENT then
 	
 	local function CycleSabotageMode()
 		local client = LocalPlayer()
+		
+		if IsInSpecDM(client) then
+			return
+		end
 		
 		if not SelectedSaboModeInRange(client) then
 			--All forms of sabotage have been disabled, or the client is very confused.
@@ -793,12 +797,16 @@ if CLIENT then
 	local function SendSabotageRequest()
 		local client = LocalPlayer()
 		
+		if IsInSpecDM(client) then
+			return
+		end
+		
 		if not SelectedSaboModeInRange(client) then
 			--All forms of sabotage have been disabled, or the client is confused/ill-informed.
 			return
 		end
 		
-		if client.impo_sabo_mode == SABO_MODE.MNGR and IMPO_SABO_DATA.MaybeGetNewStationSpawnPos(client) == nil and CurrentSabotageInProgress() == SABO_MODE.NONE then
+		if client.impo_sabo_mode == SABO_MODE.MNGR and IMPO_SABO_DATA.MaybeGetNewStationSpawnPos(client) == nil and IMPO_SABO_DATA.CurrentSabotageInProgress() == SABO_MODE.NONE then
 			IMPO_SABO_DATA.CycleSelectedSabotageStation()
 		else
 			net.Start("TTT2ImpostorSendSabotageRequest")
@@ -946,7 +954,7 @@ if CLIENT then
 			DrawVentHUD()
 		end
 		
-		if client:GetSubRole() == ROLE_IMPOSTOR and client.impo_sabo_mode == SABO_MODE.MNGR and CurrentSabotageInProgress() == SABO_MODE.NONE then
+		if client:GetSubRole() == ROLE_IMPOSTOR and client.impo_sabo_mode == SABO_MODE.MNGR and IMPO_SABO_DATA.CurrentSabotageInProgress() == SABO_MODE.NONE then
 			DrawStationManagerHUD()
 		end
 	end)

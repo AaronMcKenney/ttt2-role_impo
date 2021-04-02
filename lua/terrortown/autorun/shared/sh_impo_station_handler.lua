@@ -130,6 +130,18 @@ if SERVER then
 		print("BMF ImpostorSaboDataPrepareRoundForServer: Station Network has " .. #IMPO_SABO_DATA.STATION_NETWORK .. " entries.")
 	end)
 	
+	function IMPO_SABO_DATA.CurrentSabotageInProgress()
+		if timer.Exists("ImpostorSaboLightsTimer_Server") then
+			return SABO_MODE.LIGHTS
+		elseif timer.Exists("ImpostorSaboCommsTimer_Server") then
+			return SABO_MODE.COMMS
+		elseif timer.Exists("ImpostorSaboO2Timer_Server") then
+			return SABO_MODE.O2
+		end
+		
+		return SABO_MODE.NONE
+	end
+	
 	function IMPO_SABO_DATA.SendStationNetwork(ply)
 		net.Start("TTT2ImpostorSendEntireStationNetwork")
 		--Note: Don't use WriteTable because it can overflow and might be read out of order.
@@ -240,6 +252,18 @@ if CLIENT then
 		
 		IMPO_SABO_DATA.STATION_NETWORK[#IMPO_SABO_DATA.STATION_NETWORK + 1] = stat_spawn
 	end)
+	
+	function IMPO_SABO_DATA.CurrentSabotageInProgress()
+		if timer.Exists("ImpostorSaboLightsTimer_Client") then
+			return SABO_MODE.LIGHTS
+		elseif timer.Exists("ImpostorSaboCommsTimer_Client") then
+			return SABO_MODE.COMMS
+		elseif timer.Exists("ImpostorSaboO2Timer_Client") then
+			return SABO_MODE.O2
+		end
+		
+		return SABO_MODE.NONE
+	end
 	
 	function IMPO_SABO_DATA.CycleSelectedSabotageStation()
 		local client = LocalPlayer()
