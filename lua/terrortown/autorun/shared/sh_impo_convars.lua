@@ -276,7 +276,8 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		numStart = 0
 	})
 	
-	--# How long (in seconds) should it take for lights to fade to black upon activating Sabotage Lights (<= 0.0 to disable ability)?
+	--# How long (in seconds) should it take for lights to fade to black upon activating Sabotage Lights under Screen Fade mode (<= 0.0 to disable ability)?
+	--  Note: Only applicable if ttt2_impostor_sabo_lights_mode is 0 (Screen fade mode)
 	--  Note: Fade time is nonlinear. HUD's color difference may be off for large fade times..
 	--  ttt2_impostor_sabo_lights_fade [0.0..n.m] (default: 2.0)
 	table.insert(tbl[ROLE_IMPOSTOR], {
@@ -356,12 +357,12 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_sabo_o2_cooldown (Def: 240)"
 	})
 	
-	--# For Sabotage O2, How much HP per second should be lost (<=0 to disable ability)?
-	--  ttt2_impostor_sabo_o2_hp_loss [0..n] (default: 1)
+	--# For Sabotage O2, How much HP per second should be lost?
+	--  ttt2_impostor_sabo_o2_hp_loss [1..n] (default: 1)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_sabo_o2_hp_loss",
 		slider = true,
-		min = 0,
+		min = 1,
 		max = 10,
 		decimal = 0,
 		desc = "ttt2_impostor_sabo_o2_hp_loss (Def: 1)"

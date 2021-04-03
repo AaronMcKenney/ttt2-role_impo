@@ -58,7 +58,7 @@ end
 --Used to reduce chances of lag interrupting otherwise seemless player interactions.
 IMPO_IOTA = 0.3
 --Sabotage enum
-SABO_MODE = {NONE = 0, LIGHTS = 1, COMMS = 2, O2 = 3, MNGR = 4, NUM = 5}
+SABO_MODE = {NONE = 0, MNGR = 1, LIGHTS = 2, COMMS = 3, O2 = 4, NUM = 6}
 SABO_LIGHTS_MODE = {SCREEN_FADE = 0, DISABLE_MAP = 1}
 
 local function IsInSpecDM(ply)
@@ -83,12 +83,14 @@ local function SabotageStationManagerIsEnabled()
 end
 
 local function SabotageLightsIsEnabled()
+	local sabo_lights_mode = GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt()
 	local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
 	local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
 	
-	if fade_time <= 0.0 or sabo_lights_len < 0.0 then
+	if (sabo_lights_mode == SABO_LIGHTS_MODE.SCREEN_FADE and fade_time <= 0.0) or sabo_lights_len < 0.0 then
 		return false
 	end
+	
 	return true
 end
 
@@ -98,16 +100,27 @@ local function SabotageCommsIsEnabled()
 	if sabo_comms_len <= 0 then
 		return false
 	end
+	
 	return true
 end
 
 local function SabotageO2IsEnabled()
-	local sabo_o2_hp_loss = GetConVar("ttt2_impostor_sabo_o2_hp_loss"):GetInt()
 	local sabo_o2_len = GetConVar("ttt2_impostor_sabo_o2_length"):GetInt()
 	
-	if sabo_o2_hp_loss <= 0 or sabo_o2_len <= 0 then
+	if sabo_o2_len <= 0 then
 		return false
 	end
+	
+	return true
+end
+
+local function SabotageReactorIsEnabled()
+	local sabo_react_len = GetConVar("ttt2_impostor_sabo_react_length"):GetInt()
+	
+	if sabo_react_len <= 0 then
+		return false
+	end
+	
 	return true
 end
 
