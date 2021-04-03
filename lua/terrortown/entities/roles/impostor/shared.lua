@@ -78,6 +78,10 @@ local function CanKillTarget(impo, tgt, dist)
 	end
 end
 
+local function SabotageStationManagerIsEnabled()
+	return GetConVar("ttt2_impostor_station_enable"):GetBool() and GetConVar("ttt2_impostor_station_manager_enable"):GetBool()
+end
+
 local function SabotageLightsIsEnabled()
 	local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
 	local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
@@ -107,19 +111,15 @@ local function SabotageO2IsEnabled()
 	return true
 end
 
-local function SabotageStationManagerIsEnabled()
-	return GetConVar("ttt2_impostor_station_enable"):GetBool() and GetConVar("ttt2_impostor_station_manager_enable"):GetBool()
-end
-
 local function SabotageModeIsValid(sabo_mode)
-	if sabo_mode == SABO_MODE.LIGHTS then
+	if sabo_mode == SABO_MODE.MNGR then
+		return SabotageStationManagerIsEnabled()
+	elseif sabo_mode == SABO_MODE.LIGHTS then
 		return SabotageLightsIsEnabled()
 	elseif sabo_mode == SABO_MODE.COMMS then
 		return SabotageCommsIsEnabled()
 	elseif sabo_mode == SABO_MODE.O2 then
 		return SabotageO2IsEnabled()
-	elseif sabo_mode == SABO_MODE.MNGR then
-		return SabotageStationManagerIsEnabled()
 	end
 	
 	return false
@@ -236,7 +236,9 @@ if SERVER then
 	local function SendDefaultSaboMode(ply)
 		local mode = SABO_MODE.NONE
 		
-		if SabotageLightsIsEnabled() then
+		if SabotageStationManagerIsEnabled() then
+			mode = SABO_MODE.MNGR
+		elseif SabotageLightsIsEnabled() then
 			mode = SABO_MODE.LIGHTS
 		elseif SabotageCommsIsEnabled() then
 			mode = SABO_MODE.COMMS
@@ -426,7 +428,9 @@ if SERVER then
 			return
 		end
 		
-		if impos_can_sabo and sabo_mode ~= SABO_MODE.MNGR then
+		if sabo_mode == SABO_MODE.MNGR then
+			IMPO_SABO_DATA.MaybeAddNewStationSpawn(ply)
+		elseif impos_can_sabo then
 			if station_enabled and GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool() and IMPO_SABO_DATA.StationHasBeenUsed(selected_station) then
 				--Do not sabotage if the Impostor is trying to reuse a station.
 				return
@@ -448,8 +452,6 @@ if SERVER then
 			elseif sabo_mode == SABO_MODE.O2 then
 				SabotageO2()
 			end
-		elseif sabo_mode == SABO_MODE.MNGR then
-			IMPO_SABO_DATA.MaybeAddNewStationSpawn(ply)
 		end
 	end)
 	
@@ -753,42 +755,21 @@ if CLIENT then
 			return
 		end
 		
-		if timer.Exists("ImpostorSaboLightsTimer_Client") or timer.Exists("ImpostorSaboCommsTimer_Client") or timer.Exists("ImpostorSaboO2Timer_Client") then
+		if IMPO_SABO_DATA.CurrentSabotageInProgress() ~= SABO_MODE.NONE then
 			--Don't cycle sabotage mode while a sabotage is in progress.
 			return
 		end
 		
-		if client.impo_sabo_mode == SABO_MODE.LIGHTS then
-			if SabotageCommsIsEnabled() then
-				client.impo_sabo_mode = SABO_MODE.COMMS
-			elseif SabotageO2IsEnabled() then
-				client.impo_sabo_mode = SABO_MODE.O2
-			elseif SabotageStationManagerIsEnabled() then
-				client.impo_sabo_mode = SABO_MODE.MNGR
+		local new_mode = client.impo_sabo_mode
+		for i = SABO_MODE.NONE + 1, SABO_MODE.NUM do
+			new_mode = new_mode + 1
+			if new_mode >= SABO_MODE.NUM then
+				new_mode = SABO_MODE.NONE + 1
 			end
-		elseif client.impo_sabo_mode == SABO_MODE.COMMS then
-			if SabotageO2IsEnabled() then
-				client.impo_sabo_mode = SABO_MODE.O2
-			elseif SabotageStationManagerIsEnabled() then
-				client.impo_sabo_mode = SABO_MODE.MNGR
-			elseif SabotageLightsIsEnabled() then
-				client.impo_sabo_mode = SABO_MODE.LIGHTS
-			end
-		elseif client.impo_sabo_mode == SABO_MODE.O2 then
-			if SabotageStationManagerIsEnabled() then
-				client.impo_sabo_mode = SABO_MODE.MNGR
-			elseif SabotageLightsIsEnabled() then
-				client.impo_sabo_mode = SABO_MODE.LIGHTS
-			elseif SabotageCommsIsEnabled() then
-				client.impo_sabo_mode = SABO_MODE.COMMS
-			end
-		elseif client.impo_sabo_mode == SABO_MODE.MNGR then
-			if SabotageLightsIsEnabled() then
-				client.impo_sabo_mode = SABO_MODE.LIGHTS
-			elseif SabotageCommsIsEnabled() then
-				client.impo_sabo_mode = SABO_MODE.COMMS
-			elseif SabotageO2IsEnabled() then
-				client.impo_sabo_mode = SABO_MODE.O2
+			
+			if SabotageModeIsValid(new_mode) then
+				client.impo_sabo_mode = new_mode
+				break
 			end
 		end
 	end
