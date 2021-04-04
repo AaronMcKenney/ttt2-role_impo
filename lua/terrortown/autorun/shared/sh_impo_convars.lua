@@ -42,6 +42,10 @@ CreateConVar("ttt2_impostor_sabo_o2_stop_thresh", "10", {FCVAR_ARCHIVE, FCVAR_NO
 CreateConVar("ttt2_impostor_sabo_o2_length", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_is_affected_by_sabo_o2", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+--Sabotage Reactor
+CreateConVar("ttt2_impostor_sabo_react_cooldown", "240", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_react_win_mode", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_react_length", "60", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Special Role Handling
 CreateConVar("ttt2_impostor_inform_about_non_traitors_venting", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_trapper_venting_time", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -271,7 +275,7 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_sabo_lights_mode (Def: 0)",
 		choices = {
 			"0 - Screen fade (flashlights do nothing)",
-			"1 - Disable map lighting (Strange behavior on certain maps)",
+			"1 - Disable map lighting (Strange behavior on certain maps)"
 		},
 		numStart = 0
 	})
@@ -412,6 +416,43 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_sabo_o2_length (Def: 30)"
 	})
 	
+	--# What is the cooldown (in seconds) on an Impostor's Sabotage Reactor ability?
+	--  ttt2_impostor_sabo_react_cooldown [0..n] (default: 240)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_react_cooldown",
+		slider = true,
+		min = 0,
+		max = 300,
+		decimal = 0,
+		desc = "ttt2_impostor_sabo_react_cooldown (Def: 240)"
+	})
+	
+	--# What should happen when the reactor is sabotaged and it is not stopped in time?
+	--  ttt2_impostor_sabo_react_win_mode [0..1] (default: 0)
+	--  # 0: EVERYONE LOSES. Everyone! Including the Impostor and their team!!!
+	--  # 1: The Impostor's team wins (ex. If a Doppelganger steals the Impostor's role, they can win from this)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_react_win_mode",
+		combobox = true,
+		desc = "ttt2_impostor_sabo_react_win_mode (Def: 0)",
+		choices = {
+			"0 - Everyone loses",
+			"1 - Impostor's team wins"
+		},
+		numStart = 0
+	})
+	
+	--# What is the timelimit on the Sabotage Reactor ability (<= 0 to disable ability)?
+	--  ttt2_impostor_sabo_react_length [0..n] (default: 60)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_react_length",
+		slider = true,
+		min = 0,
+		max = 120,
+		decimal = 0,
+		desc = "ttt2_impostor_sabo_react_length (Def: 60)"
+	})
+	
 	--# Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage O2?
 	--  ttt2_impostor_traitor_team_is_affected_by_sabo_o2 [0/1] (default: 0)
 	table.insert(tbl[ROLE_IMPOSTOR], {
@@ -507,6 +548,9 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalInt("ttt2_impostor_sabo_o2_grace_period", GetConVar("ttt2_impostor_sabo_o2_grace_period"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_o2_stop_thresh", GetConVar("ttt2_impostor_sabo_o2_stop_thresh"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_o2_length", GetConVar("ttt2_impostor_sabo_o2_length"):GetInt())
+	SetGlobalInt("ttt2_impostor_sabo_react_cooldown", GetConVar("ttt2_impostor_sabo_react_cooldown"):GetInt())
+	SetGlobalInt("ttt2_impostor_sabo_react_win_mode", GetConVar("ttt2_impostor_sabo_react_win_mode"):GetInt())
+	SetGlobalInt("ttt2_impostor_sabo_react_length", GetConVar("ttt2_impostor_sabo_react_length"):GetInt())
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool())
 	SetGlobalBool("ttt2_impostor_is_affected_by_sabo_o2", GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool())
 	SetGlobalBool("ttt2_impostor_inform_about_non_traitors_venting", GetConVar("ttt2_impostor_inform_about_non_traitors_venting"):GetBool())
@@ -620,6 +664,15 @@ cvars.AddChangeCallback("ttt2_impostor_sabo_o2_stop_thresh", function(name, old,
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_o2_length", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_sabo_o2_length", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_react_cooldown", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_react_cooldown", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_react_win_mode", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_react_win_mode", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_react_length", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_react_length", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", tobool(tonumber(new)))

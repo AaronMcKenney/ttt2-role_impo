@@ -17,7 +17,9 @@ if CLIENT then
 	local icon_unlit_bulb = Material("vgui/ttt/icon_unlit_bulb")
 	--Used for Sabotage O2
 	local icon_o2_safe = Material("vgui/ttt/icon_o2_safe")
-	local icon_o2_unsafe = Material("vgui/ttt/icon_o2_unsafe")
+	local icon_o2_unsafe = Material("vgui/ttt/icon_react")
+	--Used for Sabotage Reactor
+	local icon_react = Material("vgui/ttt/icon_react")
 	
 	local const_defaults = {
 		basepos = {x = 0, y = 0},
@@ -133,6 +135,16 @@ if CLIENT then
 		end
 		
 		self:DrawComponent(kill_str, bg_color, icon_color, icon, true)
+	end
+	
+	function HUDELEMENT:DrawSabotageStationManagerComponent()
+		local icon_color = COLOR_BLACK
+		local sabo_key = string.upper(input.GetKeyName(bind.Find("ImpostorSendSabotageRequest")))
+		local sabo_str = LANG.GetTranslation("SABO_MNGR_" .. IMPOSTOR.name) .. " (" .. LANG.GetTranslation("PRESS_" .. IMPOSTOR.name) .. sabo_key .. ")"
+		local bg_color = COLOR_LGRAY
+		local icon = icon_kill_waiting
+		
+		self:DrawComponent(sabo_str, bg_color, icon_color, icon, false)
 	end
 	
 	function HUDELEMENT:DrawSabotageLightsComponent()
@@ -259,33 +271,68 @@ if CLIENT then
 		self:DrawComponent(sabo_str, bg_color, icon_color, icon, false)
 	end
 	
-	function HUDELEMENT:DrawSabotageStationManagerComponent()
+	function HUDELEMENT:DrawSabotageReactComponent()
 		local icon_color = COLOR_BLACK
-		local sabo_key = string.upper(input.GetKeyName(bind.Find("ImpostorSendSabotageRequest")))
-		local sabo_str = LANG.GetTranslation("SABO_MNGR_" .. IMPOSTOR.name) .. " (" .. LANG.GetTranslation("PRESS_" .. IMPOSTOR.name) .. sabo_key .. ")"
-		local bg_color = COLOR_LGRAY
-		local icon = icon_kill_waiting
+		local sabo_str = LANG.GetTranslation("SABO_REACT_" .. IMPOSTOR.name)
+		local bg_color = COLOR_GREEN
+		local icon = icon_react
+		
+		if timer.Exists("ImpostorSaboTimer_Client") then
+			--Sabotage is on cooldown
+			local time_left = timer.TimeLeft("ImpostorSaboTimer_Client")
+			sabo_str = sabo_str .. TimeLeftToString(time_left)
+			bg_color = COLOR_LGRAY
+		elseif timer.Exists("ImpostorSaboReactTimer_Client") then
+			--Sabotage is in progress.
+			local time_left = timer.TimeLeft("ImpostorSaboReactTimer_Client")
+			
+			--Alert!
+			bg_color = COLOR_YELLOW
+			if math.ceil(time_left) % 2 == 0 then
+				bg_color = IMPOSTOR.color
+			end
+			
+			--Give seconds left until darkness lifts
+			sabo_str = sabo_str .. TimeLeftToString(time_left)
+		else
+			--Sabotage is ready to go
+			local sabo_key = string.upper(input.GetKeyName(bind.Find("ImpostorSendSabotageRequest")))
+			sabo_str = sabo_str .. " (" .. LANG.GetTranslation("PRESS_" .. IMPOSTOR.name) .. sabo_key .. ")"
+		end
+		
+		self:DrawComponent(sabo_str, bg_color, icon_color, icon, false)
+	end
+	
+	function HUDELEMENT:DrawStrangeGameComponent()
+		local icon_color = COLOR_GREEN
+		local sabo_str = LANG.GetTranslation("SABO_REACT_STRANGE_GAME" .. IMPOSTOR.name)
+		local bg_color = COLOR_BLACK
+		local icon = icon_react
 		
 		self:DrawComponent(sabo_str, bg_color, icon_color, icon, false)
 	end
 	
 	function HUDELEMENT:Draw()
 		local client = LocalPlayer()
+		local sabo_in_progress = IMPO_SABO_DATA.CurrentSabotageInProgress()
+		
 		if IsInSpecDM(client) then
 			return
 		end
 		
-		local sabo_in_progress = IMPO_SABO_DATA.CurrentSabotageInProgress()
-		
 		self:DrawInstaKillComponent()
-		if (client.impo_sabo_mode == SABO_MODE.LIGHTS and sabo_in_progress == SABO_MODE.NONE) or sabo_in_progress == SABO_MODE.LIGHTS then
+		if IMPO_SABO_DATA.STRANGE_GAME then
+			self:DrawStrangeGameComponent()
+		elseif client.impo_sabo_mode == SABO_MODE.MNGR and sabo_in_progress == SABO_MODE.NONE then
+			self:DrawSabotageStationManagerComponent()
+		elseif (client.impo_sabo_mode == SABO_MODE.LIGHTS and sabo_in_progress == SABO_MODE.NONE) or sabo_in_progress == SABO_MODE.LIGHTS then
 			self:DrawSabotageLightsComponent()
 		elseif (client.impo_sabo_mode == SABO_MODE.COMMS and sabo_in_progress == SABO_MODE.NONE) or sabo_in_progress == SABO_MODE.COMMS then
 			self:DrawSabotageCommsComponent()
 		elseif (client.impo_sabo_mode == SABO_MODE.O2 and sabo_in_progress == SABO_MODE.NONE) or sabo_in_progress == SABO_MODE.O2 then
 			self:DrawSabotageO2Component()
-		elseif (client.impo_sabo_mode == SABO_MODE.MNGR and sabo_in_progress == SABO_MODE.NONE) then
-			self:DrawSabotageStationManagerComponent()
+		elseif (client.impo_sabo_mode == SABO_MODE.REACT and sabo_in_progress == SABO_MODE.NONE) or sabo_in_progress == SABO_MODE.REACT then
+			self:DrawSabotageReactComponent()
 		end
 	end
 end

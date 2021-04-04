@@ -33,16 +33,16 @@ function ENT:Initialize()
 	
 	self:CallOnRemove("SaboStationCallOnRemove", function(ent)
 		IMPO_SABO_DATA.ForceEndSabotage()
-		IMPO_SABO_DATA.ACTIVE_SABO_ENT = nil
+		IMPO_SABO_DATA.ACTIVE_STAT_ENT = nil
 	end)
 	
-	IMPO_SABO_DATA.ACTIVE_SABO_ENT = self
+	IMPO_SABO_DATA.ACTIVE_STAT_ENT = self
 end
 
 --Called on the Server to check if the sabotage can end prematurely.
 --Called on the Client to visually indicate sabotage progress. 
 function ENT:Think()
-	if IsValid(IMPO_SABO_DATA.ACTIVE_SABO_ENT) then
+	if IsValid(IMPO_SABO_DATA.ACTIVE_STAT_ENT) then
 		local radius = GetConVar("ttt2_impostor_station_radius"):GetInt()
 		local hold_time = GetConVar("ttt2_impostor_station_hold_time"):GetInt()
 		local radius_sqrd = radius * radius
@@ -55,7 +55,7 @@ function ENT:Think()
 				ply_count = ply_count + 1
 			end
 			
-			if ply:IsTerror() and ply:Alive() and not IsInSpecDM(ply) and ply:GetPos():DistToSqr(IMPO_SABO_DATA.ACTIVE_SABO_ENT:GetPos()) <= radius_sqrd then
+			if ply:IsTerror() and ply:Alive() and not IsInSpecDM(ply) and ply:GetPos():DistToSqr(IMPO_SABO_DATA.ACTIVE_STAT_ENT:GetPos()) <= radius_sqrd then
 				num_plys_in_range = num_plys_in_range + 1
 			end
 		end

@@ -460,8 +460,9 @@ if CLIENT then
 		
 		--Outline vents for impostors and traitor team (They will be able to see it regardless of where they are)
 		--Special roles such as Trappers and Jesters have to work for their access.
+		--Could use OUTLINE_MODE_VISIBLE to only outline vents that aren't blocked, but that code is finicky and doesn't work on all surfaces. Perhaps it doesn't like vents that are partially in a surface?
 		if (client:GetSubRole() == ROLE_IMPOSTOR or client:GetTeam() == TEAM_TRAITOR or DopTraitorCanVent(client)) and not IsInSpecDM(client) and #IMPO_VENT_DATA.VENT_NETWORK > 0 and not IsValid(client.impo_in_vent) then
-			outline.Add(IMPO_VENT_DATA.VENT_NETWORK, IMPOSTOR.color, OUTLINE_MODE_VISIBLE)
+			outline.Add(IMPO_VENT_DATA.VENT_NETWORK, IMPOSTOR.color, OUTLINE_MODE_BOTH)
 		end
 	end)
 end

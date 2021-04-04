@@ -1,12 +1,15 @@
 if SERVER then
 	AddCSLuaFile()
+	util.AddNetworkString("TTT2ImpostorSabotageUpdate")
 	util.AddNetworkString("TTT2ImpostorSendEntireStationNetwork")
 	util.AddNetworkString("TTT2ImpostorAddStationToNetwork")
+	util.AddNetworkString("TTT2ImpostorSetStrangeGame")
 end
 
 IMPO_SABO_DATA = {}
 IMPO_SABO_DATA.STATION_NETWORK = {}
-IMPO_SABO_DATA.ACTIVE_SABO_ENT = nil
+IMPO_SABO_DATA.ACTIVE_STAT_ENT = nil
+IMPO_SABO_DATA.STRANGE_GAME = false
 
 local function SafePosCanBeAdded(new_pos)
 	local min_dist = GetConVar("ttt2_impostor_min_station_dist"):GetInt()
@@ -92,27 +95,27 @@ function IMPO_SABO_DATA.MaybeGetNewStationSpawnPos(ply)
 	return maybe_spawn_pos
 end
 
-function IMPO_SABO_DATA.ForceEndSabotage()
-	if SERVER then
-		timer.Adjust("ImpostorSaboLightsTimer_Server", 0, nil, nil)
-		timer.Adjust("ImpostorSaboCommsTimer_Server", 0, nil, nil)
-		timer.Adjust("ImpostorSaboO2Timer_Server", 0, nil, nil)
-	elseif CLIENT then
-		timer.Adjust("ImpostorSaboLightsTimer_Client", 0, nil, nil)
-		timer.Adjust("ImpostorSaboCommsTimer_Client", 0, nil, nil)
-		timer.Adjust("ImpostorSaboO2Timer_Client", 0, nil, nil)
-	end
+function IMPO_SABO_DATA.SetStrangeGame()
+	IMPO_SABO_DATA.STRANGE_GAME = true
 	
-	IMPO_SABO_DATA.ACTIVE_SABO_ENT = nil
+	if SERVER then
+		net.Start("TTT2ImpostorSetStrangeGame")
+		net.Broadcast()
+	end
 end
 
 if SERVER then
+	IMPO_SABO_DATA.ON_COOLDOWN = false
+	
 	hook.Add("TTTPrepareRound", "ImpostorSaboDataPrepareRoundForServer", function()
 		local min_dist = GetConVar("ttt2_impostor_min_station_dist"):GetInt()
 		local min_dist_sqrd = min_dist * min_dist
 		local all_ply_spawn_pos = spawn.GetPlayerSpawnPointTable()
 		
 		IMPO_SABO_DATA.STATION_NETWORK = {}
+		IMPO_SABO_DATA.ACTIVE_STAT_ENT = nil
+		IMPO_SABO_DATA.ON_COOLDOWN = false
+		IMPO_SABO_DATA.STRANGE_GAME = false
 		
 		print("BMF ImpostorSaboDataPrepareRoundForServer: All Player Spawn Points")
 		for _, ply_spawn_pos in ipairs(all_ply_spawn_pos) do
@@ -137,9 +140,37 @@ if SERVER then
 			return SABO_MODE.COMMS
 		elseif timer.Exists("ImpostorSaboO2Timer_Server") then
 			return SABO_MODE.O2
+		elseif timer.Exists("ImpostorSaboReactTimer_Server") then
+			return SABO_MODE.REACT
 		end
 		
 		return SABO_MODE.NONE
+	end
+	
+	function IMPO_SABO_DATA.SendSabotageUpdateToClients(sabo_cooldown)
+		net.Start("TTT2ImpostorSabotageUpdate")
+		net.WriteInt(sabo_cooldown, 16)
+		net.Broadcast()
+	end
+	
+	function IMPO_SABO_DATA.PutSabotageOnCooldown(sabo_cooldown)
+		print("BMF PutSabotageOnCooldown")
+		--Handle case where admin wants impostor to be overpowered trash.
+		if sabo_cooldown <= 0 then
+			IMPO_SABO_DATA.ON_COOLDOWN = false
+			IMPO_SABO_DATA.SendSabotageUpdateToClients(0)
+			return
+		end
+		
+		--Put Sabotages on cooldown
+		IMPO_SABO_DATA.ON_COOLDOWN = true
+		IMPO_SABO_DATA.SendSabotageUpdateToClients(sabo_cooldown)
+		
+		--Create a timer that enables sabotages after the cooldown ends.
+		timer.Create("ImpostorSaboTimer_Server", sabo_cooldown, 1, function()
+			IMPO_SABO_DATA.ON_COOLDOWN = false
+			IMPO_SABO_DATA.SendSabotageUpdateToClients(0)
+		end)
 	end
 	
 	function IMPO_SABO_DATA.SendStationNetwork(ply)
@@ -210,15 +241,59 @@ if SERVER then
 	end
 	
 	function IMPO_SABO_DATA.DestroyStation()
-		if IsValid(IMPO_SABO_DATA.ACTIVE_SABO_ENT) then
-			IMPO_SABO_DATA.ACTIVE_SABO_ENT:Remove()
+		if IsValid(IMPO_SABO_DATA.ACTIVE_STAT_ENT) then
+			IMPO_SABO_DATA.ACTIVE_STAT_ENT:Remove()
 		end
 	end
+end
+
+function IMPO_SABO_DATA.ForceEndSabotage()
+	if SERVER then
+		timer.Adjust("ImpostorSaboLightsTimer_Server", 0, nil, nil)
+		timer.Adjust("ImpostorSaboCommsTimer_Server", 0, nil, nil)
+		timer.Adjust("ImpostorSaboO2Timer_Server", 0, nil, nil)
+		if timer.Exists("ImpostorSaboReactTimer_Server") then
+			timer.Remove("ImpostorSaboReactTimer_Server")
+			--Put the sabotage on cooldown here since the usual method (the timer) can't be used without ending the game.
+			IMPO_SABO_DATA.DestroyStation()
+			IMPO_SABO_DATA.PutSabotageOnCooldown(GetConVar("ttt2_impostor_sabo_react_cooldown"):GetInt())
+		end
+	elseif CLIENT then
+		timer.Adjust("ImpostorSaboLightsTimer_Client", 0, nil, nil)
+		timer.Adjust("ImpostorSaboCommsTimer_Client", 0, nil, nil)
+		timer.Adjust("ImpostorSaboO2Timer_Client", 0, nil, nil)
+		if timer.Exists("ImpostorSaboReactTimer_Client") then
+			timer.Remove("ImpostorSaboReactTimer_Client")
+			LANG.Msg("SABO_REACT_PASS_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+		end
+	end
+	
+	IMPO_SABO_DATA.ACTIVE_STAT_ENT = nil
 end
 
 if CLIENT then
 	hook.Add("TTTPrepareRound", "ImpostorSaboDataPrepareRoundForClient", function()
 		IMPO_SABO_DATA.STATION_NETWORK = {}
+		IMPO_SABO_DATA.ACTIVE_STAT_ENT = nil
+		IMPO_SABO_DATA.STRANGE_GAME = false
+	end)
+	
+	net.Receive("TTT2ImpostorSabotageUpdate", function()
+		local sabo_cooldown = net.ReadInt(16)
+		
+		print("BMF TTT2ImpostorSabotageUpdate: sabo_cooldown=" .. sabo_cooldown)
+		
+		if sabo_cooldown > 0 then
+			--Create a timer which hopefully will match the server's timer.
+			--This is used in the HUD to keep the client up to date in real time on when they can next sabotage
+			timer.Create("ImpostorSaboTimer_Client", sabo_cooldown, 1, function()
+				return
+			end)
+		elseif timer.Exists("ImpostorSaboTimer_Client") then
+			--Remove the previously created timer if it still exists.
+			--Hopefully this will prevent cases where multiple timers run around.
+			timer.Remove("ImpostorSaboTimer_Client")
+		end
 	end)
 	
 	net.Receive("TTT2ImpostorSendEntireStationNetwork", function()
@@ -253,6 +328,10 @@ if CLIENT then
 		IMPO_SABO_DATA.STATION_NETWORK[#IMPO_SABO_DATA.STATION_NETWORK + 1] = stat_spawn
 	end)
 	
+	net.Receive("TTT2ImpostorSetStrangeGame", function()
+		IMPO_SABO_DATA.SetStrangeGame()
+	end)
+	
 	function IMPO_SABO_DATA.CurrentSabotageInProgress()
 		if timer.Exists("ImpostorSaboLightsTimer_Client") then
 			return SABO_MODE.LIGHTS
@@ -260,6 +339,8 @@ if CLIENT then
 			return SABO_MODE.COMMS
 		elseif timer.Exists("ImpostorSaboO2Timer_Client") then
 			return SABO_MODE.O2
+		elseif timer.Exists("ImpostorSaboReactTimer_Client") then
+			return SABO_MODE.REACT
 		end
 		
 		return SABO_MODE.NONE
@@ -320,8 +401,8 @@ if CLIENT then
 	
 	hook.Add("PreDrawOutlines", "ImpostorSaboDataPreDrawOutlines", function()
 		--Outline station for all to see.
-		if IsValid(IMPO_SABO_DATA.ACTIVE_SABO_ENT) then
-			outline.Add(IMPO_SABO_DATA.ACTIVE_SABO_ENT, IMPOSTOR.color, OUTLINE_MODE_BOTH)
+		if IsValid(IMPO_SABO_DATA.ACTIVE_STAT_ENT) then
+			outline.Add(IMPO_SABO_DATA.ACTIVE_STAT_ENT, IMPOSTOR.color, OUTLINE_MODE_BOTH)
 		end
 	end)
 end
