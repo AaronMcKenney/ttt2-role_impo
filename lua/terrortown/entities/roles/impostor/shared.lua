@@ -49,8 +49,8 @@ function ROLE:Initialize()
 	roles.SetBaseRole(self, ROLE_TRAITOR)
 end
 
---CREATES "TEAM_EVERYONE". THEY'RE SOLE PURPOSE IS TO LOSE. EVERYONE LOSES.
-roles.InitCustomTeam("everyone", {
+--CREATES "TEAM_LOSER". THEY'RE SOLE PURPOSE IS TO LOSE. EVERYONE LOSES.
+roles.InitCustomTeam("loser", {
 	icon = "vgui/ttt/dynamic/roles/icon_inno",
 	color = Color(0, 0, 0, 255)
 })
@@ -427,7 +427,7 @@ if SERVER then
 		timer.Create("ImpostorSaboReactTimer_Server", sabo_duration, 1, function()
 			if GetRoundState() == ROUND_ACTIVE then
 				if sabo_react_mode == SABO_REACT_MODE.EVERYONE_LOSES then
-					impo_team_win = TEAM_EVERYONE
+					impo_team_win = TEAM_LOSER
 				else --TEAM_WIN
 					impo_team_win = team
 				end
@@ -451,6 +451,7 @@ if SERVER then
 		elseif not IMPO_SABO_DATA.ON_COOLDOWN then
 			if station_enabled and GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool() and IMPO_SABO_DATA.StationHasBeenUsed(selected_station) then
 				--Do not sabotage if the Impostor is trying to reuse a station.
+				LANG.Msg(ply, "SABO_CANNOT_REUSE_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 				return
 			end
 			
@@ -778,19 +779,32 @@ if CLIENT then
 			return
 		end
 		
-		if not SelectedSaboModeInRange(client) or IMPO_SABO_DATA.STRANGE_GAME then
+		if not SelectedSaboModeInRange(client) or IMPO_SABO_DATA.CurrentSabotageInProgress() ~= SABO_MODE.NONE or IMPO_SABO_DATA.STRANGE_GAME then
 			--All forms of sabotage have been disabled, or the client is confused/ill-informed.
 			return
 		end
 		
-		if client.impo_sabo_mode == SABO_MODE.MNGR and IMPO_SABO_DATA.MaybeGetNewStationSpawnPos(client) == nil and IMPO_SABO_DATA.CurrentSabotageInProgress() == SABO_MODE.NONE then
-			IMPO_SABO_DATA.CycleSelectedSabotageStation()
-		else
-			net.Start("TTT2ImpostorSendSabotageRequest")
-			net.WriteInt(client.impo_sabo_mode, 16)
-			net.WriteInt(client.impo_selected_station, 16)
-			net.SendToServer()
+		if client.impo_sabo_mode == SABO_MODE.MNGR then
+			--If we're not looking at a player, merely cycle the selected station.
+			--Otherwise, head over to the server to see if a new station spawn can be added.
+			local trace = client:GetEyeTrace(MASK_SHOT_HULL)
+			local dist = trace.StartPos:Distance(trace.HitPos)
+			local tgt = trace.Entity
+			if not (IsValid(tgt) and tgt:IsPlayer()) then
+				local old_selected_station = client.impo_selected_station
+				IMPO_SABO_DATA.CycleSelectedSabotageStation()
+				if client.impo_selected_station == old_selected_station then
+					--Tell the player how the Station Manager works, as it is unintuitive when there's just the one spawn available and pressing the key doesn't do anything.
+					LANG.Msg("SABO_MNGR_HELP_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+				end
+				return
+			end
 		end
+		
+		net.Start("TTT2ImpostorSendSabotageRequest")
+		net.WriteInt(client.impo_sabo_mode, 16)
+		net.WriteInt(client.impo_selected_station, 16)
+		net.SendToServer()
 	end
 	bind.Register("ImpostorSendSabotageRequest", SendSabotageRequest, nil, "Impostor", "Sabotage", KEY_V)
 	

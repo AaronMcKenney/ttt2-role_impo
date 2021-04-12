@@ -67,34 +67,6 @@ function IMPO_SABO_DATA.MarkStationAsUsed(selected_station)
 	end
 end
 
-function IMPO_SABO_DATA.MaybeGetNewStationSpawnPos(ply)
-	--If the player is looking at a valid spawn point, return that position. Otherwise return nil
-	local maybe_spawn_pos = nil
-	
-	if not ply:IsPlayer() or ply:GetSubRole() ~= ROLE_IMPOSTOR or not ply:IsActive() then
-		return maybe_spawn_pos
-	end
-	
-	--Determine if the impostor is looking at a potential station spawn position.
-	--To be a station spawn position, it must be accessible by non-Traitors who can't worm their way into a traitor room,
-	--musn't be too close to existing spawn positions, and must be in a safe location.
-	local trace = ply:GetEyeTrace(MASK_SHOT_HULL)
-	local dist = trace.StartPos:Distance(trace.HitPos)
-	local tgt = trace.Entity
-	if IsValid(tgt) and tgt:IsPlayer() and tgt:GetTeam() ~= TEAM_TRAITOR and not ply:GetSubRoleData().traitorButton and SafePosCanBeAdded(tgt:GetPos()) then
-		if SERVER then
-			if spawn.IsSpawnPointSafe(ply, tgt:GetPos(), false, player.GetAll()) then
-				maybe_spawn_pos = tgt:GetPos()
-			end
-		elseif CLIENT then
-			--Only server can check if the spawn point is safe. Client will just assume that it is, and leave Server to actually check this.
-			maybe_spawn_pos = tgt:GetPos()
-		end
-	end
-	
-	return maybe_spawn_pos
-end
-
 function IMPO_SABO_DATA.SetStrangeGame()
 	IMPO_SABO_DATA.STRANGE_GAME = true
 	
@@ -185,14 +157,38 @@ if SERVER then
 		net.Send(ply)
 	end
 	
-	function IMPO_SABO_DATA.BroadcastStationNetwork()
-		if #IMPO_SABO_DATA.STATION_NETWORK > 0 then
-			for _, ply in ipairs(player.GetAll()) do
-				if ply:GetSubRole() == ROLE_IMPOSTOR then
-					IMPO_SABO_DATA.SendStationNetwork(ply)
+	function IMPO_SABO_DATA.MaybeGetNewStationSpawnPos(ply)
+		--If the player is looking at a valid spawn point, return that position. Otherwise return nil
+		local maybe_spawn_pos = nil
+		
+		if not ply:IsPlayer() or ply:GetSubRole() ~= ROLE_IMPOSTOR or not ply:IsActive() then
+			return maybe_spawn_pos
+		end
+		
+		--Determine if the impostor is looking at a potential station spawn position.
+		--To be a station spawn position, it must be accessible by non-Traitors who can't worm their way into a traitor room,
+		--musn't be too close to existing spawn positions, and must be in a safe location.
+		local trace = ply:GetEyeTrace(MASK_SHOT_HULL)
+		local dist = trace.StartPos:Distance(trace.HitPos)
+		local tgt = trace.Entity
+		if IsValid(tgt) and tgt:IsPlayer() then
+			--Doppel support: Dop!Impostors shouldn't be able to create spawn points from either traitors or their teammates.
+			if tgt:GetTeam() ~= TEAM_TRAITOR and ply:GetTeam() ~= tgt:GetTeam() and not ply:GetSubRoleData().traitorButton then
+				if SafePosCanBeAdded(tgt:GetPos()) then
+					if spawn.IsSpawnPointSafe(ply, tgt:GetPos(), false, player.GetAll()) then
+						maybe_spawn_pos = tgt:GetPos()
+					else
+						LANG.Msg(ply, "SABO_MNGR_UNSAFE_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+					end
+				else
+					LANG.Msg(ply, "SABO_MNGR_TOO_CLOSE_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 				end
+			else
+				LANG.Msg(ply, "SABO_MNGR_BAD_PLY_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			end
 		end
+		
+		return maybe_spawn_pos
 	end
 	
 	function IMPO_SABO_DATA.MaybeAddNewStationSpawn(ply)
@@ -207,10 +203,13 @@ if SERVER then
 			
 			for _, ply in ipairs(player.GetAll()) do
 				if ply:GetSubRole() == ROLE_IMPOSTOR then
+					--Inform all Impostors of the new station
 					net.Start("TTT2ImpostorAddStationToNetwork")
 					net.WriteVector(stat_spawn.pos)
 					net.WriteBool(stat_spawn.used)
 					net.Send(ply)
+					
+					LANG.Msg(ply, "SABO_MNGR_CREATE_PASS_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 				end
 			end
 		end
@@ -300,6 +299,7 @@ if CLIENT then
 		local client = LocalPlayer()
 		local network_size = net.ReadInt(16)
 		
+		--First clear out the network in case it contains stale data.
 		IMPO_SABO_DATA.STATION_NETWORK = {}
 		
 		print("BMF TTT2ImpostorSendEntireStationNetwork: Reading station network of size " .. network_size)
@@ -321,11 +321,17 @@ if CLIENT then
 	end)
 	
 	net.Receive("TTT2ImpostorAddStationToNetwork", function()
+		local client = LocalPlayer()
 		local stat_spawn = {}
 		stat_spawn.pos = net.ReadVector()
 		stat_spawn.used = net.ReadBool()
 		
 		IMPO_SABO_DATA.STATION_NETWORK[#IMPO_SABO_DATA.STATION_NETWORK + 1] = stat_spawn
+		
+		--If the client's selected station is stale (ex. due to only one station spawn being present prior), move to this new one.
+		if not stat_spawn.used and IMPO_SABO_DATA.STATION_NETWORK[client.impo_selected_station].used then
+			client.impo_selected_station = #IMPO_SABO_DATA.STATION_NETWORK
+		end
 	end)
 	
 	net.Receive("TTT2ImpostorSetStrangeGame", function()
