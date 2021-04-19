@@ -21,6 +21,12 @@ end
 
 function ENT:Initialize()
 	self:SetModel(self.Model)
+	self:SetModelScale(self:GetModelScale() * 0.75)
+	local color = self:GetColor()
+	color.a = 178
+	self:SetColor(color)
+	--Needed in order to make the station transparent.
+	self:SetRenderMode(RENDERMODE_TRANSCOLOR)
 	
 	--Station is immovable, but has no collision (to prevent impostors from both using it to trap people and using it like some sort of shield.
 	self:PhysicsInit(SOLID_NONE)
