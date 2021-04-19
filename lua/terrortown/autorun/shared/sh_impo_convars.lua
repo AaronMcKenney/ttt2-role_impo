@@ -19,7 +19,7 @@ CreateConVar("ttt2_impostor_station_enable", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_station_manager_enable", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_dissuade_station_reuse", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_min_station_dist", "1000", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_station_radius", "750", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_station_radius", "300", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_stop_station_ply_prop", "0.25", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_station_hold_time", "5", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage Lights
@@ -221,14 +221,14 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# What is the radius of the circle that players need to enter in order to disable the current sabotage?
-	--  ttt2_impostor_station_radius [0..n] (default: 750)
+	--  ttt2_impostor_station_radius [0..n] (default: 300)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_station_radius",
 		slider = true,
 		min = 0,
 		max = 2000,
 		decimal = 0,
-		desc = "ttt2_impostor_station_radius (Def: 750)"
+		desc = "ttt2_impostor_station_radius (Def: 300)"
 	})
 	
 	--# What proportion of the players (alive and dead, rounded up) need to enter the sabotage station's radius in order to end the current sabotage (ex. If 0.25, and there are 6 players, then at least 2 need to enter the station's radius)?

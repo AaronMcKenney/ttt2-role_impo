@@ -75,3 +75,26 @@ function ENT:Think()
 		end
 	end
 end
+
+if CLIENT then
+	--Note: This is a pretty crappy material to use. Probably should find and use a crisper version.
+	local sabo_station_floor_mat = Material("sprites/sent_ball")
+	
+	hook.Add("PostDrawTranslucentRenderables", "PostDrawTranslucentRenderablesSabotageStation", function()
+		if IsValid(IMPO_SABO_DATA.ACTIVE_STAT_ENT) then
+			--Draw a rotating circle under the sabotage station, to indicate its range
+			local diameter = GetConVar("ttt2_impostor_station_radius"):GetInt() * 2
+			local cur_time = CurTime()
+			local sabo_station_pos = IMPO_SABO_DATA.ACTIVE_STAT_ENT:GetPos()
+			local sabo_station_color = IMPOSTOR.color
+			if timer.Exists("ImpostorSaboStationEndProtocolInProgress") then
+				sabo_station_color = COLOR_GREEN
+			end
+			-- 177- is invisible, 178+ is visible. 178 is partially transparent. Not sure why.
+			sabo_station_color.a = 178
+			
+			render.SetMaterial(sabo_station_floor_mat)
+			render.DrawQuadEasy(sabo_station_pos + Vector(0, 0, 1), Vector(0, 0, 1), diameter, diameter, sabo_station_color, (cur_time * 50) % 360)
+		end
+	end)
+end
