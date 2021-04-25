@@ -95,8 +95,7 @@ function ENT:Think()
 end
 
 if CLIENT then
-	--Note: This is a pretty crappy material to use. Probably should find and use a crisper version.
-	local sabo_station_floor_mat = Material("sprites/sent_ball")
+	local sabo_station_floor_mat = Material("vgui/ttt/circle")
 	
 	local function GetTimeLeftFromSaboClient()
 		local time_left = 0
