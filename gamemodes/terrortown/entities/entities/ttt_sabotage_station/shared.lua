@@ -16,6 +16,8 @@ ENT.CanUseKey = true
 local num_plys_in_range = 0
 local threshold = 0
 
+local removal_in_progress = false
+
 local function IsInSpecDM(ply)
 	if SpecDM and (ply.IsGhost and ply:IsGhost()) then
 		return true
@@ -36,6 +38,7 @@ hook.Add("TTTBeginRound", "ImpostorSabotatgeStationBeginRound", function()
 end)
 
 function ENT:Initialize()
+	removal_in_progress = false
 	self:SetModel(self.Model)
 	local model_scale = 0.75
 	self:SetModelScale(self:GetModelScale() * model_scale)
@@ -83,6 +86,7 @@ function ENT:Think()
 		if num_plys_in_range >= threshold then
 			if not timer.Exists("ImpostorSaboStationEndProtocolInProgress") then
 				timer.Create("ImpostorSaboStationEndProtocolInProgress", hold_time, 1, function()
+					removal_in_progress = true
 					if SERVER then
 						IMPO_SABO_DATA.DestroyStation()
 					end
@@ -96,6 +100,7 @@ end
 
 if CLIENT then
 	local sabo_station_floor_mat = Material("vgui/ttt/circle")
+	local sabo_station_arrow_mat = Material("vgui/ttt/arrow")
 	
 	local function GetTimeLeftFromSaboClient()
 		local time_left = 0
@@ -184,15 +189,37 @@ if CLIENT then
 			local diameter = GetConVar("ttt2_impostor_station_radius"):GetInt() * 2
 			local cur_time = CurTime()
 			local sabo_station_pos = IMPO_SABO_DATA.ACTIVE_STAT_ENT:GetPos()
-			local sabo_station_color = COLOR_RED
-			if timer.Exists("ImpostorSaboStationEndProtocolInProgress") then
+			--Create new color here. Using COLOR_RED will make a shallow copy and change it.
+			local sabo_station_color = Color(255, 0, 0, 255)
+			if removal_in_progress then
 				sabo_station_color = COLOR_GREEN
+			elseif timer.Exists("ImpostorSaboStationEndProtocolInProgress") then
+				--Interpolation from red to green.
+				local success_color = COLOR_GREEN
+				local hold_time = GetConVar("ttt2_impostor_station_hold_time"):GetInt()
+				local time_left = timer.TimeLeft("ImpostorSaboStationEndProtocolInProgress")
+				local fract = (hold_time - time_left) / hold_time
+				sabo_station_color.r = sabo_station_color.r + fract * (success_color.r - sabo_station_color.r)
+				sabo_station_color.g = sabo_station_color.g + fract * (success_color.g - sabo_station_color.g)
 			end
 			-- 177- is invisible, 178+ is visible. 178 is partially transparent. Not sure why.
 			sabo_station_color.a = 178
 			
 			render.SetMaterial(sabo_station_floor_mat)
-			render.DrawQuadEasy(sabo_station_pos + Vector(0, 0, 1), Vector(0, 0, 1), diameter, diameter, sabo_station_color, (cur_time * 50) % 360)
+			render.DrawQuadEasy(sabo_station_pos + Vector(0, 0, 1), Vector(0, 0, 1), diameter, diameter, sabo_station_color, 0)
+			
+			--Draw an arrow for each player needed. Color the arrows based on how many are in range.
+			render.SetMaterial(sabo_station_arrow_mat)
+			for i = 1, threshold do
+				local arrow_color = COLOR_RED
+				if i <= num_plys_in_range then
+					arrow_color = COLOR_GREEN
+				end
+				arrow_color.a = 178
+				
+				local arrow_rot = (50 * cur_time + (360 * i) / threshold) % 360
+				render.DrawQuadEasy(sabo_station_pos + Vector(0, 0, 1), Vector(0, 0, 1), diameter, diameter, arrow_color, arrow_rot)
+			end
 		end
 	end)
 end
