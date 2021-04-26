@@ -16,8 +16,6 @@ ENT.CanUseKey = true
 local num_plys_in_range = 0
 local threshold = 0
 
-local removal_in_progress = false
-
 local function IsInSpecDM(ply)
 	if SpecDM and (ply.IsGhost and ply:IsGhost()) then
 		return true
@@ -38,7 +36,8 @@ hook.Add("TTTBeginRound", "ImpostorSabotatgeStationBeginRound", function()
 end)
 
 function ENT:Initialize()
-	removal_in_progress = false
+	self.removal_in_progress = false
+	
 	self:SetModel(self.Model)
 	local model_scale = 0.75
 	self:SetModelScale(self:GetModelScale() * model_scale)
@@ -86,7 +85,7 @@ function ENT:Think()
 		if num_plys_in_range >= threshold then
 			if not timer.Exists("ImpostorSaboStationEndProtocolInProgress") then
 				timer.Create("ImpostorSaboStationEndProtocolInProgress", hold_time, 1, function()
-					removal_in_progress = true
+					self.removal_in_progress = true
 					if SERVER then
 						IMPO_SABO_DATA.DestroyStation()
 					end
@@ -139,12 +138,11 @@ if CLIENT then
 		self:DrawModel()
 		
 		--Info
-		local text_size = 100
 		local time_left = GetTimeLeftFromSaboClient()
 		
 		--Info box's size is mostly hardcoded to be just enough to hold the text.
-		local info_box_width = 300
-		local info_box_height = 400
+		local info_box_width = 250
+		local info_box_height = 200
 		
 		--Create three screens that display the same info, all surrounding the sabotage station.
 		for i = 1, 3 do
@@ -168,17 +166,16 @@ if CLIENT then
 			--Make the screen "protude" out of the dead middle of the entity.
 			local protude_vec = ang:Right()
 			protude_vec.z = 0
-			info_box_pos = info_box_pos - 60 * protude_vec
+			info_box_pos = info_box_pos - 40 * protude_vec
 			--Move the screen slightly to the "left"
 			local left_vec = ang:Forward()
 			left_vec.z = 0
-			info_box_pos = info_box_pos - 15 * left_vec
+			info_box_pos = info_box_pos - 10 * left_vec
 			
 			--Draw a screen
 			cam.Start3D2D(info_box_pos, ang, 0.1)
 				draw.RoundedBox(0, 0, 0, info_box_width, info_box_height, IMPOSTOR.color)
-				draw.SimpleText(time_left, "ImpostorSabotageStationFont", info_box_width / 2, (info_box_height - text_size) / 2, COLOR_BLACK, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-				draw.SimpleText(num_plys_in_range .. "/" .. threshold, "ImpostorSabotageStationFont", info_box_width / 2, (info_box_height + text_size) / 2, COLOR_BLACK, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+				draw.SimpleText(time_left, "ImpostorSabotageStationFont", info_box_width / 2, info_box_height / 2, COLOR_BLACK, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 			cam.End3D2D()
 		end
 	end
@@ -191,7 +188,7 @@ if CLIENT then
 			local sabo_station_pos = IMPO_SABO_DATA.ACTIVE_STAT_ENT:GetPos()
 			--Create new color here. Using COLOR_RED will make a shallow copy and change it.
 			local sabo_station_color = Color(255, 0, 0, 255)
-			if removal_in_progress then
+			if IMPO_SABO_DATA.ACTIVE_STAT_ENT.removal_in_progress then
 				sabo_station_color = COLOR_GREEN
 			elseif timer.Exists("ImpostorSaboStationEndProtocolInProgress") then
 				--Interpolation from red to green.
