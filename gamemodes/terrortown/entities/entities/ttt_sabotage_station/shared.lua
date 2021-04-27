@@ -69,53 +69,53 @@ end
 --Called on the Server to check if the sabotage can end prematurely.
 --Called on the Client to visually indicate sabotage progress. 
 function ENT:Think()
-	if IsValid(IMPO_SABO_DATA.ACTIVE_STAT_ENT) then
-		local radius = GetConVar("ttt2_impostor_station_radius"):GetInt()
-		local hold_time = GetConVar("ttt2_impostor_station_hold_time"):GetInt()
-		local radius_sqrd = radius * radius
-		local new_num_plys_in_range = 0
-		
-		for _, ply in ipairs(player.GetAll()) do
-			if ply:IsTerror() and ply:Alive() and not IsInSpecDM(ply) and ply:GetPos():DistToSqr(IMPO_SABO_DATA.ACTIVE_STAT_ENT:GetPos()) <= radius_sqrd then
-				new_num_plys_in_range = new_num_plys_in_range + 1
-			end
-		end
-		
-		num_plys_in_range = new_num_plys_in_range
-		if num_plys_in_range >= threshold then
-			if not timer.Exists("ImpostorSaboStationEndProtocolInProgress") then
-				timer.Create("ImpostorSaboStationEndProtocolInProgress", hold_time, 1, function()
-					self.removal_in_progress = true
-					if SERVER then
-						IMPO_SABO_DATA.DestroyStation()
-					end
-				end)
-			end
-		else
-			timer.Remove("ImpostorSaboStationEndProtocolInProgress")
+	local radius = GetConVar("ttt2_impostor_station_radius"):GetInt()
+	local hold_time = GetConVar("ttt2_impostor_station_hold_time"):GetInt()
+	local radius_sqrd = radius * radius
+	local new_num_plys_in_range = 0
+	
+	for _, ply in ipairs(player.GetAll()) do
+		if ply:IsTerror() and ply:Alive() and not IsInSpecDM(ply) and ply:GetPos():DistToSqr(self:GetPos()) <= radius_sqrd then
+			new_num_plys_in_range = new_num_plys_in_range + 1
 		end
 	end
+	
+	num_plys_in_range = new_num_plys_in_range
+	if num_plys_in_range >= threshold then
+		if not timer.Exists("ImpostorSaboStationEndProtocolInProgress") then
+			timer.Create("ImpostorSaboStationEndProtocolInProgress", hold_time, 1, function()
+				self.removal_in_progress = true
+				if SERVER then
+					IMPO_SABO_DATA.DestroyStation()
+				end
+			end)
+		end
+	else
+		timer.Remove("ImpostorSaboStationEndProtocolInProgress")
+	end
+	
+	--This technically works, but only if the map's lighting isn't fully disabled.
+	--Even setting the LightStyle to "b" will dimish SabotageLight's already underpowered effect.
+	--So this shall be commented for now.
+	--if CLIENT and IMPO_SABO_DATA.CurrentSabotageInProgress() == SABO_MODE.LIGHTS then
+	--	--Create dynamic light
+	--	local dlight = DynamicLight(self:EntIndex())
+	--	--Beacon's color
+	--	dlight.r = 255
+	--	dlight.g = 255
+	--	dlight.b = 153
+	--	
+	--	dlight.brightness = 10
+	--	dlight.Decay = 1000
+	--	dlight.Size = 200
+	--	dlight.DieTime = CurTime() + 0.1
+	--	dlight.Pos = self:GetPos() + Vector(0, 0, 120)
+	--end
 end
 
 if CLIENT then
 	local sabo_station_floor_mat = Material("vgui/ttt/circle")
 	local sabo_station_arrow_mat = Material("vgui/ttt/arrow")
-	
-	local function GetTimeLeftFromSaboClient()
-		local time_left = 0
-		
-		if timer.Exists("ImpostorSaboLightsTimer_Client") then
-			time_left = math.ceil(math.abs(timer.TimeLeft("ImpostorSaboLightsTimer_Client")))
-		elseif timer.Exists("ImpostorSaboCommsTimer_Client") then
-			time_left = math.ceil(math.abs(timer.TimeLeft("ImpostorSaboCommsTimer_Client")))
-		elseif timer.Exists("ImpostorSaboO2Timer_Client") then
-			time_left = math.ceil(math.abs(timer.TimeLeft("ImpostorSaboO2Timer_Client")))
-		elseif timer.Exists("ImpostorSaboReactTimer_Client") then
-			time_left = math.ceil(math.abs(timer.TimeLeft("ImpostorSaboReactTimer_Client")))
-		end
-		
-		return time_left
-	end
 	
 	surface.CreateFont("ImpostorSabotageStationFont", {
 		font = "Arial",
@@ -133,6 +133,22 @@ if CLIENT then
 		additive = false,
 		outline = false
 	})
+	
+	local function GetTimeLeftFromSaboClient()
+		local time_left = 0
+		
+		if timer.Exists("ImpostorSaboLightsTimer_Client") then
+			time_left = math.ceil(math.abs(timer.TimeLeft("ImpostorSaboLightsTimer_Client")))
+		elseif timer.Exists("ImpostorSaboCommsTimer_Client") then
+			time_left = math.ceil(math.abs(timer.TimeLeft("ImpostorSaboCommsTimer_Client")))
+		elseif timer.Exists("ImpostorSaboO2Timer_Client") then
+			time_left = math.ceil(math.abs(timer.TimeLeft("ImpostorSaboO2Timer_Client")))
+		elseif timer.Exists("ImpostorSaboReactTimer_Client") then
+			time_left = math.ceil(math.abs(timer.TimeLeft("ImpostorSaboReactTimer_Client")))
+		end
+		
+		return time_left
+	end
 	
 	function ENT:Draw()
 		self:DrawModel()
