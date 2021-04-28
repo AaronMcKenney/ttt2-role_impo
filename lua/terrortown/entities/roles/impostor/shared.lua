@@ -606,7 +606,11 @@ if CLIENT then
 		local client = LocalPlayer()
 		local num_impos = net.ReadInt(16)
 		
-		EPOP:AddMessage({text = LANG.GetParamTranslation("INFORM_" .. IMPOSTOR.name, {n = num_impos}), color = IMPOSTOR.color}, "", 6)
+		if num_impos == 1 then
+			EPOP:AddMessage({text = LANG.GetTranslation("INFORM_ONE_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+		else
+			EPOP:AddMessage({text = LANG.GetParamTranslation("INFORM_" .. IMPOSTOR.name, {n = num_impos}), color = IMPOSTOR.color}, "", 6)
+		end
 	end)
 	
 	net.Receive("TTT2ImpostorDefaultSaboMode", function()

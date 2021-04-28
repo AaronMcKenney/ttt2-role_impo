@@ -13,7 +13,8 @@ L["ttt2_desc_" .. IMPOSTOR.name] = [[You are an Impostor! Impostors are traitors
 However, you do not have access to a shop and deal little to no damage normally.]]
 
 -- OTHER ROLE LANGUAGE STRINGS
-L["INFORM_" .. IMPOSTOR.name] = "There are {n} impostor(s) among us..."
+L["INFORM_ONE_" .. IMPOSTOR.name] = "There is an impostor among us..."
+L["INFORM_" .. IMPOSTOR.name] = "There are {n} impostors among us..."
 L["KILL_" .. IMPOSTOR.name] = "KILL"
 L["PRESS_" .. IMPOSTOR.name] = "PRESS "
 L["TO_KILL_" .. IMPOSTOR.name] = " TO KILL"
