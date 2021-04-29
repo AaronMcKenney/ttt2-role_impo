@@ -161,44 +161,47 @@ if CLIENT then
 		elseif timer.Exists("ImpostorSaboLightsTimer_Client") then
 			--Sabotage is in progress.
 			local sabo_lights_mode = GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt()
-			local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
+			local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetInt()
 			local time_left = timer.TimeLeft("ImpostorSaboLightsTimer_Client")
+			
+			--Give seconds left until darkness lifts
+			sabo_str = sabo_str .. TimeLeftToString(time_left)
 			
 			if sabo_lights_mode == SABO_LIGHTS_MODE.DISABLE_MAP then
 				--Lights are abruptly shut off.
 				bg_color = COLOR_BLACK
 				icon_color = COLOR_LGRAY
 				icon = icon_unlit_bulb
-				
-				--Give seconds left until darkness lifts
-				sabo_str = sabo_str .. TimeLeftToString(time_left)
 			else --SABO_LIGHTS_MODE.SCREEN_FADE
-				local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
-				
-				if time_left > sabo_lights_len + fade_time then
-					--Screen is transitioning to complete darkness
-					local fract = (time_left - (sabo_lights_len + fade_time)) / fade_time
-					local h, s, v = ColorToHSV(bg_color)
-					bg_color = HSVToColor(h, s, v * fract)
+				if timer.Exists("ImpostorScreenFade_Client") then
+					--There is darkness
+					local dark_time_left = timer.TimeLeft("ImpostorScreenFade_Client")
+					local fade_trans_time = GetConVar("ttt2_impostor_sabo_lights_fade_trans_length"):GetFloat()
+					local fade_dark_time = GetConVar("ttt2_impostor_sabo_lights_fade_dark_length"):GetFloat()
+					local dark_total_time = 2*fade_trans_time + fade_dark_time
 					
-					icon_color = COLOR_LGRAY
-					icon = icon_unlit_bulb
-				elseif time_left <= fade_time then
-					--Screen is transitioning from complete darkness
-					local fract = 1 - (time_left / fade_time)
-					if GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt() > 0 then
-						bg_color = COLOR_LGRAY
+					if dark_time_left > fade_dark_time + fade_trans_time and dark_time_left < dark_total_time then
+						--Screen is transitioning to complete darkness
+						local fract = (dark_time_left - (fade_dark_time + fade_trans_time)) / fade_trans_time
+						local h, s, v = ColorToHSV(bg_color)
+						bg_color = HSVToColor(h, s, v * fract)
+						
+						icon_color = COLOR_LGRAY
+						icon = icon_unlit_bulb
+					elseif dark_time_left > fade_trans_time and dark_time_left <= fade_dark_time + fade_trans_time then
+						--Screen is completely dark.
+						bg_color = COLOR_BLACK
+						icon_color = COLOR_LGRAY
+						icon = icon_unlit_bulb
+					elseif dark_time_left > 0 and dark_time_left <= fade_trans_time then
+						--Screen is transitioning from complete darkness
+						local fract = 1 - (dark_time_left / fade_trans_time)
+						if GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt() > 0 and (time_left - dark_time_left) <= 0 then
+							bg_color = COLOR_LGRAY
+						end
+						local h, s, v = ColorToHSV(bg_color)
+						bg_color = HSVToColor(h, s, v * fract)
 					end
-					local h, s, v = ColorToHSV(bg_color)
-					bg_color = HSVToColor(h, s, v * fract)
-				else
-					--Screen is completely dark.
-					bg_color = COLOR_BLACK
-					icon_color = COLOR_LGRAY
-					icon = icon_unlit_bulb
-					
-					--Give seconds left until darkness lifts
-					sabo_str = sabo_str .. TimeLeftToString(time_left - fade_time)
 				end
 			end
 		else

@@ -23,29 +23,31 @@ CreateConVar("ttt2_impostor_station_radius", "300", {FCVAR_ARCHIVE, FCVAR_NOTFIY
 CreateConVar("ttt2_impostor_stop_station_ply_prop", "0.25", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_station_hold_time", "5", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage Lights
-CreateConVar("ttt2_impostor_sabo_lights_cooldown", "180", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_lights_length", "55", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_lights_cooldown", "120", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_mode", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_sabo_lights_fade", "2.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_sabo_lights_length", "5.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_lights_fade_trans_length", "2.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_lights_fade_dark_length", "1.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_lights_fade_bright_length", "5", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage Comms
+CreateConVar("ttt2_impostor_sabo_comms_length", "20", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_comms_cooldown", "120", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_comms_deafen", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_sabo_comms_length", "20", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage O2
+CreateConVar("ttt2_impostor_sabo_o2_length", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_o2_cooldown", "240", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_o2_hp_loss", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_o2_interval", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_o2_grace_period", "10", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_o2_stop_thresh", "10", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_sabo_o2_length", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_is_affected_by_sabo_o2", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage Reactor
+CreateConVar("ttt2_impostor_sabo_react_length", "60", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_react_cooldown", "240", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_react_win_mode", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_sabo_react_length", "60", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Special Role Handling
 CreateConVar("ttt2_impostor_inform_about_non_traitors_venting", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_trapper_venting_time", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -254,15 +256,26 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_station_hold_time (Def: 5)"
 	})
 	
+	--# How long (in seconds) should the lights be sabotaged for (<= 0 to disable ability)?
+	--  ttt2_impostor_sabo_lights_length [0..n] (default: 55)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_lights_length",
+		slider = true,
+		min = 0,
+		max = 180,
+		decimal = 0,
+		desc = "ttt2_impostor_sabo_lights_length (Def: 55)"
+	})
+	
 	--# What is the cooldown (in seconds) on the impostor's Sabotage Lights ability?
-	--  ttt2_impostor_sabo_lights_cooldown [0..n] (default: 180)
+	--  ttt2_impostor_sabo_lights_cooldown [0..n] (default: 120)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_sabo_lights_cooldown",
 		slider = true,
 		min = 0,
 		max = 300,
 		decimal = 0,
-		desc = "ttt2_impostor_sabo_lights_cooldown (Def: 180)"
+		desc = "ttt2_impostor_sabo_lights_cooldown (Def: 120)"
 	})
 	
 	--# What should happen when the lights are sabotaged?
@@ -283,25 +296,38 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	--# How long (in seconds) should it take for lights to fade to black upon activating Sabotage Lights under Screen Fade mode (<= 0.0 to disable ability)?
 	--  Note: Only applicable if ttt2_impostor_sabo_lights_mode is 0 (Screen fade mode)
 	--  Note: Fade time is nonlinear. HUD's color difference may be off for large fade times..
-	--  ttt2_impostor_sabo_lights_fade [0.0..n.m] (default: 2.0)
+	--  ttt2_impostor_sabo_lights_fade_trans_length [0.0..n.m] (default: 2.0)
 	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_sabo_lights_fade",
+		cvar = "ttt2_impostor_sabo_lights_fade_trans_length",
 		slider = true,
 		min = 0.0,
 		max = 30.0,
 		decimal = 2,
-		desc = "ttt2_impostor_sabo_lights_fade (Def: 2.0)"
+		desc = "ttt2_impostor_sabo_lights_fade_trans_length (Def: 2.0)"
 	})
 	
-	--# How long (in seconds) should the lights be sabotaged for (< 0.0 to disable ability)?
-	--  ttt2_impostor_sabo_lights_length [-n.m..n.m] (default: 5.0)
+	--# How long (in seconds) should the victims be in complete darkness under Screen Fade mode (<= 0.0 to disable ability)?
+	--  Note: Only applicable if ttt2_impostor_sabo_lights_mode is 0 (Screen fade mode)
+	--  ttt2_impostor_sabo_lights_fade_dark_length [0.0..n.m] (default: 1.0)
 	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_sabo_lights_length",
+		cvar = "ttt2_impostor_sabo_lights_fade_dark_length",
 		slider = true,
-		min = -1.0,
-		max = 120.0,
+		min = 0.0,
+		max = 30.0,
 		decimal = 2,
-		desc = "ttt2_impostor_sabo_lights_length (Def: 5.0)"
+		desc = "ttt2_impostor_sabo_lights_fade_dark_length (Def: 1.0)"
+	})
+	
+	--# How long (in seconds) should the victims be safe from the dark under Screen Fade mode (<= 0.0 to disable ability)?
+	--  Note: Only applicable if ttt2_impostor_sabo_lights_mode is 0 (Screen fade mode)
+	--  ttt2_impostor_sabo_lights_fade_bright_length [0..n] (default: 5)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_lights_fade_bright_length",
+		slider = true,
+		min = 0,
+		max = 30,
+		decimal = 0,
+		desc = "ttt2_impostor_sabo_lights_fade_bright_length (Def: 5)"
 	})
 	
 	--# Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage Lights?
@@ -310,6 +336,17 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		cvar = "ttt2_impostor_traitor_team_is_affected_by_sabo_lights",
 		checkbox = true,
 		desc = "ttt2_impostor_traitor_team_is_affected_by_sabo_lights (Def: 0)"
+	})
+	
+	--# How long (in seconds) should the comms be sabotaged for (<= 0 to disable ability)?
+	--  ttt2_impostor_sabo_comms_length [0..n] (default: 20)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_comms_length",
+		slider = true,
+		min = 0,
+		max = 120,
+		decimal = 0,
+		desc = "ttt2_impostor_sabo_comms_length (Def: 20)"
 	})
 	
 	--# What is the cooldown (in seconds) on the impostor's Sabotage Comms ability?
@@ -331,23 +368,23 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_sabo_comms_deafen (Def: 1)"
 	})
 	
-	--# How long (in seconds) should the comms be sabotaged for (<= 0 to disable ability)?
-	--  ttt2_impostor_sabo_comms_length [-n..m] (default: 20)
-	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_sabo_comms_length",
-		slider = true,
-		min = 0,
-		max = 120,
-		decimal = 0,
-		desc = "ttt2_impostor_sabo_comms_length (Def: 20)"
-	})
-	
 	--# Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage Comms?
 	--  ttt2_impostor_traitor_team_is_affected_by_sabo_comms [0/1] (default: 0)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_traitor_team_is_affected_by_sabo_comms",
 		checkbox = true,
 		desc = "ttt2_impostor_traitor_team_is_affected_by_sabo_comms (Def: 0)"
+	})
+	
+	--# How long (in seconds) should O2 be sabotaged for (<= 0 to disable ability)?
+	--  ttt2_impostor_sabo_o2_length [0..n] (default: 30)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_o2_length",
+		slider = true,
+		min = 0,
+		max = 120,
+		decimal = 0,
+		desc = "ttt2_impostor_sabo_o2_length (Def: 30)"
 	})
 	
 	--# What is the cooldown (in seconds) on an Impostor's Sabotage O2 ability?
@@ -405,15 +442,15 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_sabo_o2_stop_thresh (Def: 10)"
 	})
 	
-	--# How long (in seconds) should O2 be sabotaged for (<= 0 to disable ability)?
-	--  ttt2_impostor_sabo_o2_length [-n..m] (default: 30)
+	--# What is the timelimit on the Sabotage Reactor ability (<= 0 to disable ability)?
+	--  ttt2_impostor_sabo_react_length [0..n] (default: 60)
 	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_sabo_o2_length",
+		cvar = "ttt2_impostor_sabo_react_length",
 		slider = true,
 		min = 0,
 		max = 120,
 		decimal = 0,
-		desc = "ttt2_impostor_sabo_o2_length (Def: 30)"
+		desc = "ttt2_impostor_sabo_react_length (Def: 60)"
 	})
 	
 	--# What is the cooldown (in seconds) on an Impostor's Sabotage Reactor ability?
@@ -440,17 +477,6 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 			"1 - Impostor's team wins"
 		},
 		numStart = 0
-	})
-	
-	--# What is the timelimit on the Sabotage Reactor ability (<= 0 to disable ability)?
-	--  ttt2_impostor_sabo_react_length [0..n] (default: 60)
-	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_sabo_react_length",
-		slider = true,
-		min = 0,
-		max = 120,
-		decimal = 0,
-		desc = "ttt2_impostor_sabo_react_length (Def: 60)"
 	})
 	
 	--# Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage O2?
@@ -533,24 +559,26 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalInt("ttt2_impostor_station_radius", GetConVar("ttt2_impostor_station_radius"):GetInt())
 	SetGlobalFloat("ttt2_impostor_stop_station_ply_prop", GetConVar("ttt2_impostor_stop_station_ply_prop"):GetFloat())
 	SetGlobalInt("ttt2_impostor_station_hold_time", GetConVar("ttt2_impostor_station_hold_time"):GetInt())
+	SetGlobalInt("ttt2_impostor_sabo_lights_length", GetConVar("ttt2_impostor_sabo_lights_length"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_lights_cooldown", GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_lights_mode", GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt())
-	SetGlobalFloat("ttt2_impostor_sabo_lights_fade", GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat())
-	SetGlobalFloat("ttt2_impostor_sabo_lights_length", GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat())
+	SetGlobalFloat("ttt2_impostor_sabo_lights_fade_trans_length", GetConVar("ttt2_impostor_sabo_lights_fade_trans_length"):GetFloat())
+	SetGlobalFloat("ttt2_impostor_sabo_lights_fade_dark_length", GetConVar("ttt2_impostor_sabo_lights_fade_dark_length"):GetFloat())
+	SetGlobalInt("ttt2_impostor_sabo_lights_fade_bright_length", GetConVar("ttt2_impostor_sabo_lights_fade_bright_length"):GetInt())
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool())
+	SetGlobalInt("ttt2_impostor_sabo_comms_length", GetConVar("ttt2_impostor_sabo_comms_length"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_comms_cooldown", GetConVar("ttt2_impostor_sabo_comms_cooldown"):GetInt())
 	SetGlobalBool("ttt2_impostor_sabo_comms_deafen", GetConVar("ttt2_impostor_sabo_comms_deafen"):GetBool())
-	SetGlobalInt("ttt2_impostor_sabo_comms_length", GetConVar("ttt2_impostor_sabo_comms_length"):GetInt())
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_comms", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms"):GetBool())
+	SetGlobalInt("ttt2_impostor_sabo_o2_length", GetConVar("ttt2_impostor_sabo_o2_length"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_o2_cooldown", GetConVar("ttt2_impostor_sabo_o2_cooldown"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_o2_hp_loss", GetConVar("ttt2_impostor_sabo_o2_hp_loss"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_o2_interval", GetConVar("ttt2_impostor_sabo_o2_interval"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_o2_grace_period", GetConVar("ttt2_impostor_sabo_o2_grace_period"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_o2_stop_thresh", GetConVar("ttt2_impostor_sabo_o2_stop_thresh"):GetInt())
-	SetGlobalInt("ttt2_impostor_sabo_o2_length", GetConVar("ttt2_impostor_sabo_o2_length"):GetInt())
+	SetGlobalInt("ttt2_impostor_sabo_react_length", GetConVar("ttt2_impostor_sabo_react_length"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_react_cooldown", GetConVar("ttt2_impostor_sabo_react_cooldown"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_react_win_mode", GetConVar("ttt2_impostor_sabo_react_win_mode"):GetInt())
-	SetGlobalInt("ttt2_impostor_sabo_react_length", GetConVar("ttt2_impostor_sabo_react_length"):GetInt())
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool())
 	SetGlobalBool("ttt2_impostor_is_affected_by_sabo_o2", GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool())
 	SetGlobalBool("ttt2_impostor_inform_about_non_traitors_venting", GetConVar("ttt2_impostor_inform_about_non_traitors_venting"):GetBool())
@@ -620,20 +648,29 @@ end)
 cvars.AddChangeCallback("ttt2_impostor_station_hold_time", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_station_hold_time", tonumber(new))
 end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_lights_length", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_lights_length", tonumber(new))
+end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_lights_cooldown", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_sabo_lights_cooldown", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_lights_mode", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_sabo_lights_mode", tonumber(new))
 end)
-cvars.AddChangeCallback("ttt2_impostor_sabo_lights_fade", function(name, old, new)
-	SetGlobalFloat("ttt2_impostor_sabo_lights_fade", tonumber(new))
+cvars.AddChangeCallback("ttt2_impostor_sabo_lights_fade_trans_length", function(name, old, new)
+	SetGlobalFloat("ttt2_impostor_sabo_lights_fade_trans_length", tonumber(new))
 end)
-cvars.AddChangeCallback("ttt2_impostor_sabo_lights_length", function(name, old, new)
-	SetGlobalFloat("ttt2_impostor_sabo_lights_length", tonumber(new))
+cvars.AddChangeCallback("ttt2_impostor_sabo_lights_fade_dark_length", function(name, old, new)
+	SetGlobalFloat("ttt2_impostor_sabo_lights_fade_dark_length", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_lights_fade_bright_length", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_lights_fade_bright_length", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_comms_length", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_comms_length", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_comms_cooldown", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_sabo_comms_cooldown", tonumber(new))
@@ -641,11 +678,11 @@ end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_comms_deafen", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_sabo_comms_deafen", tobool(tonumber(new)))
 end)
-cvars.AddChangeCallback("ttt2_impostor_sabo_comms_length", function(name, old, new)
-	SetGlobalInt("ttt2_impostor_sabo_comms_length", tonumber(new))
-end)
 cvars.AddChangeCallback("ttt2_impostor_traitor_team_is_affected_by_sabo_comms", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_comms", tobool(tonumber(new)))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_o2_length", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_o2_length", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_o2_cooldown", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_sabo_o2_cooldown", tonumber(new))
@@ -662,17 +699,14 @@ end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_o2_stop_thresh", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_sabo_o2_stop_thresh", tonumber(new))
 end)
-cvars.AddChangeCallback("ttt2_impostor_sabo_o2_length", function(name, old, new)
-	SetGlobalInt("ttt2_impostor_sabo_o2_length", tonumber(new))
+cvars.AddChangeCallback("ttt2_impostor_sabo_react_length", function(name, old, new)
+	SetGlobalInt("ttt2_impostor_sabo_react_length", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_react_cooldown", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_sabo_react_cooldown", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_react_win_mode", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_sabo_react_win_mode", tonumber(new))
-end)
-cvars.AddChangeCallback("ttt2_impostor_sabo_react_length", function(name, old, new)
-	SetGlobalInt("ttt2_impostor_sabo_react_length", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", tobool(tonumber(new)))
