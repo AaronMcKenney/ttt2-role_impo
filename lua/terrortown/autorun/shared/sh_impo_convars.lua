@@ -4,7 +4,7 @@ CreateConVar("ttt2_impostor_inform_everyone", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY}
 CreateConVar("ttt2_impostor_normal_dmg_multi", "0.5", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Instant Kill
 CreateConVar("ttt2_impostor_kill_dist", "125", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_kill_cooldown", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_kill_cooldown", "45", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Venting
 CreateConVar("ttt2_impostor_num_starting_vents", "3", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_vent_capacity", "6", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -31,22 +31,22 @@ CreateConVar("ttt2_impostor_sabo_lights_fade_dark_length", "1.0", {FCVAR_ARCHIVE
 CreateConVar("ttt2_impostor_sabo_lights_fade_bright_length", "5", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage Comms
-CreateConVar("ttt2_impostor_sabo_comms_length", "20", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_comms_length", "60", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_comms_cooldown", "120", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_comms_deafen", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage O2
-CreateConVar("ttt2_impostor_sabo_o2_length", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_sabo_o2_cooldown", "240", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_o2_length", "60", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_o2_cooldown", "120", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_o2_hp_loss", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_o2_interval", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_o2_grace_period", "10", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_o2_stop_thresh", "10", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_is_affected_by_sabo_o2", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_is_affected_by_sabo_o2", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage Reactor
-CreateConVar("ttt2_impostor_sabo_react_length", "60", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_sabo_react_cooldown", "240", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_react_length", "90", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_react_cooldown", "120", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_react_win_mode", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Special Role Handling
 CreateConVar("ttt2_impostor_inform_about_non_traitors_venting", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -89,14 +89,14 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# What is the cooldown (in seconds) on the impostor's instant-kill ability?
-	--  ttt2_impostor_kill_cooldown [0..n] (default: 30)
+	--  ttt2_impostor_kill_cooldown [0..n] (default: 45)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_kill_cooldown",
 		slider = true,
 		min = 0,
 		max = 120,
 		decimal = 0,
-		desc = "ttt2_impostor_kill_cooldown (Def: 30)"
+		desc = "ttt2_impostor_kill_cooldown (Def: 45)"
 	})
 	
 	--# How many vents does the impostor start with?
@@ -339,14 +339,14 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# How long (in seconds) should the comms be sabotaged for (<= 0 to disable ability)?
-	--  ttt2_impostor_sabo_comms_length [0..n] (default: 20)
+	--  ttt2_impostor_sabo_comms_length [0..n] (default: 60)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_sabo_comms_length",
 		slider = true,
 		min = 0,
 		max = 120,
 		decimal = 0,
-		desc = "ttt2_impostor_sabo_comms_length (Def: 20)"
+		desc = "ttt2_impostor_sabo_comms_length (Def: 60)"
 	})
 	
 	--# What is the cooldown (in seconds) on the impostor's Sabotage Comms ability?
@@ -377,25 +377,25 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# How long (in seconds) should O2 be sabotaged for (<= 0 to disable ability)?
-	--  ttt2_impostor_sabo_o2_length [0..n] (default: 30)
+	--  ttt2_impostor_sabo_o2_length [0..n] (default: 60)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_sabo_o2_length",
 		slider = true,
 		min = 0,
 		max = 120,
 		decimal = 0,
-		desc = "ttt2_impostor_sabo_o2_length (Def: 30)"
+		desc = "ttt2_impostor_sabo_o2_length (Def: 60)"
 	})
 	
 	--# What is the cooldown (in seconds) on an Impostor's Sabotage O2 ability?
-	--  ttt2_impostor_sabo_o2_cooldown [0..n] (default: 240)
+	--  ttt2_impostor_sabo_o2_cooldown [0..n] (default: 120)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_sabo_o2_cooldown",
 		slider = true,
 		min = 0,
 		max = 300,
 		decimal = 0,
-		desc = "ttt2_impostor_sabo_o2_cooldown (Def: 240)"
+		desc = "ttt2_impostor_sabo_o2_cooldown (Def: 120)"
 	})
 	
 	--# For Sabotage O2, How much HP per second should be lost?
@@ -443,25 +443,25 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# What is the timelimit on the Sabotage Reactor ability (<= 0 to disable ability)?
-	--  ttt2_impostor_sabo_react_length [0..n] (default: 60)
+	--  ttt2_impostor_sabo_react_length [0..n] (default: 90)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_sabo_react_length",
 		slider = true,
 		min = 0,
 		max = 120,
 		decimal = 0,
-		desc = "ttt2_impostor_sabo_react_length (Def: 60)"
+		desc = "ttt2_impostor_sabo_react_length (Def: 90)"
 	})
 	
 	--# What is the cooldown (in seconds) on an Impostor's Sabotage Reactor ability?
-	--  ttt2_impostor_sabo_react_cooldown [0..n] (default: 240)
+	--  ttt2_impostor_sabo_react_cooldown [0..n] (default: 120)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_sabo_react_cooldown",
 		slider = true,
 		min = 0,
 		max = 300,
 		decimal = 0,
-		desc = "ttt2_impostor_sabo_react_cooldown (Def: 240)"
+		desc = "ttt2_impostor_sabo_react_cooldown (Def: 120)"
 	})
 	
 	--# What should happen when the reactor is sabotaged and it is not stopped in time?
@@ -480,19 +480,19 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage O2?
-	--  ttt2_impostor_traitor_team_is_affected_by_sabo_o2 [0/1] (default: 0)
+	--  ttt2_impostor_traitor_team_is_affected_by_sabo_o2 [0/1] (default: 1)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_traitor_team_is_affected_by_sabo_o2",
 		checkbox = true,
-		desc = "ttt2_impostor_traitor_team_is_affected_by_sabo_o2 (Def: 0)"
+		desc = "ttt2_impostor_traitor_team_is_affected_by_sabo_o2 (Def: 1)"
 	})
 	
 	--# Should impostors be affected by their own Sabotage O2?
-	--  ttt2_impostor_is_affected_by_sabo_o2 [0/1] (default: 0)
+	--  ttt2_impostor_is_affected_by_sabo_o2 [0/1] (default: 1)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_is_affected_by_sabo_o2",
 		checkbox = true,
-		desc = "ttt2_impostor_is_affected_by_sabo_o2 (Def: 0)"
+		desc = "ttt2_impostor_is_affected_by_sabo_o2 (Def: 1)"
 	})
 	
 	--# Should traitors be informed when a player who doesn't have a Traitor subrole enters and exits a vent?
