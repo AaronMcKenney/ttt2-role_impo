@@ -66,6 +66,13 @@ function ENT:Initialize()
 	IMPO_SABO_DATA.ACTIVE_STAT_ENT = self
 end
 
+function ENT:GetCenter()
+	local center = self:GetPos() + self:OBBCenter()
+	center.z = self:GetPos().z + 5
+	
+	return center
+end
+
 --Called on the Server to check if the sabotage can end prematurely.
 --Called on the Client to visually indicate sabotage progress. 
 function ENT:Think()
@@ -73,9 +80,11 @@ function ENT:Think()
 	local hold_time = GetConVar("ttt2_impostor_station_hold_time"):GetInt()
 	local radius_sqrd = radius * radius
 	local new_num_plys_in_range = 0
+	local center = self:GetCenter()
 	
 	for _, ply in ipairs(player.GetAll()) do
-		if ply:IsTerror() and ply:Alive() and not IsInSpecDM(ply) and ply:GetPos():DistToSqr(self:GetPos()) <= radius_sqrd then
+		local ply_pos = ply:GetPos() + ply:OBBCenter()
+		if ply:IsTerror() and ply:Alive() and not IsInSpecDM(ply) and ply_pos:DistToSqr(center) <= radius_sqrd then
 			new_num_plys_in_range = new_num_plys_in_range + 1
 		end
 	end
@@ -172,10 +181,12 @@ if CLIENT then
 			ang:RotateAroundAxis(self:GetAngles():Up(), 120 * (i - 1))
 			
 			--Calculating the exact position of each screen is annoying.
-			local info_box_pos = self:GetPos()
+			--This is very much hardcoded, and doesn't quite align with the model.
+			--This is partially because the model doesn't have radial symmetry.
+			local info_box_pos = self:GetPos() + self:OBBCenter()
 			local min_bound_vec, max_bound_vec = self:GetCollisionBounds()
 			--Larger z addition higher the screen is.
-			info_box_pos.z = info_box_pos.z + 150
+			info_box_pos.z = info_box_pos.z + 110
 			--Align the x/y position in the dead middle of the entity.
 			info_box_pos.x = info_box_pos.x + (max_bound_vec.x - min_bound_vec.x) / 2
 			info_box_pos.y = info_box_pos.y - (max_bound_vec.y - min_bound_vec.y) / 2
@@ -201,7 +212,7 @@ if CLIENT then
 			--Draw a rotating circle under the sabotage station, to indicate its range
 			local diameter = GetConVar("ttt2_impostor_station_radius"):GetInt() * 2
 			local cur_time = CurTime()
-			local sabo_station_pos = IMPO_SABO_DATA.ACTIVE_STAT_ENT:GetPos()
+			local center = IMPO_SABO_DATA.ACTIVE_STAT_ENT:GetCenter()
 			--Create new color here. Using COLOR_RED will make a shallow copy and change it.
 			local sabo_station_color = Color(255, 0, 0, 255)
 			if IMPO_SABO_DATA.ACTIVE_STAT_ENT.removal_in_progress then
@@ -219,7 +230,7 @@ if CLIENT then
 			sabo_station_color.a = 178
 			
 			render.SetMaterial(sabo_station_floor_mat)
-			render.DrawQuadEasy(sabo_station_pos + Vector(0, 0, 1), Vector(0, 0, 1), diameter, diameter, sabo_station_color, 0)
+			render.DrawQuadEasy(center, Vector(0, 0, 1), diameter, diameter, sabo_station_color, 0)
 			
 			--Draw an arrow for each player needed. Color the arrows based on how many are in range.
 			render.SetMaterial(sabo_station_arrow_mat)
@@ -231,7 +242,7 @@ if CLIENT then
 				arrow_color.a = 178
 				
 				local arrow_rot = (50 * cur_time + (360 * i) / threshold) % 360
-				render.DrawQuadEasy(sabo_station_pos + Vector(0, 0, 1), Vector(0, 0, 1), diameter, diameter, arrow_color, arrow_rot)
+				render.DrawQuadEasy(center, Vector(0, 0, 1), diameter, diameter, arrow_color, arrow_rot)
 			end
 		end
 	end)

@@ -857,7 +857,7 @@ if CLIENT then
 	local function IsSelectingVent(ply, vent, previously_selected)
 		local midscreen_x = ScrW() / 2
 		local midscreen_y = ScrH() / 2
-		local vent_pos = vent:GetPos()
+		local vent_pos = vent:GetPos() + vent:OBBCenter()
 		local vent_scr_pos = vent_pos:ToScreen()
 		
 		if util.IsOffScreen(vent_scr_pos) then
@@ -906,7 +906,7 @@ if CLIENT then
 		--Finally, draw all vents, making sure to draw the selected one last (to handle overlaps).
 		for _, vent in ipairs(IMPO_VENT_DATA.VENT_NETWORK) do
 			if IsValid(vent) and vent:EntIndex() ~= selected_vent_idx and vent:EntIndex() ~= client.impo_in_vent:EntIndex() then
-				local vent_pos = vent:GetPos()
+				local vent_pos = vent:GetPos() + vent:OBBCenter()
 				local vent_scr_pos = vent_pos:ToScreen()
 				
 				if util.IsOffScreen(vent_scr_pos) then
@@ -917,7 +917,7 @@ if CLIENT then
 			end
 		end
 		if IsValid(client.impo_selected_vent) and client.impo_selected_vent:EntIndex() ~= client.impo_in_vent:EntIndex() then
-			local vent_pos = client.impo_selected_vent:GetPos()
+			local vent_pos = client.impo_selected_vent:GetPos() + client.impo_selected_vent:OBBCenter()
 			local vent_scr_pos = vent_pos:ToScreen()
 			
 			draw.FilteredTexture(vent_scr_pos.x - VENT_SELECTED_BUTTON_MIDPOINT, vent_scr_pos.y - VENT_SELECTED_BUTTON_MIDPOINT, VENT_SELECTED_BUTTON_SIZE, VENT_SELECTED_BUTTON_SIZE, ICON_IN_VENT, 200, IMPOSTOR.color)
