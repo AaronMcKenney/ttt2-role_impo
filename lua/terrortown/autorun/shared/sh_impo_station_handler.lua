@@ -210,15 +210,21 @@ if SERVER then
 			
 			IMPO_SABO_DATA.STATION_NETWORK[#IMPO_SABO_DATA.STATION_NETWORK + 1] = stat_spawn
 			
-			for _, ply in ipairs(player.GetAll()) do
-				if ply:GetSubRole() == ROLE_IMPOSTOR then
+			for _, ply_i in ipairs(player.GetAll()) do
+				if ply_i:GetSubRole() == ROLE_IMPOSTOR then
 					--Inform all Impostors of the new station
 					net.Start("TTT2ImpostorAddStationToNetwork")
 					net.WriteVector(stat_spawn.pos)
 					net.WriteBool(stat_spawn.used)
-					net.Send(ply)
 					
-					LANG.Msg(ply, "SABO_MNGR_CREATE_PASS_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+					--Force the requesting player to update their selected station spawn to their requested position.
+					--...It's probably what they expect to happen.
+					if ply:SteamID64() == ply_i:SteamID64() then
+						net.WriteBool(true)
+					else
+						net.WriteBool(false)
+					end
+					net.Send(ply_i)
 				end
 			end
 		end
@@ -334,13 +340,16 @@ if CLIENT then
 		local stat_spawn = {}
 		stat_spawn.pos = net.ReadVector()
 		stat_spawn.used = net.ReadBool()
+		local was_requesting_ply = net.ReadBool()
 		
 		IMPO_SABO_DATA.STATION_NETWORK[#IMPO_SABO_DATA.STATION_NETWORK + 1] = stat_spawn
 		
 		--If the client's selected station is stale (ex. due to only one station spawn being present prior), move to this new one.
-		if not stat_spawn.used and IMPO_SABO_DATA.STATION_NETWORK[client.impo_selected_station].used then
+		if was_requesting_ply or (not stat_spawn.used and IMPO_SABO_DATA.STATION_NETWORK[client.impo_selected_station].used) then
 			client.impo_selected_station = #IMPO_SABO_DATA.STATION_NETWORK
 		end
+		
+		LANG.Msg("SABO_MNGR_CREATE_PASS_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 	end)
 	
 	net.Receive("TTT2ImpostorSetStrangeGame", function()
