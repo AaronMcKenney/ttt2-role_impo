@@ -928,6 +928,9 @@ if CLIENT then
 		local client = LocalPlayer()
 		local dissuade_station_reuse = GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool()
 		
+		surface.SetFont("Default")
+		surface.SetTextColor(255, 255, 255)
+		
 		for i, stat_spawn in ipairs(IMPO_SABO_DATA.STATION_NETWORK) do
 			local stat_spawn_scr_pos = stat_spawn.pos:ToScreen()
 			
@@ -953,7 +956,7 @@ if CLIENT then
 			
 			local text = math.ceil(client:GetPos():Distance(stat_spawn.pos))
 			local text_width, text_height = surface.GetTextSize(text)
-			surface.SetTextPos(stat_spawn_scr_pos.x - size, stat_spawn_scr_pos.y - size)
+			surface.SetTextPos(stat_spawn_scr_pos.x - text_width * 0.5, stat_spawn_scr_pos.y - text_height * 0.15)
 			surface.DrawText(text)
 		end
 	end

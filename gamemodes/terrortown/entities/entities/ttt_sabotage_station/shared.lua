@@ -217,15 +217,16 @@ if CLIENT then
 			--Alpha value of 177- is invisible, 178+ is visible. 178 is partially transparent. Not sure why.
 			local sabo_station_color = Color(255, 0, 0, 178)
 			if IMPO_SABO_DATA.ACTIVE_STAT_ENT.removal_in_progress then
-				sabo_station_color = Color(152, 251, 152, 178) --Pale green. Hopefully different enough for colorblined.
+				sabo_station_color = Color(113, 188, 120, 178) --Fern green. Hopefully different enough for colorblined.
 			elseif timer.Exists("ImpostorSaboStationEndProtocolInProgress") then
 				--Interpolation from red to green.
-				local success_color = Color(152, 251, 152, 178)
+				local success_color = Color(113, 188, 120, 178)
 				local hold_time = GetConVar("ttt2_impostor_station_hold_time"):GetInt()
 				local time_left = timer.TimeLeft("ImpostorSaboStationEndProtocolInProgress")
 				local fract = (hold_time - time_left) / hold_time
 				sabo_station_color.r = sabo_station_color.r + fract * (success_color.r - sabo_station_color.r)
 				sabo_station_color.g = sabo_station_color.g + fract * (success_color.g - sabo_station_color.g)
+				sabo_station_color.b = sabo_station_color.b + fract * (success_color.b - sabo_station_color.b)
 			end
 			
 			render.SetMaterial(sabo_station_floor_mat)
@@ -236,7 +237,7 @@ if CLIENT then
 			for i = 1, threshold do
 				local arrow_color = Color(255, 0, 0, 178)
 				if i <= num_plys_in_range then
-					arrow_color = Color(152, 251, 152, 178)
+					arrow_color = Color(113, 188, 120, 178)
 				end
 				
 				local arrow_rot = (50 * cur_time + (360 * i) / threshold) % 360
