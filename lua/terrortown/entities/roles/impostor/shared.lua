@@ -591,15 +591,11 @@ end
 if CLIENT then
 	--Client consts
 	local NUMBERS_STR_ARR = {"ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "TEN"}
-	local VENT_BUTTON_SIZE = 64
-	local VENT_BUTTON_MIDPOINT = VENT_BUTTON_SIZE / 2
-	local VENT_SELECTED_BUTTON_SIZE = 80
-	local VENT_SELECTED_BUTTON_MIDPOINT = VENT_SELECTED_BUTTON_SIZE / 2
+	local IMPO_BUTTON_SIZE = 64
+	local IMPO_BUTTON_MIDPOINT = IMPO_BUTTON_SIZE / 2
+	local IMPO_SELECTED_BUTTON_SIZE = 80
+	local IMPO_SELECTED_BUTTON_MIDPOINT = IMPO_SELECTED_BUTTON_SIZE / 2
 	local ICON_IN_VENT = Material("vgui/ttt/icon_vent")
-	local STAT_BUTTON_SIZE = 64
-	local STAT_BUTTON_MIDPOINT = STAT_BUTTON_SIZE / 2
-	local STAT_SELECTED_BUTTON_SIZE = 80
-	local STAT_SELECTED_BUTTON_MIDPOINT = STAT_SELECTED_BUTTON_SIZE / 2
 	local ICON_STATION = Material("vgui/ttt/dynamic/roles/icon_impo")
 	
 	local function SelectedSaboModeInRange(ply)
@@ -619,6 +615,7 @@ if CLIENT then
 		client.impo_last_switch_time = nil
 		client.impo_trapper_timer_expired = nil
 		client.impo_sabo_mode = nil
+		client.impo_highlighted_station = nil
 		client.impo_selected_station = nil
 	end)
 	
@@ -815,12 +812,15 @@ if CLIENT then
 			local dist = trace.StartPos:Distance(trace.HitPos)
 			local tgt = trace.Entity
 			if not (IsValid(tgt) and tgt:IsPlayer()) then
-				local old_selected_station = client.impo_selected_station
-				IMPO_SABO_DATA.CycleSelectedSabotageStation()
-				if client.impo_selected_station == old_selected_station then
-					--Tell the player how the Station Manager works, as it is unintuitive when there's just the one spawn available and pressing the key doesn't do anything.
+				if IMPO_SABO_DATA.SelectedStationIsValid(client.impo_highlighted_station) then
+					client.impo_selected_station = client.impo_highlighted_station
+					client.impo_highlighted_station = nil
+				else
+					--Display help, because Station Manager is probably unintuitive.
 					LANG.Msg("SABO_MNGR_HELP_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 				end
+				
+				--Return early as we aren't planning to create a new station spawn point.
 				return
 			end
 		end
@@ -854,24 +854,22 @@ if CLIENT then
 		end
 	end)
 	
-	local function IsSelectingVent(ply, vent, previously_selected)
+	local function CursorIsOverImpoButton(ply, button_scr_pos, previously_selected)
 		local midscreen_x = ScrW() / 2
 		local midscreen_y = ScrH() / 2
-		local vent_pos = vent:GetPos() + vent:OBBCenter()
-		local vent_scr_pos = vent_pos:ToScreen()
 		
-		if util.IsOffScreen(vent_scr_pos) then
+		if util.IsOffScreen(button_scr_pos) then
 			return false
 		end
 		
-		local dist_from_mid_x = math.abs(vent_scr_pos.x - midscreen_x)
-		local dist_from_mid_y = math.abs(vent_scr_pos.y - midscreen_y)
-		local vent_button_dist_check = VENT_BUTTON_MIDPOINT
+		local dist_from_mid_x = math.abs(button_scr_pos.x - midscreen_x)
+		local dist_from_mid_y = math.abs(button_scr_pos.y - midscreen_y)
+		local button_dist_check = IMPO_BUTTON_MIDPOINT
 		if previously_selected then
-			vent_button_dist_check = VENT_SELECTED_BUTTON_MIDPOINT
+			button_dist_check = IMPO_SELECTED_BUTTON_MIDPOINT
 		end
 		
-		if dist_from_mid_x > vent_button_dist_check or dist_from_mid_y > vent_button_dist_check then
+		if dist_from_mid_x > button_dist_check or dist_from_mid_y > button_dist_check then
 			return false
 		end
 		
@@ -884,8 +882,11 @@ if CLIENT then
 		--If the player was selecting a valid vent on the previous frame then see if they still are
 		local selected_vent_idx = -1
 		if IsValid(client.impo_selected_vent) then
-			selected_vent_idx = client.impo_selected_vent:EntIndex()
-			if not IsSelectingVent(client, client.impo_selected_vent, true) then
+			local vent_pos = client.impo_selected_vent:GetPos() + client.impo_selected_vent:OBBCenter()
+			local vent_scr_pos = vent_pos:ToScreen()
+			if CursorIsOverImpoButton(client, vent_scr_pos, true) then
+				selected_vent_idx = client.impo_selected_vent:EntIndex()
+			else
 				client.impo_selected_vent = nil
 				selected_vent_idx = -1
 			end
@@ -894,8 +895,10 @@ if CLIENT then
 		--See if we are currently selecting any vents
 		if not IsValid(client.impo_selected_vent) then
 			for _, vent in ipairs(IMPO_VENT_DATA.VENT_NETWORK) do
-				--Make sure not to run IsSelectingVent on selected_vent_idx (which we already checked above)
-				if IsValid(vent) and vent:EntIndex() ~= selected_vent_idx and IsSelectingVent(client, vent, false) then
+				--Make sure not to run CursorIsOverImpoButton on selected_vent_idx (which we already checked above)
+				local vent_pos = vent:GetPos() + vent:OBBCenter()
+				local vent_scr_pos = vent_pos:ToScreen()
+				if IsValid(vent) and vent:EntIndex() ~= selected_vent_idx and CursorIsOverImpoButton(client, vent_scr_pos, false) then
 					client.impo_selected_vent = vent
 					selected_vent_idx = client.impo_selected_vent:EntIndex()
 					break
@@ -903,7 +906,7 @@ if CLIENT then
 			end
 		end
 		
-		--Finally, draw all vents, making sure to draw the selected one last (to handle overlaps).
+		--Finally, draw all vents, making sure to draw the selected one last (to handle overlaps)
 		for _, vent in ipairs(IMPO_VENT_DATA.VENT_NETWORK) do
 			if IsValid(vent) and vent:EntIndex() ~= selected_vent_idx and vent:EntIndex() ~= client.impo_in_vent:EntIndex() then
 				local vent_pos = vent:GetPos() + vent:OBBCenter()
@@ -913,14 +916,14 @@ if CLIENT then
 					continue
 				end
 				
-				draw.FilteredTexture(vent_scr_pos.x - VENT_BUTTON_MIDPOINT, vent_scr_pos.y - VENT_BUTTON_MIDPOINT, VENT_BUTTON_SIZE, VENT_BUTTON_SIZE, ICON_IN_VENT, 200, COLOR_ORANGE)
+				draw.FilteredTexture(vent_scr_pos.x - IMPO_BUTTON_MIDPOINT, vent_scr_pos.y - IMPO_BUTTON_MIDPOINT, IMPO_BUTTON_SIZE, IMPO_BUTTON_SIZE, ICON_IN_VENT, 200, COLOR_ORANGE)
 			end
 		end
 		if IsValid(client.impo_selected_vent) and client.impo_selected_vent:EntIndex() ~= client.impo_in_vent:EntIndex() then
 			local vent_pos = client.impo_selected_vent:GetPos() + client.impo_selected_vent:OBBCenter()
 			local vent_scr_pos = vent_pos:ToScreen()
 			
-			draw.FilteredTexture(vent_scr_pos.x - VENT_SELECTED_BUTTON_MIDPOINT, vent_scr_pos.y - VENT_SELECTED_BUTTON_MIDPOINT, VENT_SELECTED_BUTTON_SIZE, VENT_SELECTED_BUTTON_SIZE, ICON_IN_VENT, 200, IMPOSTOR.color)
+			draw.FilteredTexture(vent_scr_pos.x - IMPO_SELECTED_BUTTON_MIDPOINT, vent_scr_pos.y - IMPO_SELECTED_BUTTON_MIDPOINT, IMPO_SELECTED_BUTTON_SIZE, IMPO_SELECTED_BUTTON_SIZE, ICON_IN_VENT, 200, IMPOSTOR.color)
 		end
 	end
 	
@@ -931,26 +934,70 @@ if CLIENT then
 		surface.SetFont("Default")
 		surface.SetTextColor(255, 255, 255)
 		
+		--If the player was highlighting a valid station spawn on the previous frame then see if they still are
+		local highlighted_station = -1
+		if IMPO_SABO_DATA.SelectedStationIsUsable(client.impo_highlighted_station) then
+			local stat_spawn_scr_pos = IMPO_SABO_DATA.STATION_NETWORK[client.impo_highlighted_station].pos:ToScreen()
+			if CursorIsOverImpoButton(client, stat_spawn_scr_pos, true) then
+				highlighted_station = client.impo_highlighted_station
+			else
+				client.impo_highlighted_station = nil
+				highlighted_station = -1
+			end
+		end
+		
+		--See if we are currently highighting any stations
+		if not IMPO_SABO_DATA.SelectedStationIsUsable(client.impo_highlighted_station) then
+			for i, stat_spawn in ipairs(IMPO_SABO_DATA.STATION_NETWORK) do
+				--Make sure not to run CursorIsOverImpoButton on highlighted_station (which we already checked above)
+				if IMPO_SABO_DATA.SelectedStationIsUsable(i) and i ~= client.impo_selected_station then
+					local stat_spawn_scr_pos = IMPO_SABO_DATA.STATION_NETWORK[i].pos:ToScreen()
+					if CursorIsOverImpoButton(client, stat_spawn_scr_pos, false) then
+						client.impo_highlighted_station = i
+						highlighted_station = i
+						break
+					end
+				end
+			end
+		end
+		
+		--Finally, draw all station spawns, making sure to draw the highlighted one last (to handle overlaps)
 		for i, stat_spawn in ipairs(IMPO_SABO_DATA.STATION_NETWORK) do
+			if i ~= client.impo_highlighted_station and i ~= highlighted_station then
+				local stat_spawn_scr_pos = stat_spawn.pos:ToScreen()
+				
+				if util.IsOffScreen(stat_spawn_scr_pos) then
+					continue
+				end
+				
+				local color = COLOR_ORANGE
+				local size = IMPO_BUTTON_SIZE
+				local midpoint = IMPO_BUTTON_MIDPOINT
+				
+				if i == client.impo_selected_station then
+					color = IMPOSTOR.color
+					size = IMPO_SELECTED_BUTTON_SIZE
+					midpoint = IMPO_SELECTED_BUTTON_MIDPOINT
+				end
+				
+				if dissuade_station_reuse and stat_spawn.used then
+					color = COLOR_BLACK
+				end
+				
+				draw.FilteredTexture(stat_spawn_scr_pos.x - midpoint, stat_spawn_scr_pos.y - midpoint, size, size, ICON_STATION, 200, color)
+				
+				local text = math.ceil(client:GetPos():Distance(stat_spawn.pos))
+				local text_width, text_height = surface.GetTextSize(text)
+				surface.SetTextPos(stat_spawn_scr_pos.x - text_width * 0.5, stat_spawn_scr_pos.y - text_height * 0.15)
+				surface.DrawText(text)
+			end
+		end
+		if IMPO_SABO_DATA.SelectedStationIsUsable(client.impo_highlighted_station) then
+			local stat_spawn = IMPO_SABO_DATA.STATION_NETWORK[client.impo_highlighted_station]
 			local stat_spawn_scr_pos = stat_spawn.pos:ToScreen()
-			
-			if util.IsOffScreen(stat_spawn_scr_pos) then
-				continue
-			end
-			
 			local color = COLOR_ORANGE
-			local size = STAT_BUTTON_SIZE
-			local midpoint = STAT_BUTTON_MIDPOINT
-			
-			if i == client.impo_selected_station then
-				color = IMPOSTOR.color
-				size = STAT_SELECTED_BUTTON_SIZE
-				midpoint = STAT_SELECTED_BUTTON_MIDPOINT
-			end
-			
-			if dissuade_station_reuse and stat_spawn.used then
-				color = COLOR_BLACK
-			end
+			local size = IMPO_SELECTED_BUTTON_SIZE
+			local midpoint = IMPO_SELECTED_BUTTON_MIDPOINT
 			
 			draw.FilteredTexture(stat_spawn_scr_pos.x - midpoint, stat_spawn_scr_pos.y - midpoint, size, size, ICON_STATION, 200, color)
 			

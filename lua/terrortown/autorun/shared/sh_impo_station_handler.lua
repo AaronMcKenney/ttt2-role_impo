@@ -43,6 +43,15 @@ function IMPO_SABO_DATA.StationHasBeenUsed(selected_station)
 	return true
 end
 
+function IMPO_SABO_DATA.SelectedStationIsUsable(selected_station)
+	local dissuade_station_reuse = GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool()
+	if not IMPO_SABO_DATA.SelectedStationIsValid(selected_station) or (dissuade_station_reuse and IMPO_SABO_DATA.STATION_NETWORK[selected_station].used) then
+		return false
+	end
+	
+	return true
+end
+
 function IMPO_SABO_DATA.MarkStationAsUsed(selected_station)
 	if not IMPO_SABO_DATA.SelectedStationIsValid(selected_station) then
 		return

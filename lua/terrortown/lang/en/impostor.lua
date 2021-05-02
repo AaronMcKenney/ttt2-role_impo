@@ -39,7 +39,7 @@ L["VENT_ANYONE_EXIT_" .. IMPOSTOR.name] = "Someone has exited a vent."
 
 -- SABOTAGE LANGUAGE STRINGS
 L["SABO_MNGR_" .. IMPOSTOR.name] = "STATION MANAGER"
-L["SABO_MNGR_HELP_" .. IMPOSTOR.name] = "Add a new station spawn by pressing this key while looking at a qualifying player. Cycle between spawns by pressing this key while not looking at a player."
+L["SABO_MNGR_HELP_" .. IMPOSTOR.name] = "Add a new station spawn by pressing this key while looking at a qualifying player. Select an existing spawn by pressing this key while looking at it. Station spawns may be marked as unusable post-sabotage, to dissuade re-use."
 L["SABO_MNGR_CREATE_PASS_" .. IMPOSTOR.name] = "A new Impostor sabotage station spawn has been created."
 L["SABO_MNGR_BAD_PLY_" .. IMPOSTOR.name] = "Cannot create station spawn from target player."
 L["SABO_MNGR_TOO_CLOSE_" .. IMPOSTOR.name] = "Target player is too close to an existing station spawn."
