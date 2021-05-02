@@ -21,13 +21,12 @@ function IMPO_VENT_DATA.RemoveVentFromNetwork(vent_idx)
 	for i, v in ipairs(IMPO_VENT_DATA.VENT_NETWORK) do
 		if v:EntIndex() == vent_idx then
 			table.remove(IMPO_VENT_DATA.VENT_NETWORK, i)
-			--BMF
-			if SERVER then
-				print("BMF RemoveVentFromNetwork: There are now " .. #IMPO_VENT_DATA.VENT_NETWORK .. " vents on the Server.")
-			elseif CLIENT then
-				print("BMF RemoveVentFromNetwork: There are now " .. #IMPO_VENT_DATA.VENT_NETWORK .. " vents on the Client.")
-			end
-			--BMF
+			
+			--if SERVER then
+			--	print("IMPO_DEBUG RemoveVentFromNetwork: There are now " .. #IMPO_VENT_DATA.VENT_NETWORK .. " vents on the Server.")
+			--elseif CLIENT then
+			--	print("IMPO_DEBUG RemoveVentFromNetwork: There are now " .. #IMPO_VENT_DATA.VENT_NETWORK .. " vents on the Client.")
+			--end
 			break
 		end
 	end
@@ -36,7 +35,7 @@ end
 function IMPO_VENT_DATA.ResetVentNetwork()
 	IMPO_VENT_DATA.VENT_NETWORK = {}
 	
-	print("BMF ResetVentNetwork: Number of vents is now " .. #IMPO_VENT_DATA.VENT_NETWORK)
+	--print("IMPO_DEBUG ResetVentNetwork: Number of vents is now " .. #IMPO_VENT_DATA.VENT_NETWORK)
 end
 hook.Add("TTTPrepareRound", "ImpostorVentDataPrepareRound", IMPO_VENT_DATA.ResetVentNetwork)
 hook.Add("TTTBeginRound", "ImpostorVentDataPrepareRound", IMPO_VENT_DATA.ResetVentNetwork)
@@ -195,7 +194,7 @@ end
 
 function IMPO_VENT_DATA.RevealVent(vent)
 	if IsValid(vent) then
-		print("BMF RevealVent: Revealing vent with index " .. vent:EntIndex())
+		--print("IMPO_DEBUG RevealVent: Revealing vent with index " .. vent:EntIndex())
 		vent:SetNoDraw(false)
 	end
 	
@@ -207,18 +206,16 @@ function IMPO_VENT_DATA.RevealVent(vent)
 end
 
 function IMPO_VENT_DATA.MovePlayerToVent(ply, vent)
-	--BMF
-	local server_client_str = "SERVER"
-	if CLIENT then
-		server_client_str = "CLIENT"
-	end
-	local creation_id_str = "nil"
-	if vent and SERVER then
-		creation_id_str = vent:GetCreationID()
-	end
-	local ent_id_str = vent:EntIndex()
-	print("BMF MovePlayerToVent " .. server_client_str .. " Creation ID = " .. creation_id_str .. ", Ent ID = " .. ent_id_str)
-	--BMF
+	--local server_client_str = "SERVER"
+	--if CLIENT then
+	--	server_client_str = "CLIENT"
+	--end
+	--local creation_id_str = "nil"
+	--if vent and SERVER then
+	--	creation_id_str = vent:GetCreationID()
+	--end
+	--local ent_id_str = vent:EntIndex()
+	--print("IMPO_DEBUG MovePlayerToVent " .. server_client_str .. " Creation ID = " .. creation_id_str .. ", Ent ID = " .. ent_id_str)
 	ply:SetPos(vent:GetPos())
 	ply:SetEyeAngles(vent:GetAngles())
 	ply.impo_in_vent = vent
@@ -334,7 +331,7 @@ function IMPO_VENT_DATA.MovePlayerFromVentTo(ply, ent_idx)
 	
 	local new_vent = GetVentFromIndex(ent_idx)
 	
-	print("BMF MovePlayerFromVentTo: from_ent_idx=" .. ply.impo_in_vent:EntIndex() .. ", to_ent_idx=" .. ent_idx)
+	--print("IMPO_DEBUG MovePlayerFromVentTo: from_ent_idx=" .. ply.impo_in_vent:EntIndex() .. ", to_ent_idx=" .. ent_idx)
 	
 	if IsValid(new_vent) then
 		IMPO_VENT_DATA.MovePlayerToVent(ply, new_vent)
@@ -368,7 +365,7 @@ end
 
 function IMPO_VENT_DATA.DetermineVentExitPos(vent_pos, vent_normal, vent_placement_range, ply_pos)
 	local PLY_IS_CLOSE_TO_VENT = 10000 --100^2
-	print("BMF DetermineVentExitPos: DistToSqr=" .. vent_pos:DistToSqr(ply_pos))
+	--print("IMPO_DEBUG DetermineVentExitPos: DistToSqr=" .. vent_pos:DistToSqr(ply_pos))
 	if GetConVar("ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit"):GetBool() and vent_pos:DistToSqr(ply_pos) <= PLY_IS_CLOSE_TO_VENT then
 		--Player is relatively close to the would-be vent. Their own position can therefore be used.
 		return ply_pos
@@ -383,20 +380,16 @@ function IMPO_VENT_DATA.AddVentToNetwork(vent, owner)
 	--Record player position and find good camera angle for vent exit handling.
 	vent.exit_pos = IMPO_VENT_DATA.DetermineVentExitPos(vent:GetPos(), vent:GetAngles():Forward(), GetConVar("ttt2_impostor_vent_placement_range"):GetInt(), owner:GetPos())
 	
-	--BMF
-	print("BMF AddVentToNetwork Vent ID = " .. vent:EntIndex() .. ", Exit Angle = ")
-	print(vent:GetAngles())
-	--print(tr.HitNormal:Angle()) --Absolutely the only way to print this thing from what I can tell...
-	--BMF
+	--print("IMPO_DEBUG AddVentToNetwork Vent ID = " .. vent:EntIndex() .. ", Exit Angle = ")
+	--print(vent:GetAngles())
 	
 	IMPO_VENT_DATA.VENT_NETWORK[#IMPO_VENT_DATA.VENT_NETWORK + 1] = vent
 	
-	--BMF
-	if SERVER then
-		print("BMF AddVentToNetwork: There are now " .. #IMPO_VENT_DATA.VENT_NETWORK .. " vents on the Server")
-	elseif CLIENT then
-		print("BMF AddVentToNetwork: There are now " .. #IMPO_VENT_DATA.VENT_NETWORK .. " vents on the Client")
-	end
+	--if SERVER then
+	--	print("IMPO_DEBUG AddVentToNetwork: There are now " .. #IMPO_VENT_DATA.VENT_NETWORK .. " vents on the Server")
+	--elseif CLIENT then
+	--	print("IMPO_DEBUG AddVentToNetwork: There are now " .. #IMPO_VENT_DATA.VENT_NETWORK .. " vents on the Client")
+	--end
 end
 
 if SERVER then
@@ -412,12 +405,6 @@ if SERVER then
 		end
 		
 		--Always force Impostor to use holstered. No attacking from the vents!
-		--BMF
-		print(new:GetClass())
-		if new:GetClass() == "weapon_ttt_unarmed" then
-			print("Player will become holstered!")
-		end
-		--BMF
 		if new:GetClass() ~= "weapon_ttt_unarmed" then
 			--The player will switch to the new weapon at the end of the function regardless.
 			--The timer here is a hack to force the player to holstered after the end of this function.

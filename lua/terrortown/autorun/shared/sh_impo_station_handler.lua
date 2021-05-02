@@ -89,11 +89,11 @@ if SERVER then
 		IMPO_SABO_DATA.ON_COOLDOWN = false
 		IMPO_SABO_DATA.STRANGE_GAME = false
 		
-		print("BMF ImpostorSaboDataPrepareRoundForServer: All Player Spawn Points")
+		--print("IMPO_DEBUG ImpostorSaboDataPrepareRoundForServer: All Player Spawn Points")
 		for _, ply_spawn_pos in ipairs(all_ply_spawn_pos) do
-			print(ply_spawn_pos) --BMF
+			--print(ply_spawn_pos)
 			if SafePosCanBeAdded(ply_spawn_pos) then
-				print("  Adding spawn point") --BMF
+				--print("  Adding spawn point")
 				local stat_spawn = {}
 				stat_spawn.pos = ply_spawn_pos
 				stat_spawn.used = false
@@ -102,7 +102,7 @@ if SERVER then
 			end
 		end
 		
-		print("BMF ImpostorSaboDataPrepareRoundForServer: Station Network has " .. #IMPO_SABO_DATA.STATION_NETWORK .. " entries.")
+		--print("IMPO_DEBUG ImpostorSaboDataPrepareRoundForServer: Station Network has " .. #IMPO_SABO_DATA.STATION_NETWORK .. " entries.")
 	end)
 	
 	function IMPO_SABO_DATA.CurrentSabotageInProgress()
@@ -126,7 +126,7 @@ if SERVER then
 	end
 	
 	function IMPO_SABO_DATA.PutSabotageOnCooldown(sabo_cooldown)
-		print("BMF PutSabotageOnCooldown")
+		--print("IMPO_DEBUG PutSabotageOnCooldown")
 		--Handle case where admin wants impostor to be overpowered trash.
 		if sabo_cooldown <= 0 then
 			IMPO_SABO_DATA.ON_COOLDOWN = false
@@ -280,7 +280,7 @@ if CLIENT then
 	net.Receive("TTT2ImpostorSabotageUpdate", function()
 		local sabo_cooldown = net.ReadInt(16)
 		
-		print("BMF TTT2ImpostorSabotageUpdate: sabo_cooldown=" .. sabo_cooldown)
+		--print("IMPO_DEBUG TTT2ImpostorSabotageUpdate: sabo_cooldown=" .. sabo_cooldown)
 		
 		if sabo_cooldown > 0 then
 			--Create a timer which hopefully will match the server's timer.
@@ -302,7 +302,7 @@ if CLIENT then
 		--First clear out the network in case it contains stale data.
 		IMPO_SABO_DATA.STATION_NETWORK = {}
 		
-		print("BMF TTT2ImpostorSendEntireStationNetwork: Reading station network of size " .. network_size)
+		--print("IMPO_DEBUG TTT2ImpostorSendEntireStationNetwork: Reading station network of size " .. network_size)
 		
 		for i = 1, network_size do
 			local stat_spawn = {}
@@ -311,7 +311,7 @@ if CLIENT then
 			
 			IMPO_SABO_DATA.STATION_NETWORK[#IMPO_SABO_DATA.STATION_NETWORK + 1] = stat_spawn
 			
-			print("  stat_spawn[" .. i .. "].pos = <" .. stat_spawn.pos.x .. ", " .. stat_spawn.pos.y .. ", " .. stat_spawn.pos.z .. ">")
+			--print("  stat_spawn[" .. i .. "].pos = <" .. stat_spawn.pos.x .. ", " .. stat_spawn.pos.y .. ", " .. stat_spawn.pos.z .. ">")
 		end
 		
 		--Reset impo_selected_station if needed (Recall that Lua is 1-indexed, not 0-indexed!).
@@ -357,18 +357,16 @@ if CLIENT then
 		local dissuade_station_reuse = GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool()
 		local station_count = #IMPO_SABO_DATA.STATION_NETWORK
 		
-		--BMF
-		local station_network_str = "[ "
-		for i = 1, #IMPO_SABO_DATA.STATION_NETWORK do
-			if IMPO_SABO_DATA.STATION_NETWORK[i].used then
-				station_network_str = station_network_str .. "true "
-			else
-				station_network_str = station_network_str .. "false "
-			end
-		end
-		station_network_str = station_network_str .. "]"
-		print("BMF CycleSelectedSabotageStation: impo_selected_station = " .. client.impo_selected_station .. ", # stations = " .. #IMPO_SABO_DATA.STATION_NETWORK .. ", station use = " .. station_network_str)
-		--BMF
+		--local station_network_str = "[ "
+		--for i = 1, #IMPO_SABO_DATA.STATION_NETWORK do
+		--	if IMPO_SABO_DATA.STATION_NETWORK[i].used then
+		--		station_network_str = station_network_str .. "true "
+		--	else
+		--		station_network_str = station_network_str .. "false "
+		--	end
+		--end
+		--station_network_str = station_network_str .. "]"
+		--print("IMPO_DEBUG CycleSelectedSabotageStation: impo_selected_station = " .. client.impo_selected_station .. ", # stations = " .. #IMPO_SABO_DATA.STATION_NETWORK .. ", station use = " .. station_network_str)
 		
 		--Safeguard
 		if not IMPO_SABO_DATA.SelectedStationIsValid(client.impo_selected_station) then
@@ -385,7 +383,7 @@ if CLIENT then
 				client.impo_selected_station = client.impo_selected_station + 1
 			end
 			
-			print("  impo_selected_station = " .. client.impo_selected_station)
+			--print("  impo_selected_station = " .. client.impo_selected_station)
 			if not dissuade_station_reuse or not IMPO_SABO_DATA.STATION_NETWORK[client.impo_selected_station].used then
 				break
 			end
