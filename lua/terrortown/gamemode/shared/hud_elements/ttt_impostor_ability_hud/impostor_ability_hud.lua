@@ -12,12 +12,18 @@ if CLIENT then
 	local icon_kill_waiting = Material("vgui/ttt/dynamic/roles/icon_impo")
 	local icon_kill_ready = Material("vgui/ttt/dynamic/roles/icon_traitor")
 	local icon_in_vent = Material("vgui/ttt/icon_vent")
+	--Used for Station Manager
+	local icon_wrench = Material("vgui/ttt/icon_wrench")
 	--Used for Sabotage Lights
 	local icon_lit_bulb = Material("vgui/ttt/icon_lit_bulb")
 	local icon_unlit_bulb = Material("vgui/ttt/icon_unlit_bulb")
+	--Used for Sabotage Comms
+	local icon_speaker_on = Material("vgui/ttt/icon_speaker_on")
+	local icon_speaker_off = Material("vgui/ttt/icon_speaker_off")
 	--Used for Sabotage O2
-	local icon_o2_safe = Material("vgui/ttt/icon_o2_safe")
-	local icon_o2_unsafe = Material("vgui/ttt/icon_react")
+	local icon_cloud = Material("vgui/ttt/icon_cloud")
+	local icon_pollute_off = Material("vgui/ttt/icon_pollute_off")
+	local icon_pollute_on = Material("vgui/ttt/icon_pollute_on")
 	--Used for Sabotage Reactor
 	local icon_react = Material("vgui/ttt/icon_react")
 	
@@ -142,7 +148,7 @@ if CLIENT then
 		local sabo_key = string.upper(input.GetKeyName(bind.Find("ImpostorSendSabotageRequest")))
 		local sabo_str = LANG.GetTranslation("SABO_MNGR_" .. IMPOSTOR.name) .. " (" .. LANG.GetTranslation("PRESS_" .. IMPOSTOR.name) .. sabo_key .. ")"
 		local bg_color = COLOR_LGRAY
-		local icon = icon_kill_waiting
+		local icon = icon_wrench
 		
 		self:DrawComponent(sabo_str, bg_color, icon_color, icon, false)
 	end
@@ -215,7 +221,7 @@ if CLIENT then
 		local icon_color = COLOR_BLACK
 		local sabo_str = LANG.GetTranslation("SABO_COMMS_" .. IMPOSTOR.name)
 		local bg_color = COLOR_WHITE
-		local icon = icon_lit_bulb
+		local icon = icon_speaker_on
 		
 		if timer.Exists("ImpostorSaboTimer_Client") then
 			--Sabotage is on cooldown
@@ -228,7 +234,7 @@ if CLIENT then
 			
 			--Comms are hacked, and so bg is Impostor's color
 			bg_color = IMPOSTOR.color
-			icon = icon_unlit_bulb
+			icon = icon_speaker_off
 			
 			--Give seconds left until comms are operational again
 			sabo_str = sabo_str .. TimeLeftToString(time_left)
@@ -244,8 +250,8 @@ if CLIENT then
 	function HUDELEMENT:DrawSabotageO2Component()
 		local icon_color = COLOR_WHITE
 		local sabo_str = LANG.GetTranslation("SABO_O2_" .. IMPOSTOR.name)
-		local bg_color = COLOR_BLUE
-		local icon = icon_o2_safe
+		local bg_color = Color(0, 255, 255, 255) --Cyan
+		local icon = icon_cloud
 		
 		if timer.Exists("ImpostorSaboTimer_Client") then
 			--Sabotage is on cooldown
@@ -255,10 +261,16 @@ if CLIENT then
 		elseif timer.Exists("ImpostorSaboO2Timer_Client") then
 			--Sabotage is in progress.
 			local time_left = timer.TimeLeft("ImpostorSaboO2Timer_Client")
+			local sabo_duration = GetConVar("ttt2_impostor_sabo_o2_length"):GetInt()
+			local grace_period = GetConVar("ttt2_impostor_sabo_o2_grace_period"):GetInt()
 			
 			--Air is hazaradous.
-			bg_color = COLOR_YELLOW
-			icon = icon_o2_unsafe
+			bg_color = COLOR_OLIVE
+			if time_left <= sabo_duration - grace_period then
+				icon = icon_pollute_on
+			else
+				icon = icon_pollute_off
+			end
 			icon_color = COLOR_BLACK
 			
 			--Give seconds left until darkness lifts

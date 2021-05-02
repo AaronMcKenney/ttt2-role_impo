@@ -214,20 +214,19 @@ if CLIENT then
 			local cur_time = CurTime()
 			local center = IMPO_SABO_DATA.ACTIVE_STAT_ENT:GetCenter()
 			--Create new color here. Using COLOR_RED will make a shallow copy and change it.
-			local sabo_station_color = Color(255, 0, 0, 255)
+			--Alpha value of 177- is invisible, 178+ is visible. 178 is partially transparent. Not sure why.
+			local sabo_station_color = Color(255, 0, 0, 178)
 			if IMPO_SABO_DATA.ACTIVE_STAT_ENT.removal_in_progress then
-				sabo_station_color = COLOR_GREEN
+				sabo_station_color = Color(152, 251, 152, 178) --Pale green. Hopefully different enough for colorblined.
 			elseif timer.Exists("ImpostorSaboStationEndProtocolInProgress") then
 				--Interpolation from red to green.
-				local success_color = COLOR_GREEN
+				local success_color = Color(152, 251, 152, 178)
 				local hold_time = GetConVar("ttt2_impostor_station_hold_time"):GetInt()
 				local time_left = timer.TimeLeft("ImpostorSaboStationEndProtocolInProgress")
 				local fract = (hold_time - time_left) / hold_time
 				sabo_station_color.r = sabo_station_color.r + fract * (success_color.r - sabo_station_color.r)
 				sabo_station_color.g = sabo_station_color.g + fract * (success_color.g - sabo_station_color.g)
 			end
-			-- 177- is invisible, 178+ is visible. 178 is partially transparent. Not sure why.
-			sabo_station_color.a = 178
 			
 			render.SetMaterial(sabo_station_floor_mat)
 			render.DrawQuadEasy(center, Vector(0, 0, 1), diameter, diameter, sabo_station_color, 0)
@@ -235,11 +234,10 @@ if CLIENT then
 			--Draw an arrow for each player needed. Color the arrows based on how many are in range.
 			render.SetMaterial(sabo_station_arrow_mat)
 			for i = 1, threshold do
-				local arrow_color = COLOR_RED
+				local arrow_color = Color(255, 0, 0, 178)
 				if i <= num_plys_in_range then
-					arrow_color = COLOR_GREEN
+					arrow_color = Color(152, 251, 152, 178)
 				end
-				arrow_color.a = 178
 				
 				local arrow_rot = (50 * cur_time + (360 * i) / threshold) % 360
 				render.DrawQuadEasy(center, Vector(0, 0, 1), diameter, diameter, arrow_color, arrow_rot)

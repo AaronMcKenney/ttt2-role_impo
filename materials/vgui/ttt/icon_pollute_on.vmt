@@ -1,6 +1,6 @@
 "UnlitGeneric"
 {
-	"$basetexture" "vgui/ttt/icon_o2_safe"
+	"$basetexture" "vgui/ttt/icon_pollute_on"
 	"$nocull" 1
 	"$nodecal" 1
 	"$nolod" 1
