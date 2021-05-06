@@ -25,7 +25,7 @@ CreateConVar("ttt2_impostor_station_hold_time", "5", {FCVAR_ARCHIVE, FCVAR_NOTFI
 --Sabotage Lights
 CreateConVar("ttt2_impostor_sabo_lights_length", "55", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_cooldown", "120", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_sabo_lights_mode", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_lights_mode", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_fade_trans_length", "2.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_fade_dark_length", "1.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_fade_bright_length", "5", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -279,13 +279,13 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# What should happen when the lights are sabotaged?
-	--  ttt2_impostor_sabo_lights_mode [0..1] (default: 0)
+	--  ttt2_impostor_sabo_lights_mode [0..1] (default: 1)
 	--  # 0: A Screen fade occurs, which blacks out the entire screen. Flashlights will not help you.
 	--  # 1: Map lighting is temporarily disabled. Flashlights work. Effectiveness depends on map (ex. some props may still be fully lit, and players may be easier to see instead of harder)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_sabo_lights_mode",
 		combobox = true,
-		desc = "ttt2_impostor_sabo_lights_mode (Def: 0)",
+		desc = "ttt2_impostor_sabo_lights_mode (Def: 1)",
 		choices = {
 			"0 - Screen fade (flashlights do nothing)",
 			"1 - Disable map lighting (Strange behavior on certain maps)"
