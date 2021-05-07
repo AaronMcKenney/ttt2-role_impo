@@ -214,4 +214,8 @@ Convars are variables that are introduced to allow server owners to customize th
 --
 [h1]Credits:[/h1]
 [URL=https://steamcommunity.com/profiles/76561198025772353/]BlackMagicFine[/URL]: creator of this role addon
-[URL=https://steamcommunity.com/id/SmugglesTheButt/]Smuggles[/URL]: designer of the role, vent, wrench, speaker (on and off), cloud, and smoke stacks icons
+[URL=https://steamcommunity.com/id/SmugglesTheButt/]Smuggles[/URL]: designer of the role, vent, wrench, Beacon speaker (on and off), cloud, and smoke stacks icons
+[URL=https://steamcommunity.com/id/Zzzaaaccc13/]Wasted[/URL]: designer of the Blight icon, which is used for sabotage reactor here
+[URL=https://steamcommunity.com/id/mineotopia]Mineotopia[/URL]: designer of the role thumbnail
+[URL=https://steamcommunity.com/profiles/76561198037564834]Veldrim[/URL]: heavily assisted with testing
+[URL=https://store.steampowered.com/app/945360/Among_Us/]Among Us by Innersloth[/URL]: The original work that inspired this role.
