@@ -552,6 +552,14 @@ if SERVER then
 		end
 	end)
 	
+	hook.Add("TTT2AvoidGeneralChat", "ImpostorAvoidGeneralChat", function(sender, text)
+		--Prevents player from sending messages to general chat.
+		if timer.Exists("ImpostorSaboCommsTimer_Server") and IsValid(sender) and CanHaveCommsSabotaged(sender) then
+			LANG.Msg(sender, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			return false
+		end
+	end)
+	
 	hook.Add("TTT2AvoidTeamChat", "ImpostorAvoidTeamChat", function(sender, tm, msg)
 		if timer.Exists("ImpostorSaboCommsTimer_Server") and IsValid(sender) and CanHaveCommsSabotaged(sender) then
 			--Jam everyone but traitors while Sabotage Comms is in effect.
@@ -791,7 +799,7 @@ if CLIENT then
 			end
 		end
 	end
-	bind.Register("ImpostorSabotageCycle", CycleSabotageMode, nil, "Impostor", "Cycle Sabotage Mode", KEY_R)
+	bind.Register("ImpostorSabotageCycle", CycleSabotageMode, nil, "Impostor", "Cycle Sabotage Mode", KEY_C)
 	
 	local function SendSabotageRequest()
 		local client = LocalPlayer()

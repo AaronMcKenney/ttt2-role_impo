@@ -14,13 +14,13 @@ Source: [url=https://github.com/AaronMcKenney/ttt2-role_beac]https://github.com/
 The impostor is a traitor subrole who emphasizes 1v1 assassination and team support. They have the following detriments:
 [list]
     [*] No shop
-	[*] 50% reduced damage
+    [*] 50% reduced damage
 [/list]
 And the following boons:
 [list]
     [*] A close range instant kill ability that operates on a 45 second cooldown
-	[*] 3 placeable vents that can be used to create a dynamic teleportation network
-	[*] The ability to create 4 different types of sabotage stations, each producing a global detrimental effect that can be stopped in a king of the hill style minigame
+    [*] 3 placeable vents that can be used to create a dynamic teleportation network
+    [*] The ability to create 4 different types of sabotage stations, each producing a global detrimental effect that can be stopped in a king of the hill style minigame
 [/list]
  
 [h1]Venting (In-Depth Explanation):[/h1]
@@ -37,14 +37,14 @@ The impostor's instant kill cooldown will be paused while they are in Vent Space
 The trapper subrole has a unique interaction. They may enter Vent Space, but only for a total alloted time of 30 seconds. If this time is exceeded, they are ejected out and will be unable to utilize the vents again for the remainder of the game. Trappers are informed when someone enters/exits a vent, and traitors are informed when a trapper enters/exits a vent.
  
 [h1]Sabotage Stations and You:[/h1]
-The impostor has access to 4 types of sabotages. Each one will create a sabotage station at a particular spot, and produce a global detrimental effect for as long as the station is active. This effect will end naturally after a set amount of time (around a minute or so), but players may desire to end it faster. This can be achieved by entering the red circle that encloses the station. Each player within the circle will cause a rotating red arrow to turn green. When all arrows have been green for 5 seconds, the sabotage will end prematurely. When a sabotage has ended, a cooldown of two minutes will be enacted. Sabotages are global, meaning that only one sabotage can be active at a time, and all impostors must wait after that sabotage ends.
+The impostor has access to 4 types of sabotages. Each one will create an outlined sabotage station at a particular spot, and produce a global detrimental effect for as long as the station is active. This effect will end naturally after a set amount of time (around a minute or so), but players may desire to end it faster. This can be achieved by entering the red circle that encloses the station. Each player within the circle will cause a rotating red arrow to turn green. When all arrows have been green for 5 seconds, the sabotage will end prematurely. When a sabotage has ended, a cooldown of two minutes will be enacted. Sabotages are global, meaning that only one sabotage can be active at a time, and no sabotages can be enacted during the cooldown period.
  
 The number of players needed to end a sabotage is 25% of the total number of players (rounded up). This means that a sabotage becomes harder to stop the less people there are alive.
  
-The impostor has a unique HUD that indicates the type of sabotage, time left until the sabotage ends, and time left until the sabotage goes off of cooldown. It can be cycled through 5 modes (the 4 types of sabotages and a manager) which are explained below:
+The impostor has a unique HUD that indicates the type of sabotage, time left until the sabotage ends, and time left until the sabotage goes off of cooldown. It can be cycled by pressing the "C" key through 5 modes (the 4 types of sabotages and a manager) which are explained below:
  
 Station Manager:
-This mode exists to handle the spawn location of the sabotage station. The initial list of spawn points is taken from the list of player spawn points (which makes it difficult for the impostor to create a sabotage station in an area that innocents have no hope of reaching). The impostor can use the Station Manager to select where the sabotage will spawn, by using the mapped sabotage key to click on one of the station spawn icons that will appear with this HUD. The spawn that will be used will have its icon marked red. If the impostor uses the mapped sabotage key on a non-traitorous player, the Station Manager will attempt to create a new station spawn point (this is helpful for maps such as ttt_waterworld, which clusters all of the player spawns in a single area). By default, a station spawn cannot be re-used until all spawns have been exhausted, and its icon will be marked black to indicate this.
+This mode exists to handle the spawn location of the sabotage station. The initial list of spawn points is taken from the list of player spawn points (which makes it difficult for the impostor to create a sabotage station in an area that innocents have no hope of reaching). The impostor can use the Station Manager to select where the sabotage station will spawn, by using the mapped sabotage key ("V") to click on one of the station spawn icons that will appear with this HUD. The spawn that will be used will have its icon marked red. If the impostor uses the mapped sabotage key on a non-traitorous player, the Station Manager will attempt to create a new station spawn point (this is helpful for maps such as ttt_waterworld, which clusters all of the player spawns in a single area). By default, a station spawn cannot be re-used until all spawns have been exhausted, and its icon will be marked black to indicate this.
  
 Sabotage Lights:
 The weakest sabotage, this type will disable map lighting for everyone who isn't on the traitor team, often times making it harder to see. However, a flashlight can still be used here to provide some illumination. Due to the jankiness of GMod as a whole, this ability is heavily map dependent as not all maps take this type of manipulation into account (for example, certain props may remain completely illuminated and others will be pitch black). There is an alternative implementation that can be used, by setting ttt2_impostor_sabo_lights_mode to 1. This implementation, known as "screen fade mode" will instead cause non-traitors to experience continuous fade to blacks (think first person horror games that have a "blinking" mechanic). While this implementation will work across all maps, it is also far more annoying to the victims, and may be the most cancerous piece of software that I have ever written. In either case, this sabotage can be used to get in a quick kill and cause a quick pang of general chaos.
@@ -77,7 +77,7 @@ Convars are variables that are introduced to allow server owners to customize th
 [code]# enable or disable this role
   ttt_impostor_enabled [0/1] (default: 1)
 # the percentage of players that are spawned as this role
-  ttt_impostor_pct [0.0..1.0] (default: 0.15)
+  ttt_impostor_pct [0.0..1.0] (default: 0.17)
 # the limit of players that spawn as this role each round, this overwrites the percentage
   ttt_impostor_max [0..n] (default: 1)
 # the probability each round of this role being spawned at all
