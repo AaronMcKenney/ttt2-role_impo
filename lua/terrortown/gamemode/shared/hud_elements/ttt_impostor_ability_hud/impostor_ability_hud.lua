@@ -336,6 +336,9 @@ if CLIENT then
 		self:DrawInstaKillComponent()
 		if IMPO_SABO_DATA.STRANGE_GAME then
 			self:DrawStrangeGameComponent()
+		elseif GetRoundState() ~= ROUND_ACTIVE then
+			--Sabos are disabled during end of round
+			return
 		elseif client.impo_sabo_mode == SABO_MODE.MNGR and sabo_in_progress == SABO_MODE.NONE then
 			self:DrawSabotageStationManagerComponent()
 		elseif (client.impo_sabo_mode == SABO_MODE.LIGHTS and sabo_in_progress == SABO_MODE.NONE) or sabo_in_progress == SABO_MODE.LIGHTS then
