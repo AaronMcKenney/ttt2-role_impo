@@ -543,23 +543,15 @@ if SERVER then
 	end)
 	
 	hook.Add("TTT2CanUseVoiceChat", "ImpostorCanUseVoiceChatForServer", function(speaker, isTeamVoice)
-		if not timer.Exists("ImpostorSaboCommsTimer_Server") or (IsValid(speaker) and not CanHaveCommsSabotaged(speaker)) then
-			return
-		end
-		
-		return false
-	end)
-	
-	hook.Add("TTT2CanSeeChat", "ImpostorCanSeeChat", function(reader, sender, teamOnly)
-		if timer.Exists("ImpostorSaboCommsTimer_Server") and IsValid(reader) and CanHaveCommsSabotaged(reader) then
-			LANG.Msg(reader, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+		if timer.Exists("ImpostorSaboCommsTimer_Server") and (not isTeamVoice or CanHaveCommsSabotaged(speaker)) then
+			LANG.Msg(speaker, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			return false
 		end
 	end)
 	
 	hook.Add("TTT2AvoidGeneralChat", "ImpostorAvoidGeneralChat", function(sender, text)
 		--Prevents player from sending messages to general chat.
-		if timer.Exists("ImpostorSaboCommsTimer_Server") and IsValid(sender) and CanHaveCommsSabotaged(sender) then
+		if timer.Exists("ImpostorSaboCommsTimer_Server") then
 			LANG.Msg(sender, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			return false
 		end
