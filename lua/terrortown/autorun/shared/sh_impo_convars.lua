@@ -17,7 +17,7 @@ CreateConVar("ttt2_impostor_traitor_team_can_use_vents", "1", {FCVAR_ARCHIVE, FC
 --Sabotage Station Management
 CreateConVar("ttt2_impostor_station_enable", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_station_manager_enable", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_dissuade_station_reuse", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_dissuade_station_reuse", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_min_station_dist", "1000", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_station_radius", "300", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_stop_station_ply_prop", "0.25", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -204,11 +204,11 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# Should Impostors be unable to create sabotage stations in the same place twice (until all available locations have been exhausted)?
-	--  ttt2_impostor_dissuade_station_reuse [0/1] (default: 1)
+	--  ttt2_impostor_dissuade_station_reuse [0/1] (default: 0)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_dissuade_station_reuse",
 		checkbox = true,
-		desc = "ttt2_impostor_dissuade_station_reuse (Def: 1)"
+		desc = "ttt2_impostor_dissuade_station_reuse (Def: 0)"
 	})
 	
 	--# How far away can sabotage station spawn locations be from each other?

@@ -128,7 +128,7 @@ Convars are variables that are introduced to allow server owners to customize th
 # Should the Impostor be able to know where the sabotage station will spawn, be able to switch the spawn location, and add new station spawns?
   ttt2_impostor_station_manager_enable [0/1] (default: 1)
 # Should Impostors be unable to create sabotage stations in the same place twice (until all available locations have been exhausted)?
-  ttt2_impostor_dissuade_station_reuse [0/1] (default: 1)
+  ttt2_impostor_dissuade_station_reuse [0/1] (default: 0)
 # How far away can sabotage station spawn locations be from each other?
   ttt2_impostor_min_station_dist [0..n] (default: 1000)
 # What is the radius of the circle that players need to enter in order to disable the current sabotage?
