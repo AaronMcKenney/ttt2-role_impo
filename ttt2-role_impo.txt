@@ -56,7 +56,7 @@ Sabotage O2:
 This sabotage will, after a short 10 second grace period, deal constant damage to everyone, including those on the traitor team. This sabotage will not damage anyone after they have hit 10 HP, meaning that it cannot by itself kill anyone. It can however, deal a maximum of 50 damage if it is allowed to end naturally. A player will not be damaged if they have immunity to drowning. This sabotage is a medium risk to reward ability that can give the traitors the upper hand if handled properly.
  
 Sabotage Reactor:
-This sabotage has no global effect. However, if it is not stopped manually, the game will end immediately and EVERYONE WILL LOSE. This sabotage is all but guarranteed to move players to wherever the station is located.
+This sabotage has no global effect. However, if it is not stopped manually, the game will end immediately and EVERYONE WILL LOSE. This sabotage is all but guaranteed to move players to wherever the station is located.
  
 [h1]A Final Note[/h1]
 As with all of my roles, everything mentioned above is highly configurable. Anything with a number can be modified, sabotages can be disabled, the entire concept of "stations" can be disabled, and there may be some hidden fun stuff as well. With more than 45 ConVars, the sky is the limit here.

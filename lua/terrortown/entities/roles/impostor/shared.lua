@@ -467,7 +467,7 @@ if SERVER then
 		local selected_station = net.ReadInt(16)
 		local station_enabled = GetConVar("ttt2_impostor_station_enable"):GetBool()
 		
-		if not IsValid(ply) or not ply:IsPlayer() or not ply:IsTerror() or ply:GetSubRole() ~= ROLE_IMPOSTOR or not SabotageModeIsValid(sabo_mode) or IMPO_SABO_DATA.STRANGE_GAME then
+		if not IsValid(ply) or not ply:IsPlayer() or not ply:IsTerror() or ply:GetSubRole() ~= ROLE_IMPOSTOR or not SabotageModeIsValid(sabo_mode) or GetRoundState() ~= ROUND_ACTIVE or IMPO_SABO_DATA.STRANGE_GAME then
 			return
 		end
 		

@@ -285,6 +285,16 @@ function IMPO_SABO_DATA.ForceEndSabotage()
 	IMPO_SABO_DATA.ACTIVE_STAT_ENT = nil
 end
 
+hook.Add("TTTEndRound", "ImpostorSabotDataEndRound", function()
+	--End any existing sabotages, as they may not end during the end round phase, causing issues in the next round.
+	--Such as lighting being disabled permanently.
+	if SERVER then
+		IMPO_SABO_DATA.DestroyStation()
+	else
+		IMPO_SABO_DATA.ForceEndSabotage()
+	end
+end)
+
 if CLIENT then
 	hook.Add("TTTPrepareRound", "ImpostorSaboDataPrepareRoundForClient", function()
 		IMPO_SABO_DATA.STATION_NETWORK = {}
