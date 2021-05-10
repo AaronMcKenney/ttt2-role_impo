@@ -76,15 +76,6 @@ function IMPO_SABO_DATA.MarkStationAsUsed(selected_station)
 	end
 end
 
-function IMPO_SABO_DATA.SetStrangeGame()
-	IMPO_SABO_DATA.STRANGE_GAME = true
-	
-	if SERVER then
-		net.Start("TTT2ImpostorSetStrangeGame")
-		net.Broadcast()
-	end
-end
-
 if SERVER then
 	IMPO_SABO_DATA.ON_COOLDOWN = false
 	
@@ -258,6 +249,64 @@ if SERVER then
 		if IsValid(IMPO_SABO_DATA.ACTIVE_STAT_ENT) then
 			IMPO_SABO_DATA.ACTIVE_STAT_ENT:Remove()
 		end
+	end
+	
+	function IMPO_SABO_DATA.CreateExplosion(pos, mag)
+		local explosion = ents.Create("env_explosion")
+		explosion:SetPos(pos)
+		explosion:Spawn()
+		--IMagnitude is the amount of damage done by the explosion, as well as the radius.
+		explosion:SetKeyValue("IMagnitude", mag)
+		explosion:Fire("Explode")
+	end
+	
+	function IMPO_SABO_DATA.RecursiveExplosions()
+		timer.Simple(0.3, function()
+			if GetRoundState() == ROUND_POST then
+				local plys = player.GetAll()
+				local victim = plys[math.random(#plys)]
+				
+				if IsValid(victim) then
+					pos = victim:GetPos()
+					pos.x = pos.x + math.random(-300, 300)
+					pos.y = pos.y + math.random(-300, 300)
+					pos.z = pos.z + math.random(-300, 300)
+					IMPO_SABO_DATA.CreateExplosion(pos, 100)
+				end
+				IMPO_SABO_DATA.RecursiveExplosions()
+			end
+		end)
+	end
+end
+
+function IMPO_SABO_DATA.SetStrangeGame()
+	IMPO_SABO_DATA.STRANGE_GAME = true
+	
+	if SERVER then
+		net.Start("TTT2ImpostorSetStrangeGame")
+		net.Broadcast()
+		
+		local dmg_info = DamageInfo()
+		dmg_info:SetDamage(30)
+		dmg_info:SetAttacker(IMPO_SABO_DATA.ACTIVE_STAT_ENT)
+		dmg_info:SetDamageType(DMG_DISSOLVE)
+		
+		for _, ply in ipairs(player.GetAll()) do
+			ply:ScreenFade(SCREENFADE.IN, COLOR_WHITE, 1.0, 0.5)
+			ply:TakeDamageInfo(dmg_info)
+		end
+		
+		--Destroy the station via giant explosion
+		IMPO_SABO_DATA.CreateExplosion(IMPO_SABO_DATA.ACTIVE_STAT_ENT:GetPos(), 500)
+		IMPO_SABO_DATA.DestroyStation()
+		
+		timer.Simple(1.5, function()
+			--Plummet civilization into an unending age of explosions
+			IMPO_SABO_DATA.RecursiveExplosions()
+		end)
+	elseif CLIENT then
+		local client = LocalPlayer()
+		client:ScreenFade(SCREENFADE.IN, COLOR_WHITE, 1.0, 0.5)
 	end
 end
 
