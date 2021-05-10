@@ -173,7 +173,7 @@ if SERVER then
 		local tgt = trace.Entity
 		if IsValid(tgt) and tgt:IsPlayer() then
 			--Doppel support: Dop!Impostors shouldn't be able to create spawn points from either traitors or their teammates.
-			if tgt:GetTeam() ~= TEAM_TRAITOR and ply:GetTeam() ~= tgt:GetTeam() and not ply:GetSubRoleData().traitorButton then
+			if tgt:GetTeam() ~= TEAM_TRAITOR and ply:GetTeam() ~= tgt:GetTeam() then
 				if SafePosCanBeAdded(tgt:GetPos()) then
 					if spawn.IsSpawnPointSafe(ply, tgt:GetPos(), false, player.GetAll()) then
 						maybe_spawn_pos = tgt:GetPos()
