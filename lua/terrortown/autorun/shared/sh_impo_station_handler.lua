@@ -157,6 +157,14 @@ if SERVER then
 		net.Send(ply)
 	end
 	
+	local function IsSpy(ply)
+		if SPY and ply:GetSubRole() == ROLE_SPY then
+			return true
+		else
+			return false
+		end
+	end
+	
 	function IMPO_SABO_DATA.MaybeGetNewStationSpawnPos(ply)
 		--If the player is looking at a valid spawn point, return that position. Otherwise return nil
 		local maybe_spawn_pos = nil
@@ -173,7 +181,8 @@ if SERVER then
 		local tgt = trace.Entity
 		if IsValid(tgt) and tgt:IsPlayer() then
 			--Doppel support: Dop!Impostors shouldn't be able to create spawn points from either traitors or their teammates.
-			if tgt:GetTeam() ~= TEAM_TRAITOR and ply:GetTeam() ~= tgt:GetTeam() then
+			--Spy support: Treat spies like traitors, as otherwise the station manager would be an easy spy detector.
+			if tgt:GetTeam() ~= TEAM_TRAITOR and ply:GetTeam() ~= tgt:GetTeam() and not IsSpy(tgt) then
 				if SafePosCanBeAdded(tgt:GetPos()) then
 					if spawn.IsSpawnPointSafe(ply, tgt:GetPos(), false, player.GetAll()) then
 						maybe_spawn_pos = tgt:GetPos()
