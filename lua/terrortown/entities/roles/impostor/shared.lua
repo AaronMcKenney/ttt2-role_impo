@@ -76,11 +76,17 @@ end
 
 local function CanKillTarget(impo, tgt, dist)
 	--impo is assumed to be a valid impostor and tgt is assumed to be a valid player
-	if impo.impo_can_insta_kill and dist <= GetConVar("ttt2_impostor_kill_dist"):GetInt() and impo.impo_in_vent == nil and not IsInSpecDM(impo) then
-		return true
-	else
-		return false
+	--True if the Impostor can instantly kill in general
+	local can_instant_kill = impo.impo_can_insta_kill and dist <= GetConVar("ttt2_impostor_kill_dist"):GetInt() and impo.impo_in_vent == nil and not IsInSpecDM(impo)
+	
+	--Handle friendly fire and disguised roles
+	local can_kill_target = impo:GetTeam() ~= tgt:GetTeam()
+	if SPY and tgt:GetSubRole() == ROLE_SPY then
+		--Edge case: Prevent the Spy from being instant killable to prevent the traitors from having an easy solution.
+		can_kill_target = false
 	end
+	
+	return can_instant_kill and can_kill_target
 end
 
 local function SabotageStationManagerIsEnabled()
@@ -146,7 +152,7 @@ local function SabotageModeIsValid(sabo_mode)
 	return false
 end
 
-local function LooksLikeTraitorButNotImpostor(ply)
+local function ActsLikeTraitorButNotImpostor(ply)
 	--Only handle Dop!Traitor (who explicitly isn't an Impostor) for now.
 	--Handling Spy scenario would lead to them being able to vent and not be affected by sabos. Historically they only look like a traitor, they don't have special traitor abilities.
 	--Handling Defective scenario would lead to them being unable to vent and being affected by sabos. Probably not worth it.
@@ -162,7 +168,7 @@ local function LooksLikeTraitorButNotImpostor(ply)
 end
 
 local function CanHaveLightsSabotaged(ply)
-	if ply:GetSubRole() == ROLE_IMPOSTOR or (LooksLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool()) or IsInSpecDM(ply) then
+	if ply:GetSubRole() == ROLE_IMPOSTOR or (ActsLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool()) or IsInSpecDM(ply) then
 		return false
 	end
 	
@@ -170,7 +176,7 @@ local function CanHaveLightsSabotaged(ply)
 end
 
 local function CanHaveCommsSabotaged(ply)
-	if ply:GetSubRole() == ROLE_IMPOSTOR or (LooksLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms"):GetBool()) or IsInSpecDM(ply) then
+	if ply:GetSubRole() == ROLE_IMPOSTOR or (ActsLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms"):GetBool()) or IsInSpecDM(ply) then
 		return false
 	end
 	
@@ -178,7 +184,7 @@ local function CanHaveCommsSabotaged(ply)
 end
 
 local function CanHaveO2Sabotaged(ply)
-	if (ply:GetSubRole() == ROLE_IMPOSTOR and not GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool()) or (LooksLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool()) or IsInSpecDM(ply) then
+	if (ply:GetSubRole() == ROLE_IMPOSTOR and not GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool()) or (ActsLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool()) or IsInSpecDM(ply) then
 		return false
 	end
 	
