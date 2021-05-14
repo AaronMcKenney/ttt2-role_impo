@@ -160,6 +160,7 @@ if CLIENT then
 	end
 	
 	function ENT:Draw()
+		local client = LocalPlayer()
 		self:DrawModel()
 		
 		--Info
@@ -169,42 +170,42 @@ if CLIENT then
 		local info_box_width = 250
 		local info_box_height = 200
 		
-		--Create three screens that display the same info, all surrounding the sabotage station.
-		for i = 1, 3 do
-			local ang = self:GetAngles()
-			--Makes the screen's text face "forward"
-			ang:RotateAroundAxis(self:GetAngles():Right(), 90)
-			ang:RotateAroundAxis(self:GetAngles():Forward(), 90)
-			--Tilts the screen down toward the players.
-			ang:RotateAroundAxis(self:GetAngles():Right(), 45)
-			--Allows for each screen to face a different direction.
-			ang:RotateAroundAxis(self:GetAngles():Up(), 120 * (i - 1))
-			
-			--Calculating the exact position of each screen is annoying.
-			--This is very much hardcoded, and doesn't quite align with the model.
-			--This is partially because the model doesn't have radial symmetry.
-			local info_box_pos = self:GetPos() + self:OBBCenter()
-			local min_bound_vec, max_bound_vec = self:GetCollisionBounds()
-			--Larger z addition higher the screen is.
-			info_box_pos.z = info_box_pos.z + 110
-			--Align the x/y position in the dead middle of the entity.
-			info_box_pos.x = info_box_pos.x + (max_bound_vec.x - min_bound_vec.x) / 2
-			info_box_pos.y = info_box_pos.y - (max_bound_vec.y - min_bound_vec.y) / 2
-			--Make the screen "protude" out of the dead middle of the entity.
-			local protude_vec = ang:Right()
-			protude_vec.z = 0
-			info_box_pos = info_box_pos - 40 * protude_vec
-			--Move the screen slightly to the "left"
-			local left_vec = ang:Forward()
-			left_vec.z = 0
-			info_box_pos = info_box_pos - 10 * left_vec
-			
-			--Draw a screen
-			cam.Start3D2D(info_box_pos, ang, 0.1)
-				draw.RoundedBox(0, 0, 0, info_box_width, info_box_height, IMPOSTOR.color)
-				draw.SimpleText(time_left, "ImpostorSabotageStationFont", info_box_width / 2, info_box_height / 2, COLOR_BLACK, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-			cam.End3D2D()
-		end
+		--Create a screen that follows the player, which displays the time left.
+		--Make the angle face in the opposite direction the client is looking
+		local dist_vec = client:GetPos() - self:GetPos()
+		local ang = dist_vec:Angle()
+		--We only care about the yaw that's changed from the above function, which spins the screen on a lazy susan.
+		--Roll and pitch must be constant values to prevent the screen from completely mirroring the player's camera.
+		--Set to 0 for now to make info box position less of a pain to calculate
+		ang.r = 0
+		ang.p = 0
+		
+		--Screen position is hardcoded mostly due to the lack of radial symmetry in the model.
+		local info_box_pos = self:GetPos() + self:OBBCenter()
+		--Center the info_box across the XY-plane through arduous hardcoding.
+		--Top-left point of info_box (seen as a dot on the base of the model) prior to centering is illustrated below
+		-- ___    x-axis is positive to the right, y-axis is positive up.
+		--/.  \
+		--_____
+		info_box_pos.x = info_box_pos.x + 4
+		info_box_pos.y = info_box_pos.y - 6
+		--Larger z addition to put the screen near the top of the model.
+		info_box_pos.z = info_box_pos.z + 110
+		--Now that it is properly centered, we can move the screen "left" from the player's perspective, to align it with the model.
+		info_box_pos = info_box_pos + 12 * ang:Right()
+		--Make the screen protude outwards from the model.
+		info_box_pos = info_box_pos + 25 * ang:Forward()
+		
+		--Modify the yaw post position calculation because the screen is otherwise drawn along the dist_vec axis.
+		ang.y = ang.y + 90
+		--Set roll such that the screen faces downwards at a tilt.
+		ang.r = 120
+		
+		--Draw a screen
+		cam.Start3D2D(info_box_pos, ang, 0.1)
+			draw.RoundedBox(0, 0, 0, info_box_width, info_box_height, IMPOSTOR.color)
+			draw.SimpleText(time_left, "ImpostorSabotageStationFont", info_box_width / 2, info_box_height / 2, COLOR_BLACK, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		cam.End3D2D()
 	end
 	
 	hook.Add("PostDrawTranslucentRenderables", "PostDrawTranslucentRenderablesSabotageStation", function()
