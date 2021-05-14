@@ -184,65 +184,64 @@ local function CanHaveCommsSabotaged(ply)
 end
 
 local function CanHaveO2Sabotaged(ply)
-	if (ply:GetSubRole() == ROLE_IMPOSTOR and not GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool()) or (ActsLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool()) or IsInSpecDM(ply) then
+	if not ply:Alive() or (ply:GetSubRole() == ROLE_IMPOSTOR and not GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool()) or (ActsLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool()) or IsInSpecDM(ply) then
 		return false
 	end
 	
 	return true
 end
 
-local function InduceScreenFade(ply, hud_only)
-	if SabotageLightsIsEnabled() and GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt() == SABO_LIGHTS_MODE.SCREEN_FADE then
-		local fade_trans_time = GetConVar("ttt2_impostor_sabo_lights_fade_trans_length"):GetFloat()
-		--Sabotage ply's lights by performing two screen fades.
-		local fade_dark_time = GetConVar("ttt2_impostor_sabo_lights_fade_dark_length"):GetFloat()
-		local total_fade_time = 2*fade_trans_time + fade_dark_time
+local function InduceScreenFade(ply)
+	local fade_trans_time = GetConVar("ttt2_impostor_sabo_lights_fade_trans_length"):GetFloat()
+	--Sabotage ply's lights by performing two screen fades.
+	local fade_dark_time = GetConVar("ttt2_impostor_sabo_lights_fade_dark_length"):GetFloat()
+	local total_fade_time = 2*fade_trans_time + fade_dark_time
+	
+	if CanHaveLightsSabotaged(ply) then
+		--SCREENFADE.IN: Cut to black immediately. After fade_hold, transition out over fade_trans_time.
+		--SCREENFADE.OUT: Fade to black over fade_trans_time. After fade_hold, cut back to normal immediately.
+		--SCREENFADE.MODULATE: Cut to black immediately. Cut back to normal some time after. Not sure how fade_trans_time factors in here.
+		--SCREENFADE.STAYOUT: Cut to black immediately. Never returns to normal. Why is this a thing?
+		--SCREENFADE.PURGE: Not sure how this differs from SCREENFADE.MODULATE.
 		
-		if not hud_only then
-			--SCREENFADE.IN: Cut to black immediately. After fade_hold, transition out over fade_trans_time.
-			--SCREENFADE.OUT: Fade to black over fade_trans_time. After fade_hold, cut back to normal immediately.
-			--SCREENFADE.MODULATE: Cut to black immediately. Cut back to normal some time after. Not sure how fade_trans_time factors in here.
-			--SCREENFADE.STAYOUT: Cut to black immediately. Never returns to normal. Why is this a thing?
-			--SCREENFADE.PURGE: Not sure how this differs from SCREENFADE.MODULATE.
-			
-			--Create temporary lights-out effect: fade to black, hold, then fade to normal.
-			--Add IMPO_IOTA in first ScreenFade call to handle lag between the two calls and create a hopefully seemless blackout effect.
-			ply:ScreenFade(SCREENFADE.OUT, COLOR_BLACK, fade_trans_time, (fade_dark_time/2) + IMPO_IOTA)
-			timer.Simple(fade_trans_time + (fade_dark_time/2), function()
-				--Have to create a lambda function() here. ply:ScreenFade by itself doesn't pass compile.
-				ply:ScreenFade(SCREENFADE.IN, COLOR_BLACK, fade_trans_time, fade_dark_time/2)
+		--Create temporary lights-out effect: fade to black, hold, then fade to normal.
+		--Add IMPO_IOTA in first ScreenFade call to handle lag between the two calls and create a hopefully seemless blackout effect.
+		ply:ScreenFade(SCREENFADE.OUT, COLOR_BLACK, fade_trans_time, (fade_dark_time/2) + IMPO_IOTA)
+		timer.Simple(fade_trans_time + (fade_dark_time/2), function()
+			--Have to create a lambda function() here. ply:ScreenFade by itself doesn't pass compile.
+			ply:ScreenFade(SCREENFADE.IN, COLOR_BLACK, fade_trans_time, fade_dark_time/2)
+		end)
+	end
+	
+	if SERVER then
+		--Send request to client to call this same function, just to keep things in sync.
+		net.Start("TTT2ImpostorSabotageLightsScreenFade")
+		net.Send(ply)
+		
+		local fade_bright_time = GetConVar("ttt2_impostor_sabo_lights_fade_bright_length"):GetInt()
+		local time_left = GetConVar("ttt2_impostor_sabo_lights_length"):GetInt()
+		if timer.Exists("ImpostorSaboLightsTimer_Server") then
+			time_left = timer.TimeLeft("ImpostorSaboLightsTimer_Server")
+		end
+		
+		--Induce further screen fades, until the sabotage is cleared.
+		if time_left >= 2*total_fade_time + fade_bright_time - IMPO_IOTA then
+			timer.Simple(total_fade_time + fade_bright_time, function()
+				--Peform another check on the timer here in case the sabotage is cleared early.
+				if timer.Exists("ImpostorSaboLightsTimer_Server") then
+					InduceScreenFade(ply)
+				end
 			end)
 		end
-		
-		if SERVER then
-			--Send request to client to call this same function, just to keep things in sync.
-			net.Start("TTT2ImpostorSabotageLightsScreenFade")
-			net.WriteBool(hud_only)
-			net.Send(ply)
-			
-			local fade_bright_time = GetConVar("ttt2_impostor_sabo_lights_fade_bright_length"):GetInt()
-			local time_left = GetConVar("ttt2_impostor_sabo_lights_length"):GetInt()
-			if timer.Exists("ImpostorSaboLightsTimer_Server") then
-				time_left = timer.TimeLeft("ImpostorSaboLightsTimer_Server")
-			end
-			
-			--Induce further screen fades, until the sabotage is cleared.
-			if time_left >= 2*total_fade_time + fade_bright_time - IMPO_IOTA then
-				timer.Simple(total_fade_time + fade_bright_time, function()
-					--Peform another check on the timer here in case the sabotage is cleared early.
-					if timer.Exists("ImpostorSaboLightsTimer_Server") then
-						InduceScreenFade(ply, hud_only)
-					end
-				end)
-			end
-		end
-		
-		if CLIENT and ply:GetSubRole() == ROLE_IMPOSTOR then
-			--Create timer just to keep track of this for UI purposes.
-			timer.Create("ImpostorScreenFade_Client", total_fade_time, 1, function()
-				return
-			end)
-		end
+	end
+	
+	if CLIENT and ply:GetSubRole() == ROLE_IMPOSTOR then
+		--Create timer just to keep track of this for UI purposes.
+		--Only create this for impostor because we have enough timers already.
+		--Only edge case missed is when someone becomes an impostor during a dark interval, the HUD will still be bright.
+		timer.Create("ImpostorScreenFade_Client", total_fade_time, 1, function()
+			return
+		end)
 	end
 end
 
@@ -343,17 +342,13 @@ if SERVER then
 		for _, ply in ipairs(player.GetAll()) do
 			SendSabotageResponse(ply, SABO_MODE.LIGHTS, sabo_duration)
 			
-			if CanHaveLightsSabotaged(ply) then
-				if sabo_lights_mode == SABO_LIGHTS_MODE.SCREEN_FADE then
-					InduceScreenFade(ply, false)
-				else --SABO_LIGHTS_MODE.DISABLE_MAP
-					net.Start("TTT2ImpostorSabotageLightsRedownloadMap")
-					net.Send(ply)
-					--Keep track of who had their map disabled, in case a role changes during sabo.
-					ply.impo_tmp_light_map_disabled = true
-				end
-			elseif sabo_lights_mode == SABO_LIGHTS_MODE.SCREEN_FADE and ply:GetSubRole() == ROLE_IMPOSTOR then
-				InduceScreenFade(ply, true)
+			if sabo_lights_mode == SABO_LIGHTS_MODE.SCREEN_FADE then
+				InduceScreenFade(ply, ply:GetSubRole() == ROLE_IMPOSTOR)
+			elseif sabo_lights_mode == SABO_LIGHTS_MODE.DISABLE_MAP and CanHaveLightsSabotaged(ply) then
+				net.Start("TTT2ImpostorSabotageLightsRedownloadMap")
+				net.Send(ply)
+				--Keep track of who had their map disabled, in case a role changes during sabo.
+				ply.impo_tmp_light_map_disabled = true
 			end
 		end
 		
@@ -667,9 +662,8 @@ if CLIENT then
 	
 	net.Receive("TTT2ImpostorSabotageLightsScreenFade", function()
 		local client = LocalPlayer()
-		local hud_only = net.ReadBool()
 		
-		InduceScreenFade(client, hud_only)
+		InduceScreenFade(client)
 	end)
 	
 	net.Receive("TTT2ImpostorSabotageLightsRedownloadMap", function()
