@@ -544,9 +544,14 @@ if SERVER then
 	end)
 	
 	hook.Add("TTT2CanUseVoiceChat", "ImpostorCanUseVoiceChatForServer", function(speaker, isTeamVoice)
-		if timer.Exists("ImpostorSaboCommsTimer_Server") and (not isTeamVoice or CanHaveCommsSabotaged(speaker)) then
-			LANG.Msg(speaker, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+		if timer.Exists("ImpostorSaboCommsTimer_Server") and (not isTeamVoice or CanHaveCommsSabotaged(speaker)) and not speaker:IsSpec() then
 			return false
+		end
+	end)
+	
+	hook.Add("TTTPlayerRadioCommand", "ImpostorPlayerRadioCommand", function(ply, msg_name, msg_target)
+		if timer.Exists("ImpostorSaboCommsTimer_Server") then
+			return true
 		end
 	end)
 	
@@ -559,7 +564,7 @@ if SERVER then
 	end)
 	
 	hook.Add("TTT2AvoidTeamChat", "ImpostorAvoidTeamChat", function(sender, tm, msg)
-		if timer.Exists("ImpostorSaboCommsTimer_Server") and IsValid(sender) and CanHaveCommsSabotaged(sender) then
+		if timer.Exists("ImpostorSaboCommsTimer_Server") and (tm == TEAM_INNOCENT or tm == TEAM_NONE or (IsValid(sender) and CanHaveCommsSabotaged(sender))) then
 			--Jam everyone but traitors while Sabotage Comms is in effect.
 			LANG.Msg(sender, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			return false
@@ -727,13 +732,22 @@ if CLIENT then
 	end)
 	
 	hook.Add("TTT2CanUseVoiceChat", "ImpostorCanUseVoiceChatForClient", function(speaker, isTeamVoice)
-		if not timer.Exists("ImpostorSaboCommsTimer_Client") or (IsValid(speaker) and not CanHaveCommsSabotaged(speaker)) then
-			return
+		--Jam all voice channels except traitor chat and spectator chat
+		if timer.Exists("ImpostorSaboCommsTimer_Client") and (not isTeamVoice or CanHaveCommsSabotaged(speaker)) and not speaker:IsSpec() then
+			LANG.Msg("SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			return false
 		end
-		
-		--Jam everyone but traitors while Sabotage Comms is in effect.
-		LANG.Msg("SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
-		return false
+	end)
+	
+	hook.Add("TTT2ClientRadioCommand", "ImpostorClientRadioCommand", function(cmd)
+		--ttt_radio is a base TTT command that can be used to broadcast quickchat messages to others.
+		--It can be accessed with running the "ttt_radio <option>" console command while looking at someone, or pressing "b" by default.
+		--See https://ttt.badking.net/help/gameplay/ for details.
+		--This should be prevented during Sabotage Comms.
+		if timer.Exists("ImpostorSaboCommsTimer_Client") then
+			LANG.Msg("SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			return true
+		end
 	end)
 	
 	hook.Add("TTTRenderEntityInfo", "ImpostorRenderEntityInfo", function(tData)
