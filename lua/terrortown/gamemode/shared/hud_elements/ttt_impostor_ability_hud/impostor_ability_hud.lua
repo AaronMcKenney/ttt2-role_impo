@@ -318,7 +318,7 @@ if CLIENT then
 	
 	function HUDELEMENT:DrawStrangeGameComponent()
 		local icon_color = COLOR_GREEN
-		local sabo_str = LANG.GetTranslation("SABO_REACT_STRANGE_GAME" .. IMPOSTOR.name)
+		local sabo_str = LANG.GetTranslation("SABO_REACT_STRANGE_GAME_" .. IMPOSTOR.name)
 		local bg_color = COLOR_BLACK
 		local icon = icon_react
 		

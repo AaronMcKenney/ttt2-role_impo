@@ -14,7 +14,6 @@ ENT.CanUseKey = true
 --How many players currently in range of stopping the sabotage.
 --Used both for calculations and for visual presentation.
 local num_plys_in_range = 0
-local threshold = 0
 
 local function IsInSpecDM(ply)
 	if SpecDM and (ply.IsGhost and ply:IsGhost()) then
@@ -23,17 +22,6 @@ local function IsInSpecDM(ply)
 	
 	return false
 end
-
-hook.Add("TTTBeginRound", "ImpostorSabotatgeStationBeginRound", function()
-	local ply_count = 0
-	for _, ply in ipairs(player.GetAll()) do
-		if not ply:IsSpec() and not IsInSpecDM(ply) then
-			ply_count = ply_count + 1
-		end
-	end
-	
-	threshold = math.ceil(ply_count * GetConVar("ttt2_impostor_stop_station_ply_prop"):GetFloat())
-end)
 
 function ENT:Initialize()
 	self.removal_in_progress = false
@@ -90,7 +78,7 @@ function ENT:Think()
 	end
 	
 	num_plys_in_range = new_num_plys_in_range
-	if num_plys_in_range >= threshold then
+	if num_plys_in_range >= IMPO_SABO_DATA.THRESHOLD then
 		if not timer.Exists("ImpostorSaboStationEndProtocolInProgress") then
 			timer.Create("ImpostorSaboStationEndProtocolInProgress", hold_time, 1, function()
 				self.removal_in_progress = true
@@ -235,13 +223,13 @@ if CLIENT then
 			
 			--Draw an arrow for each player needed. Color the arrows based on how many are in range.
 			render.SetMaterial(sabo_station_arrow_mat)
-			for i = 1, threshold do
+			for i = 1, IMPO_SABO_DATA.THRESHOLD do
 				local arrow_color = Color(255, 0, 0, 178)
 				if i <= num_plys_in_range then
 					arrow_color = Color(113, 188, 120, 178)
 				end
 				
-				local arrow_rot = (50 * cur_time + (360 * i) / threshold) % 360
+				local arrow_rot = (50 * cur_time + (360 * i) / IMPO_SABO_DATA.THRESHOLD) % 360
 				render.DrawQuadEasy(center, Vector(0, 0, 1), diameter, diameter, arrow_color, arrow_rot)
 			end
 		end

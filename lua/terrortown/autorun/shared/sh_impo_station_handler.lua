@@ -9,7 +9,16 @@ end
 IMPO_SABO_DATA = {}
 IMPO_SABO_DATA.STATION_NETWORK = {}
 IMPO_SABO_DATA.ACTIVE_STAT_ENT = nil
+IMPO_SABO_DATA.THRESHOLD = nil
 IMPO_SABO_DATA.STRANGE_GAME = false
+
+local function IsInSpecDM(ply)
+	if SpecDM and (ply.IsGhost and ply:IsGhost()) then
+		return true
+	end
+	
+	return false
+end
 
 local function SafePosCanBeAdded(new_pos)
 	local min_dist = GetConVar("ttt2_impostor_min_station_dist"):GetInt()
@@ -343,7 +352,18 @@ function IMPO_SABO_DATA.ForceEndSabotage()
 	IMPO_SABO_DATA.ACTIVE_STAT_ENT = nil
 end
 
-hook.Add("TTTEndRound", "ImpostorSabotDataEndRound", function()
+hook.Add("TTTBeginRound", "ImpostorSaboDataBeginRound", function()
+	local ply_count = 0
+	for _, ply in ipairs(player.GetAll()) do
+		if not ply:IsSpec() and not IsInSpecDM(ply) then
+			ply_count = ply_count + 1
+		end
+	end
+	
+	IMPO_SABO_DATA.THRESHOLD = math.ceil(ply_count * GetConVar("ttt2_impostor_stop_station_ply_prop"):GetFloat())
+end)
+
+hook.Add("TTTEndRound", "ImpostorSaboDataEndRound", function()
 	--End any existing sabotages, as they may not end during the end round phase, causing issues in the next round.
 	--Such as lighting being disabled permanently.
 	if SERVER then

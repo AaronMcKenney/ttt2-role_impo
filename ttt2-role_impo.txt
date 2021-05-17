@@ -91,6 +91,8 @@ Convars are variables that are introduced to allow server owners to customize th
   ttt2_impostor_inform_everyone [0/1] (default: 0)
 # How much damage should the impostor be able to do with traditional guns and crowbars?
   ttt2_impostor_normal_dmg_multi [0.0..n.m] (default: 0.5)
+# Should everyone be informed via pop-ups about how sabotages work every time a sabotage occurs?
+  ttt2_impostor_sabo_pop_ups [0/1] (default: 1)
   
 ### INSTANT KILL ###
 # What is the range on the impostor's instant-kill ability?

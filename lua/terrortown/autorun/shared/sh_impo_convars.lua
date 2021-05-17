@@ -2,6 +2,7 @@
 --General
 CreateConVar("ttt2_impostor_inform_everyone", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_normal_dmg_multi", "0.5", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_pop_ups", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Instant Kill
 CreateConVar("ttt2_impostor_kill_dist", "125", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_kill_cooldown", "45", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -75,6 +76,14 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		max = 1.0,
 		decimal = 2,
 		desc = "ttt2_impostor_normal_dmg_multi (Def: 0.5)"
+	})
+	
+	--# Should everyone be informed via pop-ups about how sabotages work every time a sabotage occurs?
+	--  ttt2_impostor_sabo_pop_ups [0/1] (default: 1)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_pop_ups",
+		checkbox = true,
+		desc = "ttt2_impostor_sabo_pop_ups (Def: 1)"
 	})
 	
 	--# What is the range on the impostor's instant-kill ability?
@@ -542,6 +551,7 @@ end)
 hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalBool("ttt2_impostor_inform_everyone", GetConVar("ttt2_impostor_inform_everyone"):GetBool())
 	SetGlobalFloat("ttt2_impostor_normal_dmg_multi", GetConVar("ttt2_impostor_normal_dmg_multi"):GetFloat())
+	SetGlobalBool("ttt2_impostor_sabo_pop_ups", GetConVar("ttt2_impostor_sabo_pop_ups"):GetBool())
 	SetGlobalInt("ttt2_impostor_kill_dist", GetConVar("ttt2_impostor_kill_dist"):GetInt())
 	SetGlobalInt("ttt2_impostor_kill_cooldown", GetConVar("ttt2_impostor_kill_cooldown"):GetInt())
 	SetGlobalInt("ttt2_impostor_num_starting_vents", GetConVar("ttt2_impostor_num_starting_vents"):GetInt())
@@ -593,6 +603,9 @@ cvars.AddChangeCallback("ttt2_impostor_inform_everyone", function(name, old, new
 end)
 cvars.AddChangeCallback("ttt2_impostor_normal_dmg_multi", function(name, old, new)
 	SetGlobalFloat("ttt2_impostor_normal_dmg_multi", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_pop_ups", function(name, old, new)
+	SetGlobalBool("ttt2_impostor_sabo_pop_ups", tobool(tonumber(new)))
 end)
 cvars.AddChangeCallback("ttt2_impostor_kill_dist", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_kill_dist", tonumber(new))

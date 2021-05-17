@@ -454,7 +454,7 @@ if SERVER then
 			if GetRoundState() == ROUND_ACTIVE then
 				if sabo_react_mode == SABO_REACT_MODE.EVERYONE_LOSES then
 					impo_team_win = TEAM_LOSER
-				else --TEAM_WIN
+				else --SABO_REACT_MODE.TEAM_WIN
 					impo_team_win = team
 				end
 				
@@ -631,7 +631,6 @@ if CLIENT then
 	end)
 	
 	net.Receive("TTT2ImpostorInformEveryone", function()
-		local client = LocalPlayer()
 		local num_impos = net.ReadInt(16)
 		
 		if num_impos == 1 then
@@ -703,6 +702,37 @@ if CLIENT then
 		end
 	end
 	
+	local function DisplaySaboPopUps(sabo_mode)
+		if sabo_mode == SABO_MODE.LIGHTS then
+			if GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt() == SABO_LIGHTS_MODE.SCREEN_FADE then
+				EPOP:AddMessage({text = LANG.GetTranslation("SABO_LIGHTS_INFO_FADE_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+			else --SABO_LIGHTS_MODE.DISABLE_MAP
+				EPOP:AddMessage({text = LANG.GetTranslation("SABO_LIGHTS_INFO_MAP_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+			end
+		elseif sabo_mode == SABO_MODE.COMMS then
+			if GetConVar("ttt2_impostor_sabo_comms_deafen"):GetBool() then
+				EPOP:AddMessage({text = LANG.GetTranslation("SABO_COMMS_INFO_MUTE_AND_DEAF_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+			else
+				EPOP:AddMessage({text = LANG.GetTranslation("SABO_COMMS_INFO_MUTE_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+			end
+		elseif sabo_mode == SABO_MODE.O2 then
+			EPOP:AddMessage({text = LANG.GetTranslation("SABO_O2_INFO_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+		elseif sabo_mode == SABO_MODE.REACT then
+			if GetConVar("ttt2_impostor_sabo_react_win_mode"):GetInt() == SABO_REACT_MODE.EVERYONE_LOSES then
+				EPOP:AddMessage({text = LANG.GetTranslation("SABO_REACT_INFO_LOSE_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+			else --SABO_REACT_MODE.TEAM_WIN
+				EPOP:AddMessage({text = LANG.GetTranslation("SABO_REACT_INFO_TEAM_WIN_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+			end
+		end
+		
+		if GetConVar("ttt2_impostor_station_enable"):GetBool() and IMPO_SABO_DATA.THRESHOLD then
+			--Use simple timer so that this pop up message doesn't overwrite the message above.
+			timer.Simple(6, function()
+				EPOP:AddMessage({text = LANG.GetParamTranslation("SABO_STAT_INFO_" .. IMPOSTOR.name, {n = IMPO_SABO_DATA.THRESHOLD}), color = IMPOSTOR.color}, "", 6)
+			end)
+		end
+	end
+	
 	net.Receive("TTT2ImpostorSendSabotageResponse", function()
 		local sabo_mode = net.ReadInt(16)
 		local sabo_duration = net.ReadInt(16)
@@ -728,6 +758,10 @@ if CLIENT then
 		
 		if sabo_mode == SABO_MODE.REACT then
 			SabotageReactorCountdown(sabo_duration)
+		end
+		
+		if GetConVar("ttt2_impostor_sabo_pop_ups"):GetBool() then
+			DisplaySaboPopUps(sabo_mode)
 		end
 	end)
 	
