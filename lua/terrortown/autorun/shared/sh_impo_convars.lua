@@ -4,7 +4,7 @@ CreateConVar("ttt2_impostor_inform_everyone", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY}
 CreateConVar("ttt2_impostor_normal_dmg_multi", "0.5", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_pop_ups", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Instant Kill
-CreateConVar("ttt2_impostor_kill_dist", "125", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_kill_dist", "150", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_kill_cooldown", "45", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Venting
 CreateConVar("ttt2_impostor_num_starting_vents", "3", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -87,14 +87,14 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# What is the range on the impostor's instant-kill ability?
-	--  ttt2_impostor_kill_dist [0..n] (default: 125)
+	--  ttt2_impostor_kill_dist [0..n] (default: 150)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_kill_dist",
 		slider = true,
 		min = 0,
 		max = 1000,
 		decimal = 0,
-		desc = "ttt2_impostor_kill_dist (Def: 125)"
+		desc = "ttt2_impostor_kill_dist (Def: 150)"
 	})
 	
 	--# What is the cooldown (in seconds) on the impostor's instant-kill ability?

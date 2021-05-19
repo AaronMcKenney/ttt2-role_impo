@@ -96,7 +96,7 @@ Convars are variables that are introduced to allow server owners to customize th
   
 ### INSTANT KILL ###
 # What is the range on the impostor's instant-kill ability?
-  ttt2_impostor_kill_dist [0..n] (default: 125)
+  ttt2_impostor_kill_dist [0..n] (default: 150)
 # What is the cooldown (in seconds) on the impostor's instant-kill ability?
   ttt2_impostor_kill_cooldown [0..n] (default: 45)
   
