@@ -49,8 +49,8 @@ function ROLE:Initialize()
 	roles.SetBaseRole(self, ROLE_TRAITOR)
 end
 
---CREATES "TEAM_EVERYONE". THEY'RE SOLE PURPOSE IS TO LOSE. EVERYONE LOSES.
-roles.InitCustomTeam("everyone", {
+--CREATES "TEAM_LOSER". THEY'RE SOLE PURPOSE IS TO LOSE. EVERYONE LOSES.
+roles.InitCustomTeam("loser", {
 	icon = "vgui/ttt/dynamic/roles/icon_inno",
 	color = Color(0, 0, 0, 255)
 })
@@ -76,11 +76,17 @@ end
 
 local function CanKillTarget(impo, tgt, dist)
 	--impo is assumed to be a valid impostor and tgt is assumed to be a valid player
-	if impo.impo_can_insta_kill and dist <= GetConVar("ttt2_impostor_kill_dist"):GetInt() and impo.impo_in_vent == nil and not IsInSpecDM(impo) then
-		return true
-	else
-		return false
+	--True if the Impostor can instantly kill in general
+	local can_instant_kill = impo.impo_can_insta_kill and dist <= GetConVar("ttt2_impostor_kill_dist"):GetInt() and impo.impo_in_vent == nil and not IsInSpecDM(impo)
+	
+	--Handle friendly fire and disguised roles
+	local can_kill_target = impo:GetTeam() ~= tgt:GetTeam()
+	if SPY and tgt:GetSubRole() == ROLE_SPY then
+		--Edge case: Prevent the Spy from being instant killable to prevent the traitors from having an easy solution.
+		can_kill_target = false
 	end
+	
+	return can_instant_kill and can_kill_target
 end
 
 local function SabotageStationManagerIsEnabled()
@@ -89,10 +95,11 @@ end
 
 local function SabotageLightsIsEnabled()
 	local sabo_lights_mode = GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt()
-	local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
-	local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
+	local fade_trans_len = GetConVar("ttt2_impostor_sabo_lights_fade_trans_length"):GetFloat()
+	local fade_dark_len = GetConVar("ttt2_impostor_sabo_lights_fade_dark_length"):GetFloat()
+	local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetInt()
 	
-	if (sabo_lights_mode == SABO_LIGHTS_MODE.SCREEN_FADE and fade_time <= 0.0) or sabo_lights_len < 0.0 then
+	if (sabo_lights_mode == SABO_LIGHTS_MODE.SCREEN_FADE and (fade_trans_len <= 0.0 or fade_dark_len < 0.0)) or sabo_lights_len <= 0 then
 		return false
 	end
 	
@@ -145,7 +152,7 @@ local function SabotageModeIsValid(sabo_mode)
 	return false
 end
 
-local function LooksLikeTraitorButNotImpostor(ply)
+local function ActsLikeTraitorButNotImpostor(ply)
 	--Only handle Dop!Traitor (who explicitly isn't an Impostor) for now.
 	--Handling Spy scenario would lead to them being able to vent and not be affected by sabos. Historically they only look like a traitor, they don't have special traitor abilities.
 	--Handling Defective scenario would lead to them being unable to vent and being affected by sabos. Probably not worth it.
@@ -161,7 +168,7 @@ local function LooksLikeTraitorButNotImpostor(ply)
 end
 
 local function CanHaveLightsSabotaged(ply)
-	if ply:GetSubRole() == ROLE_IMPOSTOR or (LooksLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool()) or IsInSpecDM(ply) then
+	if ply:GetSubRole() == ROLE_IMPOSTOR or (ActsLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool()) or IsInSpecDM(ply) then
 		return false
 	end
 	
@@ -169,7 +176,7 @@ local function CanHaveLightsSabotaged(ply)
 end
 
 local function CanHaveCommsSabotaged(ply)
-	if ply:GetSubRole() == ROLE_IMPOSTOR or (LooksLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms"):GetBool()) or IsInSpecDM(ply) then
+	if ply:GetSubRole() == ROLE_IMPOSTOR or (ActsLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_comms"):GetBool()) or IsInSpecDM(ply) then
 		return false
 	end
 	
@@ -177,7 +184,7 @@ local function CanHaveCommsSabotaged(ply)
 end
 
 local function CanHaveO2Sabotaged(ply)
-	if (ply:GetSubRole() == ROLE_IMPOSTOR and not GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool()) or (LooksLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool()) or IsInSpecDM(ply) then
+	if not ply:Alive() or (ply:GetSubRole() == ROLE_IMPOSTOR and not GetConVar("ttt2_impostor_is_affected_by_sabo_o2"):GetBool()) or (ActsLikeTraitorButNotImpostor(ply) and not GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_o2"):GetBool()) or IsInSpecDM(ply) then
 		return false
 	end
 	
@@ -185,31 +192,56 @@ local function CanHaveO2Sabotaged(ply)
 end
 
 local function InduceScreenFade(ply)
-	if SabotageLightsIsEnabled() and GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt() == SABO_LIGHTS_MODE.SCREEN_FADE then
-		local fade_hold = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
-		local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
-		--Sabotage ply's lights by performing two screen fades.
-		fade_hold_half = fade_hold/2
-		
-		--SCREENFADE.IN: Cut to black immediately. After fade_hold, transition out over fade_time.
-		--SCREENFADE.OUT: Fade to black over fade_time. After fade_hold, cut back to normal immediately.
-		--SCREENFADE.MODULATE: Cut to black immediately. Cut back to normal some time after. Not sure how fade_time factors in here.
+	local fade_trans_time = GetConVar("ttt2_impostor_sabo_lights_fade_trans_length"):GetFloat()
+	--Sabotage ply's lights by performing two screen fades.
+	local fade_dark_time = GetConVar("ttt2_impostor_sabo_lights_fade_dark_length"):GetFloat()
+	local total_fade_time = 2*fade_trans_time + fade_dark_time
+	
+	if CanHaveLightsSabotaged(ply) then
+		--SCREENFADE.IN: Cut to black immediately. After fade_hold, transition out over fade_trans_time.
+		--SCREENFADE.OUT: Fade to black over fade_trans_time. After fade_hold, cut back to normal immediately.
+		--SCREENFADE.MODULATE: Cut to black immediately. Cut back to normal some time after. Not sure how fade_trans_time factors in here.
 		--SCREENFADE.STAYOUT: Cut to black immediately. Never returns to normal. Why is this a thing?
 		--SCREENFADE.PURGE: Not sure how this differs from SCREENFADE.MODULATE.
 		
 		--Create temporary lights-out effect: fade to black, hold, then fade to normal.
 		--Add IMPO_IOTA in first ScreenFade call to handle lag between the two calls and create a hopefully seemless blackout effect.
-		ply:ScreenFade(SCREENFADE.OUT, COLOR_BLACK, fade_time, fade_hold_half + IMPO_IOTA)
-		timer.Simple(fade_time + fade_hold_half, function()
+		ply:ScreenFade(SCREENFADE.OUT, COLOR_BLACK, fade_trans_time, (fade_dark_time/2) + IMPO_IOTA)
+		timer.Simple(fade_trans_time + (fade_dark_time/2), function()
 			--Have to create a lambda function() here. ply:ScreenFade by itself doesn't pass compile.
-			ply:ScreenFade(SCREENFADE.IN, COLOR_BLACK, fade_time, fade_hold_half)
+			ply:ScreenFade(SCREENFADE.IN, COLOR_BLACK, fade_trans_time, fade_dark_time/2)
 		end)
+	end
+	
+	if SERVER then
+		--Send request to client to call this same function, just to keep things in sync.
+		net.Start("TTT2ImpostorSabotageLightsScreenFade")
+		net.Send(ply)
 		
-		if SERVER then
-			--Send request to client to call this same function, just to keep things in sync.
-			net.Start("TTT2ImpostorSabotageLightsScreenFade")
-			net.Send(ply)
+		local fade_bright_time = GetConVar("ttt2_impostor_sabo_lights_fade_bright_length"):GetInt()
+		local time_left = GetConVar("ttt2_impostor_sabo_lights_length"):GetInt()
+		if timer.Exists("ImpostorSaboLightsTimer_Server") then
+			time_left = timer.TimeLeft("ImpostorSaboLightsTimer_Server")
 		end
+		
+		--Induce further screen fades, until the sabotage is cleared.
+		if time_left >= 2*total_fade_time + fade_bright_time - IMPO_IOTA then
+			timer.Simple(total_fade_time + fade_bright_time, function()
+				--Peform another check on the timer here in case the sabotage is cleared early.
+				if timer.Exists("ImpostorSaboLightsTimer_Server") then
+					InduceScreenFade(ply)
+				end
+			end)
+		end
+	end
+	
+	if CLIENT and ply:GetSubRole() == ROLE_IMPOSTOR then
+		--Create timer just to keep track of this for UI purposes.
+		--Only create this for impostor because we have enough timers already.
+		--Only edge case missed is when someone becomes an impostor during a dark interval, the HUD will still be bright.
+		timer.Create("ImpostorScreenFade_Client", total_fade_time, 1, function()
+			return
+		end)
 	end
 end
 
@@ -300,29 +332,23 @@ if SERVER then
 	
 	local function SabotageLights()
 		local sabo_lights_mode = GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt()
-		local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetFloat()
+		local sabo_duration = GetConVar("ttt2_impostor_sabo_lights_length"):GetInt()
+		local sabo_cooldown = GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt()
 		
-		local sabo_duration = sabo_lights_len
-		if sabo_lights_mode == SABO_LIGHTS_MODE.SCREEN_FADE then
-			local fade_time = GetConVar("ttt2_impostor_sabo_lights_fade"):GetFloat()
-			sabo_duration = sabo_duration + 2*fade_time
-		else --SABO_LIGHTS_MODE.DISABLE_MAP
+		if sabo_lights_mode == SABO_LIGHTS_MODE.DISABLE_MAP then
 			engine.LightStyle(0, "a")
 		end
-		local sabo_cooldown = GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt()
 		
 		for _, ply in ipairs(player.GetAll()) do
 			SendSabotageResponse(ply, SABO_MODE.LIGHTS, sabo_duration)
 			
-			if CanHaveLightsSabotaged(ply) then
-				if sabo_lights_mode == SABO_LIGHTS_MODE.SCREEN_FADE then
-					InduceScreenFade(ply)
-				else --SABO_LIGHTS_MODE.DISABLE_MAP
-					net.Start("TTT2ImpostorSabotageLightsRedownloadMap")
-					net.Send(ply)
-					--Keep track of who had their map disabled, in case a role changes during sabo.
-					ply.impo_tmp_light_map_disabled = true
-				end
+			if sabo_lights_mode == SABO_LIGHTS_MODE.SCREEN_FADE then
+				InduceScreenFade(ply, ply:GetSubRole() == ROLE_IMPOSTOR)
+			elseif sabo_lights_mode == SABO_LIGHTS_MODE.DISABLE_MAP and CanHaveLightsSabotaged(ply) then
+				net.Start("TTT2ImpostorSabotageLightsRedownloadMap")
+				net.Send(ply)
+				--Keep track of who had their map disabled, in case a role changes during sabo.
+				ply.impo_tmp_light_map_disabled = true
 			end
 		end
 		
@@ -427,8 +453,8 @@ if SERVER then
 		timer.Create("ImpostorSaboReactTimer_Server", sabo_duration, 1, function()
 			if GetRoundState() == ROUND_ACTIVE then
 				if sabo_react_mode == SABO_REACT_MODE.EVERYONE_LOSES then
-					impo_team_win = TEAM_EVERYONE
-				else --TEAM_WIN
+					impo_team_win = TEAM_LOSER
+				else --SABO_REACT_MODE.TEAM_WIN
 					impo_team_win = team
 				end
 				
@@ -442,7 +468,7 @@ if SERVER then
 		local selected_station = net.ReadInt(16)
 		local station_enabled = GetConVar("ttt2_impostor_station_enable"):GetBool()
 		
-		if not IsValid(ply) or not ply:IsPlayer() or not ply:IsTerror() or ply:GetSubRole() ~= ROLE_IMPOSTOR or not SabotageModeIsValid(sabo_mode) or IMPO_SABO_DATA.STRANGE_GAME then
+		if not IsValid(ply) or not ply:IsPlayer() or not ply:IsTerror() or ply:GetSubRole() ~= ROLE_IMPOSTOR or not SabotageModeIsValid(sabo_mode) or GetRoundState() ~= ROUND_ACTIVE or IMPO_SABO_DATA.STRANGE_GAME then
 			return
 		end
 		
@@ -451,6 +477,7 @@ if SERVER then
 		elseif not IMPO_SABO_DATA.ON_COOLDOWN then
 			if station_enabled and GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool() and IMPO_SABO_DATA.StationHasBeenUsed(selected_station) then
 				--Do not sabotage if the Impostor is trying to reuse a station.
+				LANG.Msg(ply, "SABO_CANNOT_REUSE_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 				return
 			end
 			
@@ -517,22 +544,27 @@ if SERVER then
 	end)
 	
 	hook.Add("TTT2CanUseVoiceChat", "ImpostorCanUseVoiceChatForServer", function(speaker, isTeamVoice)
-		if not timer.Exists("ImpostorSaboCommsTimer_Server") or (IsValid(speaker) and not CanHaveCommsSabotaged(speaker)) then
-			return
+		if timer.Exists("ImpostorSaboCommsTimer_Server") and (not isTeamVoice or CanHaveCommsSabotaged(speaker)) and not speaker:IsSpec() then
+			return false
 		end
-		
-		return false
 	end)
 	
-	hook.Add("TTT2CanSeeChat", "ImpostorCanSeeChat", function(reader, sender, teamOnly)
-		if timer.Exists("ImpostorSaboCommsTimer_Server") and IsValid(reader) and CanHaveCommsSabotaged(reader) then
-			LANG.Msg(reader, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+	hook.Add("TTTPlayerRadioCommand", "ImpostorPlayerRadioCommand", function(ply, msg_name, msg_target)
+		if timer.Exists("ImpostorSaboCommsTimer_Server") then
+			return true
+		end
+	end)
+	
+	hook.Add("TTT2AvoidGeneralChat", "ImpostorAvoidGeneralChat", function(sender, text)
+		--Prevents player from sending messages to general chat.
+		if timer.Exists("ImpostorSaboCommsTimer_Server") then
+			LANG.Msg(sender, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			return false
 		end
 	end)
 	
 	hook.Add("TTT2AvoidTeamChat", "ImpostorAvoidTeamChat", function(sender, tm, msg)
-		if timer.Exists("ImpostorSaboCommsTimer_Server") and IsValid(sender) and CanHaveCommsSabotaged(sender) then
+		if timer.Exists("ImpostorSaboCommsTimer_Server") and (tm == TEAM_INNOCENT or tm == TEAM_NONE or (IsValid(sender) and CanHaveCommsSabotaged(sender))) then
 			--Jam everyone but traitors while Sabotage Comms is in effect.
 			LANG.Msg(sender, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			return false
@@ -570,15 +602,11 @@ end
 if CLIENT then
 	--Client consts
 	local NUMBERS_STR_ARR = {"ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "TEN"}
-	local VENT_BUTTON_SIZE = 64
-	local VENT_BUTTON_MIDPOINT = VENT_BUTTON_SIZE / 2
-	local VENT_SELECTED_BUTTON_SIZE = 80
-	local VENT_SELECTED_BUTTON_MIDPOINT = VENT_SELECTED_BUTTON_SIZE / 2
+	local IMPO_BUTTON_SIZE = 64
+	local IMPO_BUTTON_MIDPOINT = IMPO_BUTTON_SIZE / 2
+	local IMPO_SELECTED_BUTTON_SIZE = 80
+	local IMPO_SELECTED_BUTTON_MIDPOINT = IMPO_SELECTED_BUTTON_SIZE / 2
 	local ICON_IN_VENT = Material("vgui/ttt/icon_vent")
-	local STAT_BUTTON_SIZE = 64
-	local STAT_BUTTON_MIDPOINT = STAT_BUTTON_SIZE / 2
-	local STAT_SELECTED_BUTTON_SIZE = 80
-	local STAT_SELECTED_BUTTON_MIDPOINT = STAT_SELECTED_BUTTON_SIZE / 2
 	local ICON_STATION = Material("vgui/ttt/dynamic/roles/icon_impo")
 	
 	local function SelectedSaboModeInRange(ply)
@@ -598,14 +626,18 @@ if CLIENT then
 		client.impo_last_switch_time = nil
 		client.impo_trapper_timer_expired = nil
 		client.impo_sabo_mode = nil
+		client.impo_highlighted_station = nil
 		client.impo_selected_station = nil
 	end)
 	
 	net.Receive("TTT2ImpostorInformEveryone", function()
-		local client = LocalPlayer()
 		local num_impos = net.ReadInt(16)
 		
-		EPOP:AddMessage({text = LANG.GetParamTranslation("INFORM_" .. IMPOSTOR.name, {n = num_impos}), color = IMPOSTOR.color}, "", 6)
+		if num_impos == 1 then
+			EPOP:AddMessage({text = LANG.GetTranslation("INFORM_ONE_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+		else
+			EPOP:AddMessage({text = LANG.GetParamTranslation("INFORM_" .. IMPOSTOR.name, {n = num_impos}), color = IMPOSTOR.color}, "", 6)
+		end
 	end)
 	
 	net.Receive("TTT2ImpostorDefaultSaboMode", function()
@@ -634,6 +666,7 @@ if CLIENT then
 	
 	net.Receive("TTT2ImpostorSabotageLightsScreenFade", function()
 		local client = LocalPlayer()
+		
 		InduceScreenFade(client)
 	end)
 	
@@ -669,6 +702,37 @@ if CLIENT then
 		end
 	end
 	
+	local function DisplaySaboPopUps(sabo_mode)
+		if sabo_mode == SABO_MODE.LIGHTS then
+			if GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt() == SABO_LIGHTS_MODE.SCREEN_FADE then
+				EPOP:AddMessage({text = LANG.GetTranslation("SABO_LIGHTS_INFO_FADE_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+			else --SABO_LIGHTS_MODE.DISABLE_MAP
+				EPOP:AddMessage({text = LANG.GetTranslation("SABO_LIGHTS_INFO_MAP_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+			end
+		elseif sabo_mode == SABO_MODE.COMMS then
+			if GetConVar("ttt2_impostor_sabo_comms_deafen"):GetBool() then
+				EPOP:AddMessage({text = LANG.GetTranslation("SABO_COMMS_INFO_MUTE_AND_DEAF_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+			else
+				EPOP:AddMessage({text = LANG.GetTranslation("SABO_COMMS_INFO_MUTE_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+			end
+		elseif sabo_mode == SABO_MODE.O2 then
+			EPOP:AddMessage({text = LANG.GetTranslation("SABO_O2_INFO_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+		elseif sabo_mode == SABO_MODE.REACT then
+			if GetConVar("ttt2_impostor_sabo_react_win_mode"):GetInt() == SABO_REACT_MODE.EVERYONE_LOSES then
+				EPOP:AddMessage({text = LANG.GetTranslation("SABO_REACT_INFO_LOSE_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+			else --SABO_REACT_MODE.TEAM_WIN
+				EPOP:AddMessage({text = LANG.GetTranslation("SABO_REACT_INFO_TEAM_WIN_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+			end
+		end
+		
+		if GetConVar("ttt2_impostor_station_enable"):GetBool() and IMPO_SABO_DATA.THRESHOLD then
+			--Use simple timer so that this pop up message doesn't overwrite the message above.
+			timer.Simple(6, function()
+				EPOP:AddMessage({text = LANG.GetParamTranslation("SABO_STAT_INFO_" .. IMPOSTOR.name, {n = IMPO_SABO_DATA.THRESHOLD}), color = IMPOSTOR.color}, "", 6)
+			end)
+		end
+	end
+	
 	net.Receive("TTT2ImpostorSendSabotageResponse", function()
 		local sabo_mode = net.ReadInt(16)
 		local sabo_duration = net.ReadInt(16)
@@ -695,16 +759,29 @@ if CLIENT then
 		if sabo_mode == SABO_MODE.REACT then
 			SabotageReactorCountdown(sabo_duration)
 		end
+		
+		if GetConVar("ttt2_impostor_sabo_pop_ups"):GetBool() then
+			DisplaySaboPopUps(sabo_mode)
+		end
 	end)
 	
 	hook.Add("TTT2CanUseVoiceChat", "ImpostorCanUseVoiceChatForClient", function(speaker, isTeamVoice)
-		if not timer.Exists("ImpostorSaboCommsTimer_Client") or (IsValid(speaker) and not CanHaveCommsSabotaged(speaker)) then
-			return
+		--Jam all voice channels except traitor chat and spectator chat
+		if timer.Exists("ImpostorSaboCommsTimer_Client") and (not isTeamVoice or CanHaveCommsSabotaged(speaker)) and not speaker:IsSpec() then
+			LANG.Msg("SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			return false
 		end
-		
-		--Jam everyone but traitors while Sabotage Comms is in effect.
-		LANG.Msg("SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
-		return false
+	end)
+	
+	hook.Add("TTT2ClientRadioCommand", "ImpostorClientRadioCommand", function(cmd)
+		--ttt_radio is a base TTT command that can be used to broadcast quickchat messages to others.
+		--It can be accessed with running the "ttt_radio <option>" console command while looking at someone, or pressing "b" by default.
+		--See https://ttt.badking.net/help/gameplay/ for details.
+		--This should be prevented during Sabotage Comms.
+		if timer.Exists("ImpostorSaboCommsTimer_Client") then
+			LANG.Msg("SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			return true
+		end
 	end)
 	
 	hook.Add("TTTRenderEntityInfo", "ImpostorRenderEntityInfo", function(tData)
@@ -769,7 +846,7 @@ if CLIENT then
 			end
 		end
 	end
-	bind.Register("ImpostorSabotageCycle", CycleSabotageMode, nil, "Impostor", "Cycle Sabotage Mode", KEY_R)
+	bind.Register("ImpostorSabotageCycle", CycleSabotageMode, nil, "Impostor", "Cycle Sabotage Mode", KEY_C)
 	
 	local function SendSabotageRequest()
 		local client = LocalPlayer()
@@ -778,19 +855,35 @@ if CLIENT then
 			return
 		end
 		
-		if not SelectedSaboModeInRange(client) or IMPO_SABO_DATA.STRANGE_GAME then
+		if not SelectedSaboModeInRange(client) or IMPO_SABO_DATA.CurrentSabotageInProgress() ~= SABO_MODE.NONE or IMPO_SABO_DATA.STRANGE_GAME then
 			--All forms of sabotage have been disabled, or the client is confused/ill-informed.
 			return
 		end
 		
-		if client.impo_sabo_mode == SABO_MODE.MNGR and IMPO_SABO_DATA.MaybeGetNewStationSpawnPos(client) == nil and IMPO_SABO_DATA.CurrentSabotageInProgress() == SABO_MODE.NONE then
-			IMPO_SABO_DATA.CycleSelectedSabotageStation()
-		else
-			net.Start("TTT2ImpostorSendSabotageRequest")
-			net.WriteInt(client.impo_sabo_mode, 16)
-			net.WriteInt(client.impo_selected_station, 16)
-			net.SendToServer()
+		if client.impo_sabo_mode == SABO_MODE.MNGR then
+			--If we're not looking at a player, merely cycle the selected station.
+			--Otherwise, head over to the server to see if a new station spawn can be added.
+			local trace = client:GetEyeTrace(MASK_SHOT_HULL)
+			local dist = trace.StartPos:Distance(trace.HitPos)
+			local tgt = trace.Entity
+			if not (IsValid(tgt) and tgt:IsPlayer()) then
+				if IMPO_SABO_DATA.SelectedStationIsValid(client.impo_highlighted_station) then
+					client.impo_selected_station = client.impo_highlighted_station
+					client.impo_highlighted_station = nil
+				else
+					--Display help, because Station Manager is probably unintuitive.
+					LANG.Msg("SABO_MNGR_HELP_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+				end
+				
+				--Return early as we aren't planning to create a new station spawn point.
+				return
+			end
 		end
+		
+		net.Start("TTT2ImpostorSendSabotageRequest")
+		net.WriteInt(client.impo_sabo_mode, 16)
+		net.WriteInt(client.impo_selected_station, 16)
+		net.SendToServer()
 	end
 	bind.Register("ImpostorSendSabotageRequest", SendSabotageRequest, nil, "Impostor", "Sabotage", KEY_V)
 	
@@ -816,24 +909,22 @@ if CLIENT then
 		end
 	end)
 	
-	local function IsSelectingVent(ply, vent, previously_selected)
+	local function CursorIsOverImpoButton(ply, button_scr_pos, previously_selected)
 		local midscreen_x = ScrW() / 2
 		local midscreen_y = ScrH() / 2
-		local vent_pos = vent:GetPos()
-		local vent_scr_pos = vent_pos:ToScreen()
 		
-		if util.IsOffScreen(vent_scr_pos) then
+		if util.IsOffScreen(button_scr_pos) then
 			return false
 		end
 		
-		local dist_from_mid_x = math.abs(vent_scr_pos.x - midscreen_x)
-		local dist_from_mid_y = math.abs(vent_scr_pos.y - midscreen_y)
-		local vent_button_dist_check = VENT_BUTTON_MIDPOINT
+		local dist_from_mid_x = math.abs(button_scr_pos.x - midscreen_x)
+		local dist_from_mid_y = math.abs(button_scr_pos.y - midscreen_y)
+		local button_dist_check = IMPO_BUTTON_MIDPOINT
 		if previously_selected then
-			vent_button_dist_check = VENT_SELECTED_BUTTON_MIDPOINT
+			button_dist_check = IMPO_SELECTED_BUTTON_MIDPOINT
 		end
 		
-		if dist_from_mid_x > vent_button_dist_check or dist_from_mid_y > vent_button_dist_check then
+		if dist_from_mid_x > button_dist_check or dist_from_mid_y > button_dist_check then
 			return false
 		end
 		
@@ -846,8 +937,11 @@ if CLIENT then
 		--If the player was selecting a valid vent on the previous frame then see if they still are
 		local selected_vent_idx = -1
 		if IsValid(client.impo_selected_vent) then
-			selected_vent_idx = client.impo_selected_vent:EntIndex()
-			if not IsSelectingVent(client, client.impo_selected_vent, true) then
+			local vent_pos = client.impo_selected_vent:GetPos() + client.impo_selected_vent:OBBCenter()
+			local vent_scr_pos = vent_pos:ToScreen()
+			if CursorIsOverImpoButton(client, vent_scr_pos, true) then
+				selected_vent_idx = client.impo_selected_vent:EntIndex()
+			else
 				client.impo_selected_vent = nil
 				selected_vent_idx = -1
 			end
@@ -856,8 +950,10 @@ if CLIENT then
 		--See if we are currently selecting any vents
 		if not IsValid(client.impo_selected_vent) then
 			for _, vent in ipairs(IMPO_VENT_DATA.VENT_NETWORK) do
-				--Make sure not to run IsSelectingVent on selected_vent_idx (which we already checked above)
-				if IsValid(vent) and vent:EntIndex() ~= selected_vent_idx and IsSelectingVent(client, vent, false) then
+				--Make sure not to run CursorIsOverImpoButton on selected_vent_idx (which we already checked above)
+				local vent_pos = vent:GetPos() + vent:OBBCenter()
+				local vent_scr_pos = vent_pos:ToScreen()
+				if IsValid(vent) and vent:EntIndex() ~= selected_vent_idx and CursorIsOverImpoButton(client, vent_scr_pos, false) then
 					client.impo_selected_vent = vent
 					selected_vent_idx = client.impo_selected_vent:EntIndex()
 					break
@@ -865,24 +961,24 @@ if CLIENT then
 			end
 		end
 		
-		--Finally, draw all vents, making sure to draw the selected one last (to handle overlaps).
+		--Finally, draw all vents, making sure to draw the selected one last (to handle overlaps)
 		for _, vent in ipairs(IMPO_VENT_DATA.VENT_NETWORK) do
 			if IsValid(vent) and vent:EntIndex() ~= selected_vent_idx and vent:EntIndex() ~= client.impo_in_vent:EntIndex() then
-				local vent_pos = vent:GetPos()
+				local vent_pos = vent:GetPos() + vent:OBBCenter()
 				local vent_scr_pos = vent_pos:ToScreen()
 				
 				if util.IsOffScreen(vent_scr_pos) then
 					continue
 				end
 				
-				draw.FilteredTexture(vent_scr_pos.x - VENT_BUTTON_MIDPOINT, vent_scr_pos.y - VENT_BUTTON_MIDPOINT, VENT_BUTTON_SIZE, VENT_BUTTON_SIZE, ICON_IN_VENT, 200, COLOR_ORANGE)
+				draw.FilteredTexture(vent_scr_pos.x - IMPO_BUTTON_MIDPOINT, vent_scr_pos.y - IMPO_BUTTON_MIDPOINT, IMPO_BUTTON_SIZE, IMPO_BUTTON_SIZE, ICON_IN_VENT, 200, COLOR_ORANGE)
 			end
 		end
 		if IsValid(client.impo_selected_vent) and client.impo_selected_vent:EntIndex() ~= client.impo_in_vent:EntIndex() then
-			local vent_pos = client.impo_selected_vent:GetPos()
+			local vent_pos = client.impo_selected_vent:GetPos() + client.impo_selected_vent:OBBCenter()
 			local vent_scr_pos = vent_pos:ToScreen()
 			
-			draw.FilteredTexture(vent_scr_pos.x - VENT_SELECTED_BUTTON_MIDPOINT, vent_scr_pos.y - VENT_SELECTED_BUTTON_MIDPOINT, VENT_SELECTED_BUTTON_SIZE, VENT_SELECTED_BUTTON_SIZE, ICON_IN_VENT, 200, IMPOSTOR.color)
+			draw.FilteredTexture(vent_scr_pos.x - IMPO_SELECTED_BUTTON_MIDPOINT, vent_scr_pos.y - IMPO_SELECTED_BUTTON_MIDPOINT, IMPO_SELECTED_BUTTON_SIZE, IMPO_SELECTED_BUTTON_SIZE, ICON_IN_VENT, 200, IMPOSTOR.color)
 		end
 	end
 	
@@ -890,32 +986,79 @@ if CLIENT then
 		local client = LocalPlayer()
 		local dissuade_station_reuse = GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool()
 		
+		surface.SetFont("Default")
+		surface.SetTextColor(255, 255, 255)
+		
+		--If the player was highlighting a valid station spawn on the previous frame then see if they still are
+		local highlighted_station = -1
+		if IMPO_SABO_DATA.SelectedStationIsUsable(client.impo_highlighted_station) then
+			local stat_spawn_scr_pos = IMPO_SABO_DATA.STATION_NETWORK[client.impo_highlighted_station].pos:ToScreen()
+			if CursorIsOverImpoButton(client, stat_spawn_scr_pos, true) then
+				highlighted_station = client.impo_highlighted_station
+			else
+				client.impo_highlighted_station = nil
+				highlighted_station = -1
+			end
+		end
+		
+		--See if we are currently highighting any stations
+		if not IMPO_SABO_DATA.SelectedStationIsUsable(client.impo_highlighted_station) then
+			for i, stat_spawn in ipairs(IMPO_SABO_DATA.STATION_NETWORK) do
+				--Make sure not to run CursorIsOverImpoButton on highlighted_station (which we already checked above)
+				if IMPO_SABO_DATA.SelectedStationIsUsable(i) and i ~= client.impo_selected_station then
+					local stat_spawn_scr_pos = IMPO_SABO_DATA.STATION_NETWORK[i].pos:ToScreen()
+					if CursorIsOverImpoButton(client, stat_spawn_scr_pos, false) then
+						client.impo_highlighted_station = i
+						highlighted_station = i
+						break
+					end
+				end
+			end
+		end
+		
+		--Finally, draw all station spawns, making sure to draw the highlighted one last (to handle overlaps)
 		for i, stat_spawn in ipairs(IMPO_SABO_DATA.STATION_NETWORK) do
+			if i ~= client.impo_highlighted_station and i ~= highlighted_station then
+				local stat_spawn_scr_pos = stat_spawn.pos:ToScreen()
+				
+				if util.IsOffScreen(stat_spawn_scr_pos) then
+					continue
+				end
+				
+				local color = COLOR_ORANGE
+				local size = IMPO_BUTTON_SIZE
+				local midpoint = IMPO_BUTTON_MIDPOINT
+				
+				if i == client.impo_selected_station then
+					color = IMPOSTOR.color
+					size = IMPO_SELECTED_BUTTON_SIZE
+					midpoint = IMPO_SELECTED_BUTTON_MIDPOINT
+				end
+				
+				if dissuade_station_reuse and stat_spawn.used then
+					color = COLOR_BLACK
+				end
+				
+				draw.FilteredTexture(stat_spawn_scr_pos.x - midpoint, stat_spawn_scr_pos.y - midpoint, size, size, ICON_STATION, 200, color)
+				
+				local text = math.ceil(client:GetPos():Distance(stat_spawn.pos))
+				local text_width, text_height = surface.GetTextSize(text)
+				surface.SetTextPos(stat_spawn_scr_pos.x - text_width * 0.5, stat_spawn_scr_pos.y - text_height * 0.15)
+				surface.DrawText(text)
+			end
+		end
+		if IMPO_SABO_DATA.SelectedStationIsUsable(client.impo_highlighted_station) then
+			local stat_spawn = IMPO_SABO_DATA.STATION_NETWORK[client.impo_highlighted_station]
 			local stat_spawn_scr_pos = stat_spawn.pos:ToScreen()
-			
-			if util.IsOffScreen(stat_spawn_scr_pos) then
-				continue
-			end
-			
 			local color = COLOR_ORANGE
-			local size = STAT_BUTTON_SIZE
-			local midpoint = STAT_BUTTON_MIDPOINT
-			
-			if i == client.impo_selected_station then
-				color = IMPOSTOR.color
-				size = STAT_SELECTED_BUTTON_SIZE
-				midpoint = STAT_SELECTED_BUTTON_MIDPOINT
-			end
-			
-			if dissuade_station_reuse and stat_spawn.used then
-				color = COLOR_BLACK
-			end
+			local size = IMPO_SELECTED_BUTTON_SIZE
+			local midpoint = IMPO_SELECTED_BUTTON_MIDPOINT
 			
 			draw.FilteredTexture(stat_spawn_scr_pos.x - midpoint, stat_spawn_scr_pos.y - midpoint, size, size, ICON_STATION, 200, color)
 			
 			local text = math.ceil(client:GetPos():Distance(stat_spawn.pos))
 			local text_width, text_height = surface.GetTextSize(text)
-			surface.SetTextPos(stat_spawn_scr_pos.x - size, stat_spawn_scr_pos.y - size)
+			surface.SetTextPos(stat_spawn_scr_pos.x - text_width * 0.5, stat_spawn_scr_pos.y - text_height * 0.15)
 			surface.DrawText(text)
 		end
 	end

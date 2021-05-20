@@ -6,7 +6,7 @@ end
 ENT.Author = "BlackMagicFine"
 ENT.Contact = "https://steamcommunity.com/profiles/76561198025772353/"
 
---BMF TryTranslation is not recognized here!
+--TryTranslation is not recognized here!
 ----Name
 --ENT.PrintName = LANG.TryTranslation("VENT_NAME_" .. IMPOSTOR.name)
 --ENT.Icon = "vgui/ttt/icon_vent"
@@ -47,9 +47,7 @@ function ENT:Initialize()
 	self:CallOnRemove("VentCallOnRemove", function(vent)
 		ent_idx = vent:EntIndex()
 		
-		--BMF
-		print("VentCallOnRemove: Handling destruction of vent with index " .. ent_idx)
-		--BMF
+		--print("IMPO_DEBUG VentCallOnRemove: Handling destruction of vent with index " .. ent_idx)
 		
 		--This vent-to-be-destroyed is occupied. Force all players in it out and kill them!
 		for _, ply in ipairs(player.GetAll()) do

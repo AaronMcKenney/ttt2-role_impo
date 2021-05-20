@@ -1,0 +1,13 @@
+{
+    "title"		:	"[TTT2] Impostor [ROLE]",
+    "type"		:	"ServerContent",
+    "tags"		:	[ "roleplay", "fun" ],
+    "ignore"    : [
+        ".git/*",
+        ".gitignore",
+        "README.md",
+        "ttt2-role_impo.jpg",
+        "ttt2-role_impo.txt",
+        "test_notes.txt"
+    ]
+}

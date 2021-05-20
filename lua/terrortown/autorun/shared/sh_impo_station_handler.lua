@@ -9,7 +9,16 @@ end
 IMPO_SABO_DATA = {}
 IMPO_SABO_DATA.STATION_NETWORK = {}
 IMPO_SABO_DATA.ACTIVE_STAT_ENT = nil
+IMPO_SABO_DATA.THRESHOLD = nil
 IMPO_SABO_DATA.STRANGE_GAME = false
+
+local function IsInSpecDM(ply)
+	if SpecDM and (ply.IsGhost and ply:IsGhost()) then
+		return true
+	end
+	
+	return false
+end
 
 local function SafePosCanBeAdded(new_pos)
 	local min_dist = GetConVar("ttt2_impostor_min_station_dist"):GetInt()
@@ -43,6 +52,15 @@ function IMPO_SABO_DATA.StationHasBeenUsed(selected_station)
 	return true
 end
 
+function IMPO_SABO_DATA.SelectedStationIsUsable(selected_station)
+	local dissuade_station_reuse = GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool()
+	if not IMPO_SABO_DATA.SelectedStationIsValid(selected_station) or (dissuade_station_reuse and IMPO_SABO_DATA.STATION_NETWORK[selected_station].used) then
+		return false
+	end
+	
+	return true
+end
+
 function IMPO_SABO_DATA.MarkStationAsUsed(selected_station)
 	if not IMPO_SABO_DATA.SelectedStationIsValid(selected_station) then
 		return
@@ -67,43 +85,6 @@ function IMPO_SABO_DATA.MarkStationAsUsed(selected_station)
 	end
 end
 
-function IMPO_SABO_DATA.MaybeGetNewStationSpawnPos(ply)
-	--If the player is looking at a valid spawn point, return that position. Otherwise return nil
-	local maybe_spawn_pos = nil
-	
-	if not ply:IsPlayer() or ply:GetSubRole() ~= ROLE_IMPOSTOR or not ply:IsActive() then
-		return maybe_spawn_pos
-	end
-	
-	--Determine if the impostor is looking at a potential station spawn position.
-	--To be a station spawn position, it must be accessible by non-Traitors who can't worm their way into a traitor room,
-	--musn't be too close to existing spawn positions, and must be in a safe location.
-	local trace = ply:GetEyeTrace(MASK_SHOT_HULL)
-	local dist = trace.StartPos:Distance(trace.HitPos)
-	local tgt = trace.Entity
-	if IsValid(tgt) and tgt:IsPlayer() and tgt:GetTeam() ~= TEAM_TRAITOR and not ply:GetSubRoleData().traitorButton and SafePosCanBeAdded(tgt:GetPos()) then
-		if SERVER then
-			if spawn.IsSpawnPointSafe(ply, tgt:GetPos(), false, player.GetAll()) then
-				maybe_spawn_pos = tgt:GetPos()
-			end
-		elseif CLIENT then
-			--Only server can check if the spawn point is safe. Client will just assume that it is, and leave Server to actually check this.
-			maybe_spawn_pos = tgt:GetPos()
-		end
-	end
-	
-	return maybe_spawn_pos
-end
-
-function IMPO_SABO_DATA.SetStrangeGame()
-	IMPO_SABO_DATA.STRANGE_GAME = true
-	
-	if SERVER then
-		net.Start("TTT2ImpostorSetStrangeGame")
-		net.Broadcast()
-	end
-end
-
 if SERVER then
 	IMPO_SABO_DATA.ON_COOLDOWN = false
 	
@@ -117,11 +98,11 @@ if SERVER then
 		IMPO_SABO_DATA.ON_COOLDOWN = false
 		IMPO_SABO_DATA.STRANGE_GAME = false
 		
-		print("BMF ImpostorSaboDataPrepareRoundForServer: All Player Spawn Points")
+		--print("IMPO_DEBUG ImpostorSaboDataPrepareRoundForServer: All Player Spawn Points")
 		for _, ply_spawn_pos in ipairs(all_ply_spawn_pos) do
-			print(ply_spawn_pos) --BMF
+			--print(ply_spawn_pos)
 			if SafePosCanBeAdded(ply_spawn_pos) then
-				print("  Adding spawn point") --BMF
+				--print("  Adding spawn point")
 				local stat_spawn = {}
 				stat_spawn.pos = ply_spawn_pos
 				stat_spawn.used = false
@@ -130,7 +111,7 @@ if SERVER then
 			end
 		end
 		
-		print("BMF ImpostorSaboDataPrepareRoundForServer: Station Network has " .. #IMPO_SABO_DATA.STATION_NETWORK .. " entries.")
+		--print("IMPO_DEBUG ImpostorSaboDataPrepareRoundForServer: Station Network has " .. #IMPO_SABO_DATA.STATION_NETWORK .. " entries.")
 	end)
 	
 	function IMPO_SABO_DATA.CurrentSabotageInProgress()
@@ -154,7 +135,7 @@ if SERVER then
 	end
 	
 	function IMPO_SABO_DATA.PutSabotageOnCooldown(sabo_cooldown)
-		print("BMF PutSabotageOnCooldown")
+		--print("IMPO_DEBUG PutSabotageOnCooldown")
 		--Handle case where admin wants impostor to be overpowered trash.
 		if sabo_cooldown <= 0 then
 			IMPO_SABO_DATA.ON_COOLDOWN = false
@@ -185,14 +166,47 @@ if SERVER then
 		net.Send(ply)
 	end
 	
-	function IMPO_SABO_DATA.BroadcastStationNetwork()
-		if #IMPO_SABO_DATA.STATION_NETWORK > 0 then
-			for _, ply in ipairs(player.GetAll()) do
-				if ply:GetSubRole() == ROLE_IMPOSTOR then
-					IMPO_SABO_DATA.SendStationNetwork(ply)
+	local function IsSpy(ply)
+		if SPY and ply:GetSubRole() == ROLE_SPY then
+			return true
+		else
+			return false
+		end
+	end
+	
+	function IMPO_SABO_DATA.MaybeGetNewStationSpawnPos(ply)
+		--If the player is looking at a valid spawn point, return that position. Otherwise return nil
+		local maybe_spawn_pos = nil
+		
+		if not ply:IsPlayer() or ply:GetSubRole() ~= ROLE_IMPOSTOR or not ply:IsActive() then
+			return maybe_spawn_pos
+		end
+		
+		--Determine if the impostor is looking at a potential station spawn position.
+		--To be a station spawn position, it must be accessible by non-Traitors who can't worm their way into a traitor room,
+		--musn't be too close to existing spawn positions, and must be in a safe location.
+		local trace = ply:GetEyeTrace(MASK_SHOT_HULL)
+		local dist = trace.StartPos:Distance(trace.HitPos)
+		local tgt = trace.Entity
+		if IsValid(tgt) and tgt:IsPlayer() then
+			--Doppel support: Dop!Impostors shouldn't be able to create spawn points from either traitors or their teammates.
+			--Spy support: Treat spies like traitors, as otherwise the station manager would be an easy spy detector.
+			if tgt:GetTeam() ~= TEAM_TRAITOR and ply:GetTeam() ~= tgt:GetTeam() and not IsSpy(tgt) then
+				if SafePosCanBeAdded(tgt:GetPos()) then
+					if spawn.IsSpawnPointSafe(ply, tgt:GetPos(), false, player.GetAll()) then
+						maybe_spawn_pos = tgt:GetPos()
+					else
+						LANG.Msg(ply, "SABO_MNGR_UNSAFE_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+					end
+				else
+					LANG.Msg(ply, "SABO_MNGR_TOO_CLOSE_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 				end
+			else
+				LANG.Msg(ply, "SABO_MNGR_BAD_PLY_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			end
 		end
+		
+		return maybe_spawn_pos
 	end
 	
 	function IMPO_SABO_DATA.MaybeAddNewStationSpawn(ply)
@@ -205,12 +219,21 @@ if SERVER then
 			
 			IMPO_SABO_DATA.STATION_NETWORK[#IMPO_SABO_DATA.STATION_NETWORK + 1] = stat_spawn
 			
-			for _, ply in ipairs(player.GetAll()) do
-				if ply:GetSubRole() == ROLE_IMPOSTOR then
+			for _, ply_i in ipairs(player.GetAll()) do
+				if ply_i:GetSubRole() == ROLE_IMPOSTOR then
+					--Inform all Impostors of the new station
 					net.Start("TTT2ImpostorAddStationToNetwork")
 					net.WriteVector(stat_spawn.pos)
 					net.WriteBool(stat_spawn.used)
-					net.Send(ply)
+					
+					--Force the requesting player to update their selected station spawn to their requested position.
+					--...It's probably what they expect to happen.
+					if ply:SteamID64() == ply_i:SteamID64() then
+						net.WriteBool(true)
+					else
+						net.WriteBool(false)
+					end
+					net.Send(ply_i)
 				end
 			end
 		end
@@ -245,6 +268,64 @@ if SERVER then
 			IMPO_SABO_DATA.ACTIVE_STAT_ENT:Remove()
 		end
 	end
+	
+	function IMPO_SABO_DATA.CreateExplosion(pos, mag)
+		local explosion = ents.Create("env_explosion")
+		explosion:SetPos(pos)
+		explosion:Spawn()
+		--IMagnitude is the amount of damage done by the explosion, as well as the radius.
+		explosion:SetKeyValue("IMagnitude", mag)
+		explosion:Fire("Explode")
+	end
+	
+	function IMPO_SABO_DATA.RecursiveExplosions()
+		timer.Simple(0.3, function()
+			if GetRoundState() == ROUND_POST then
+				local plys = player.GetAll()
+				local victim = plys[math.random(#plys)]
+				
+				if IsValid(victim) then
+					pos = victim:GetPos()
+					pos.x = pos.x + math.random(-300, 300)
+					pos.y = pos.y + math.random(-300, 300)
+					pos.z = pos.z + math.random(-300, 300)
+					IMPO_SABO_DATA.CreateExplosion(pos, 100)
+				end
+				IMPO_SABO_DATA.RecursiveExplosions()
+			end
+		end)
+	end
+end
+
+function IMPO_SABO_DATA.SetStrangeGame()
+	IMPO_SABO_DATA.STRANGE_GAME = true
+	
+	if SERVER then
+		net.Start("TTT2ImpostorSetStrangeGame")
+		net.Broadcast()
+		
+		local dmg_info = DamageInfo()
+		dmg_info:SetDamage(30)
+		dmg_info:SetAttacker(IMPO_SABO_DATA.ACTIVE_STAT_ENT)
+		dmg_info:SetDamageType(DMG_DISSOLVE)
+		
+		for _, ply in ipairs(player.GetAll()) do
+			ply:ScreenFade(SCREENFADE.IN, COLOR_WHITE, 1.0, 0.5)
+			ply:TakeDamageInfo(dmg_info)
+		end
+		
+		--Destroy the station via giant explosion
+		IMPO_SABO_DATA.CreateExplosion(IMPO_SABO_DATA.ACTIVE_STAT_ENT:GetPos(), 500)
+		IMPO_SABO_DATA.DestroyStation()
+		
+		timer.Simple(1.5, function()
+			--Plummet civilization into an unending age of explosions
+			IMPO_SABO_DATA.RecursiveExplosions()
+		end)
+	elseif CLIENT then
+		local client = LocalPlayer()
+		client:ScreenFade(SCREENFADE.IN, COLOR_WHITE, 1.0, 0.5)
+	end
 end
 
 function IMPO_SABO_DATA.ForceEndSabotage()
@@ -271,6 +352,27 @@ function IMPO_SABO_DATA.ForceEndSabotage()
 	IMPO_SABO_DATA.ACTIVE_STAT_ENT = nil
 end
 
+hook.Add("TTTBeginRound", "ImpostorSaboDataBeginRound", function()
+	local ply_count = 0
+	for _, ply in ipairs(player.GetAll()) do
+		if not ply:IsSpec() and not IsInSpecDM(ply) then
+			ply_count = ply_count + 1
+		end
+	end
+	
+	IMPO_SABO_DATA.THRESHOLD = math.ceil(ply_count * GetConVar("ttt2_impostor_stop_station_ply_prop"):GetFloat())
+end)
+
+hook.Add("TTTEndRound", "ImpostorSaboDataEndRound", function()
+	--End any existing sabotages, as they may not end during the end round phase, causing issues in the next round.
+	--Such as lighting being disabled permanently.
+	if SERVER then
+		IMPO_SABO_DATA.DestroyStation()
+	else
+		IMPO_SABO_DATA.ForceEndSabotage()
+	end
+end)
+
 if CLIENT then
 	hook.Add("TTTPrepareRound", "ImpostorSaboDataPrepareRoundForClient", function()
 		IMPO_SABO_DATA.STATION_NETWORK = {}
@@ -281,7 +383,7 @@ if CLIENT then
 	net.Receive("TTT2ImpostorSabotageUpdate", function()
 		local sabo_cooldown = net.ReadInt(16)
 		
-		print("BMF TTT2ImpostorSabotageUpdate: sabo_cooldown=" .. sabo_cooldown)
+		--print("IMPO_DEBUG TTT2ImpostorSabotageUpdate: sabo_cooldown=" .. sabo_cooldown)
 		
 		if sabo_cooldown > 0 then
 			--Create a timer which hopefully will match the server's timer.
@@ -300,9 +402,10 @@ if CLIENT then
 		local client = LocalPlayer()
 		local network_size = net.ReadInt(16)
 		
+		--First clear out the network in case it contains stale data.
 		IMPO_SABO_DATA.STATION_NETWORK = {}
 		
-		print("BMF TTT2ImpostorSendEntireStationNetwork: Reading station network of size " .. network_size)
+		--print("IMPO_DEBUG TTT2ImpostorSendEntireStationNetwork: Reading station network of size " .. network_size)
 		
 		for i = 1, network_size do
 			local stat_spawn = {}
@@ -311,7 +414,7 @@ if CLIENT then
 			
 			IMPO_SABO_DATA.STATION_NETWORK[#IMPO_SABO_DATA.STATION_NETWORK + 1] = stat_spawn
 			
-			print("  stat_spawn[" .. i .. "].pos = <" .. stat_spawn.pos.x .. ", " .. stat_spawn.pos.y .. ", " .. stat_spawn.pos.z .. ">")
+			--print("  stat_spawn[" .. i .. "].pos = <" .. stat_spawn.pos.x .. ", " .. stat_spawn.pos.y .. ", " .. stat_spawn.pos.z .. ">")
 		end
 		
 		--Reset impo_selected_station if needed (Recall that Lua is 1-indexed, not 0-indexed!).
@@ -321,11 +424,20 @@ if CLIENT then
 	end)
 	
 	net.Receive("TTT2ImpostorAddStationToNetwork", function()
+		local client = LocalPlayer()
 		local stat_spawn = {}
 		stat_spawn.pos = net.ReadVector()
 		stat_spawn.used = net.ReadBool()
+		local was_requesting_ply = net.ReadBool()
 		
 		IMPO_SABO_DATA.STATION_NETWORK[#IMPO_SABO_DATA.STATION_NETWORK + 1] = stat_spawn
+		
+		--If the client's selected station is stale (ex. due to only one station spawn being present prior), move to this new one.
+		if was_requesting_ply or (not stat_spawn.used and IMPO_SABO_DATA.STATION_NETWORK[client.impo_selected_station].used) then
+			client.impo_selected_station = #IMPO_SABO_DATA.STATION_NETWORK
+		end
+		
+		LANG.Msg("SABO_MNGR_CREATE_PASS_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 	end)
 	
 	net.Receive("TTT2ImpostorSetStrangeGame", function()
@@ -351,18 +463,16 @@ if CLIENT then
 		local dissuade_station_reuse = GetConVar("ttt2_impostor_dissuade_station_reuse"):GetBool()
 		local station_count = #IMPO_SABO_DATA.STATION_NETWORK
 		
-		--BMF
-		local station_network_str = "[ "
-		for i = 1, #IMPO_SABO_DATA.STATION_NETWORK do
-			if IMPO_SABO_DATA.STATION_NETWORK[i].used then
-				station_network_str = station_network_str .. "true "
-			else
-				station_network_str = station_network_str .. "false "
-			end
-		end
-		station_network_str = station_network_str .. "]"
-		print("BMF CycleSelectedSabotageStation: impo_selected_station = " .. client.impo_selected_station .. ", # stations = " .. #IMPO_SABO_DATA.STATION_NETWORK .. ", station use = " .. station_network_str)
-		--BMF
+		--local station_network_str = "[ "
+		--for i = 1, #IMPO_SABO_DATA.STATION_NETWORK do
+		--	if IMPO_SABO_DATA.STATION_NETWORK[i].used then
+		--		station_network_str = station_network_str .. "true "
+		--	else
+		--		station_network_str = station_network_str .. "false "
+		--	end
+		--end
+		--station_network_str = station_network_str .. "]"
+		--print("IMPO_DEBUG CycleSelectedSabotageStation: impo_selected_station = " .. client.impo_selected_station .. ", # stations = " .. #IMPO_SABO_DATA.STATION_NETWORK .. ", station use = " .. station_network_str)
 		
 		--Safeguard
 		if not IMPO_SABO_DATA.SelectedStationIsValid(client.impo_selected_station) then
@@ -379,7 +489,7 @@ if CLIENT then
 				client.impo_selected_station = client.impo_selected_station + 1
 			end
 			
-			print("  impo_selected_station = " .. client.impo_selected_station)
+			--print("  impo_selected_station = " .. client.impo_selected_station)
 			if not dissuade_station_reuse or not IMPO_SABO_DATA.STATION_NETWORK[client.impo_selected_station].used then
 				break
 			end

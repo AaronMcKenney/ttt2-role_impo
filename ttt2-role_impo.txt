@@ -1,0 +1,223 @@
+[i]I didn't believe a word they said,
+But now that detective is dead.
+So I don't want to make a fuss,
+But you're looking awfully sus.[/i]
+ 
+You have to use [URL=https://steamcommunity.com/sharedfiles/filedetails/?id=1357204556]TTT2[/URL] in order to use this role. Additionally using [URL=https://steamcommunity.com/sharedfiles/filedetails/?id=1362430347]ULX for TTT2[/URL] is recommended. Report bugs concerning this role [URL=https://github.com/AaronMcKenney/ttt2-role_beac]here[/URL] and submit new role ideas [URL=https://github.com/TTT-2/addon-ideas]here[/URL]. A list of all currently available roles can be found [URL=https://steamcommunity.com/sharedfiles/filedetails/?id=1737053146]here[/URL].
+ 
+Discord: [url=https://discord.gg/Npcbb4W]https://discord.gg/Npcbb4W[/url]
+Source: [url=https://github.com/AaronMcKenney/ttt2-role_beac]https://github.com/AaronMcKenney/ttt2-role_impo[/url]
+ 
+ 
+[img]https://i.imgur.com/KeP4fWN.png[/img]
+ 
+The impostor is a traitor subrole who emphasizes 1v1 assassination and team support. They have the following detriments:
+[list]
+    [*] No shop
+    [*] 50% reduced damage
+[/list]
+And the following boons:
+[list]
+    [*] A close range instant kill ability that operates on a 45 second cooldown
+    [*] 3 placeable vents that can be used to create a dynamic teleportation network
+    [*] The ability to create 4 different types of sabotage stations, each producing a global detrimental effect that can be stopped in a king of the hill style minigame
+[/list]
+ 
+[h1]Venting (In-Depth Explanation):[/h1]
+Vents are a weapon that the Impostor starts with. The primary fire button will attempt to place a vent onto a nearby surface that the impostor is directly looking at. If successful, the vent will spawn in an invisible "unrevealed" state, visually discernable to the traitor team by a red outline. Anyone on the traitor team can enter this vent by pressing the use key on it, which effectively removes them from reality. A player residing in "Vent Space" cannot be seen or interacted with, and cannot attack others through conventional means. Other vents that have been placed will show a unique vent button which the player can press to warp between vents. Pressing the use key while not hovering over a vent button will promptly exit the player from Vent Space.
+ 
+When a vent is entered into or exited from, it will become "revealed." Everyone will now be able to spot the vent from afar.
+ 
+The secondary fire button will attempt to take a placed vent back. This only works if the vent in question is unrevealed, meaning that a revealed vent cannot be easily moved.
+ 
+If a vent happens to be destroyed (through a "prop exploder" weapon for example) then everyone in that vent will perish.
+
+The impostor's instant kill cooldown will be paused while they are in Vent Space.
+ 
+The trapper subrole has a unique interaction. They may enter Vent Space, but only for a total alloted time of 30 seconds. If this time is exceeded, they are ejected out and will be unable to utilize the vents again for the remainder of the game. Trappers are informed when someone enters/exits a vent, and traitors are informed when a trapper enters/exits a vent.
+ 
+[h1]Sabotage Stations and You:[/h1]
+The impostor has access to 4 types of sabotages. Each one will create an outlined sabotage station at a particular spot, and produce a global detrimental effect for as long as the station is active. This effect will end naturally after a set amount of time (around a minute or so), but players may desire to end it faster. This can be achieved by entering the red circle that encloses the station. Each player within the circle will cause a rotating red arrow to turn green. When all arrows have been green for 5 seconds, the sabotage will end prematurely. When a sabotage has ended, a cooldown of two minutes will be enacted. Sabotages are global, meaning that only one sabotage can be active at a time, and no sabotages can be enacted during the cooldown period.
+ 
+The number of players needed to end a sabotage is 25% of the total number of players (rounded up). This means that a sabotage becomes harder to stop the less people there are alive.
+ 
+The impostor has a unique HUD that indicates the type of sabotage, time left until the sabotage ends, and time left until the sabotage goes off of cooldown. It can be cycled by pressing the "C" key through 5 modes (the 4 types of sabotages and a manager) which are explained below:
+ 
+Station Manager:
+This mode exists to handle the spawn location of the sabotage station. The initial list of spawn points is taken from the list of player spawn points (which makes it difficult for the impostor to create a sabotage station in an area that innocents have no hope of reaching). The impostor can use the Station Manager to select where the sabotage station will spawn, by using the mapped sabotage key ("V") to click on one of the station spawn icons that will appear with this HUD. The spawn that will be used will have its icon marked red. If the impostor uses the mapped sabotage key on a non-traitorous player, the Station Manager will attempt to create a new station spawn point (this is helpful for maps such as ttt_waterworld, which clusters all of the player spawns in a single area). By default, a station spawn cannot be re-used until all spawns have been exhausted, and its icon will be marked black to indicate this.
+ 
+Sabotage Lights:
+This sabotage will cause non-traitors to experience continuous fade to blacks (think first person horror games that have a "blinking" mechanic). An alternative option can be used by setting ttt2_impostor_sabo_lights_mode to 1, which instead disables map lighting for the duration of the sabotage. Disabling map lighting will generally plunge the map into darkness, but the result is heavily map dependent, as not all props and parts of the map will be affected (and in some cases, the map will not support the mode at all). In either case, this sabotage can be used to get in a quick kill and cause a quick pang of general chaos.
+ 
+Sabotage Comms:
+This sabotage will deafen all non-traitors. The inflicted will be unable to hear anything in-game, and will be denied access to both text and voice chat. For those who use Discord or a similar voice app, please consider instituting a house rule of not speaking while this sabotage is active. This sabotage can be used to assist traitors in preventing their opponents from gathering information.
+ 
+Sabotage O2:
+This sabotage will, after a short 10 second grace period, deal constant damage to everyone, including those on the traitor team. This sabotage will not damage anyone after they have hit 10 HP, meaning that it cannot by itself kill anyone. It can however, deal a maximum of 50 damage if it is allowed to end naturally. A player will not be damaged if they have immunity to drowning. This sabotage is a medium risk to reward ability that can give the traitors the upper hand if handled properly.
+ 
+Sabotage Reactor:
+This sabotage has no global effect. However, if it is not stopped manually, the game will end immediately and EVERYONE WILL LOSE. This sabotage is all but guaranteed to move players to wherever the station is located.
+ 
+[h1]A Final Note[/h1]
+As with all of my roles, everything mentioned above is highly configurable. Anything with a number can be modified, sabotages can be disabled, the entire concept of "stations" can be disabled, and there may be some hidden fun stuff as well. With more than 45 ConVars, the sky is the limit here.
+ 
+[H1]Plays best with:[/H1]
+[list]
+    [*]A normal, old-fashioned Traitor
+    [*][URL=https://steamcommunity.com/sharedfiles/filedetails/?id=2339261523]Doppelganger[/URL]
+    [*][URL=https://steamcommunity.com/sharedfiles/filedetails/?id=2004491494]Trapper[/URL]
+[/list]
+ 
+ 
+[img]https://i.imgur.com/jIBWtbM.png[/img]
+ 
+Convars are variables that are introduced to allow server owners to customize the gameplay without changing the code. There are always a handful of convars automatically created by TTT2, that define the spawn parameters of this role and are found in ULX. Additionally there might be some role specific convars, which have to be set in the server config file.
+ 
+[h1]Normal Role Convars (also found in ULX):[/h1]
+[code]# enable or disable this role
+  ttt_impostor_enabled [0/1] (default: 1)
+# the percentage of players that are spawned as this role
+  ttt_impostor_pct [0.0..1.0] (default: 0.17)
+# the limit of players that spawn as this role each round, this overwrites the percentage
+  ttt_impostor_max [0..n] (default: 1)
+# the probability each round of this role being spawned at all
+  ttt_impostor_random [0..100] (default: 30)
+# the amount of players needed for this role to spawn
+  ttt_impostor_min_players: [0..n] (default: 6)[/code]
+ 
+[h1]Rolespecific Convars:[/h1]
+[code]### GENERAL ###
+# At the beginning of the round, should everyone be told how many impostors are among us?
+  ttt2_impostor_inform_everyone [0/1] (default: 0)
+# How much damage should the impostor be able to do with traditional guns and crowbars?
+  ttt2_impostor_normal_dmg_multi [0.0..n.m] (default: 0.5)
+# Should everyone be informed via pop-ups about how sabotages work every time a sabotage occurs?
+  ttt2_impostor_sabo_pop_ups [0/1] (default: 1)
+  
+### INSTANT KILL ###
+# What is the range on the impostor's instant-kill ability?
+  ttt2_impostor_kill_dist [0..n] (default: 150)
+# What is the cooldown (in seconds) on the impostor's instant-kill ability?
+  ttt2_impostor_kill_cooldown [0..n] (default: 45)
+  
+### VENTING ###
+# How many vents does the impostor start with?
+  ttt2_impostor_num_starting_vents [0..n] (default: 3)
+# How many vents does can the impostor hold?
+  ttt2_impostor_vent_capacity [0..n] (default: 6)
+# What is the maximum number of vents allowed on the map (-1 for unlimited)?
+  ttt2_impostor_global_max_num_vents [-1..n] (default: 9)
+# What is the range on the Impostor's vent placement tool?
+  ttt2_impostor_vent_placement_range [0..n] (default: 100)
+# If set, newly created vents will attempt to use the creator's position as the exit point (as long as the vent is close enough to them).
+    Allows for quick and creative vent placement. Can lead to map abuse (i.e. hiding vents in ridiculous locations).
+  If not set, all created vents (regardless of placement distance) will attempt to set the exit point out and in front automatically.
+    Enforces sane vent placement. However, the user will be forced to place vents on walls near the floor in most scenarios.
+  ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit [0/1] (default: 1)
+# Should vents be invisible upon creation, only being revealed when entered or exited?
+  ttt2_impostor_hide_unused_vents [0/1] (default: 1)
+# Can the secondary fire on the Vent tool be used to take back already placed vents?
+  ttt2_impostor_vent_secondary_fire_mode [0..2] (default: 1)
+  # 0: Impostors cannot take vents back
+  # 1: Impostors can only take unrevealed vents back
+  # 2: Impostors can take any kind of vent back
+# Should all traitor roles be able to use vents that the Impostor(s) have placed?
+  ttt2_impostor_traitor_team_can_use_vents [0/1] (default: 1)
+  
+### SABOTAGE STATION ###
+# Should the Impostor's sabotage abilities create a Sabotage Station entity (If disabled, the sabotage abilities can only end once their duration has been exceeded)?
+  ttt2_impostor_station_enable [0/1] (default: 1)
+# Should the Impostor be able to know where the sabotage station will spawn, be able to switch the spawn location, and add new station spawns?
+  ttt2_impostor_station_manager_enable [0/1] (default: 1)
+# Should Impostors be unable to create sabotage stations in the same place twice (until all available locations have been exhausted)?
+  ttt2_impostor_dissuade_station_reuse [0/1] (default: 0)
+# How far away can sabotage station spawn locations be from each other?
+  ttt2_impostor_min_station_dist [0..n] (default: 1000)
+# What is the radius of the circle that players need to enter in order to disable the current sabotage?
+  ttt2_impostor_station_radius [0..n] (default: 300)
+# What proportion of the players (alive and dead, rounded up) need to enter the sabotage station's radius in order to end the current sabotage (ex. If 0.25, and there are 6 players, then at least 2 need to enter the station's radius)?
+  Note: Both dead and alive players are counted for determining this threshold.
+  ttt2_impostor_stop_station_ply_prop [0.0..n.m] (default: 0.25)
+# How long must enough players be in the sabotage station's radius to end it?
+  ttt2_impostor_station_hold_time [0..n] (default: 5)
+  
+### SABOTAGE LIGHTS ###
+# How long (in seconds) should the lights be sabotaged for (<= 0 to disable ability)?
+  ttt2_impostor_sabo_lights_length [0..n] (default: 55)
+# What is the cooldown (in seconds) on the impostor's Sabotage Lights ability?
+  ttt2_impostor_sabo_lights_cooldown [0..n] (default: 120)
+# What should happen when the lights are sabotaged?
+  ttt2_impostor_sabo_lights_mode [0..1] (default: 0)
+  # 0: A series of Screen fades occur, which blacks out the entire screen. Flashlights will not help you.
+  # 1: Map lighting is temporarily disabled. Flashlights work. Effectiveness depends on map (ex. some props may still be fully lit, and players may be easier to see instead of harder)
+# How long (in seconds) should it take for lights to fade to black upon activating Sabotage Lights under Screen Fade mode (<= 0.0 to disable ability)?
+  Note: Only applicable if ttt2_impostor_sabo_lights_mode is 0 (Screen fade mode)
+  Note: Fade time is nonlinear. HUD's color difference may be off for large fade times..
+  ttt2_impostor_sabo_lights_fade_trans_length [0.0..n.m] (default: 2.0)
+# How long (in seconds) should the victims be in complete darkness under Screen Fade mode (<= 0.0 to disable ability)?
+  Note: Only applicable if ttt2_impostor_sabo_lights_mode is 0 (Screen fade mode)
+  ttt2_impostor_sabo_lights_fade_dark_length [0.0..n.m] (default: 1.0)
+# How long (in seconds) should the victims be in complete darkness under Screen Fade mode (<= 0.0 to disable ability)?
+  Note: Only applicable if ttt2_impostor_sabo_lights_mode is 0 (Screen fade mode)
+  ttt2_impostor_sabo_lights_fade_dark_length [0.0..n.m] (default: 1.0)
+# Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage Lights?
+  ttt2_impostor_traitor_team_is_affected_by_sabo_lights [0/1] (default: 0)
+  
+### SABOTAGE COMMS ###
+# Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage Lights?
+  ttt2_impostor_traitor_team_is_affected_by_sabo_lights [0/1] (default: 0)
+# What is the cooldown (in seconds) on the impostor's Sabotage Comms ability?
+  ttt2_impostor_sabo_comms_cooldown [0..n] (default: 120)
+# During Sabotage Comms, should the affected be deafened in addition to having text/voice chat disabled?
+  ttt2_impostor_sabo_comms_deafen [0/1] (default: 1)
+# Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage Comms?
+  ttt2_impostor_traitor_team_is_affected_by_sabo_comms [0/1] (default: 0)
+  
+### SABOTAGE O2 ###
+# How long (in seconds) should O2 be sabotaged for (<= 0 to disable ability)?
+  ttt2_impostor_sabo_o2_length [0..n] (default: 60)
+# What is the cooldown (in seconds) on an Impostor's Sabotage O2 ability?
+  ttt2_impostor_sabo_o2_cooldown [0..n] (default: 120)
+# For Sabotage O2, How much HP per second should be lost?
+  ttt2_impostor_sabo_o2_hp_loss [1..n] (default: 1)
+# For Sabotage O2, How many seconds should occur between HP deductions?
+  ttt2_impostor_sabo_o2_interval [1..n] (default: 1)
+# How many seconds until Sabotage O2 starts incurring hp loss?
+  ttt2_impostor_sabo_o2_grace_period [0..n] (default: 10)
+# At what HP threshold should Sabotage O2 stop damaging a given player?
+  ttt2_impostor_sabo_o2_stop_thresh [0..n] (default: 10)
+# Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage O2?
+  ttt2_impostor_traitor_team_is_affected_by_sabo_o2 [0/1] (default: 1)
+# Should impostors be affected by their own Sabotage O2?
+  ttt2_impostor_is_affected_by_sabo_o2 [0/1] (default: 1)
+  
+### SABOTAGE REACTOR ###
+# What is the timelimit on the Sabotage Reactor ability (<= 0 to disable ability)?
+  ttt2_impostor_sabo_react_length [0..n] (default: 90)
+# What is the cooldown (in seconds) on an Impostor's Sabotage Reactor ability?
+  ttt2_impostor_sabo_react_cooldown [0..n] (default: 120)
+# What should happen when the reactor is sabotaged and it is not stopped in time?
+  ttt2_impostor_sabo_react_win_mode [0..1] (default: 0)
+  # 0: EVERYONE LOSES. Everyone! Including the Impostor and their team!!!
+  # 1: The Impostor's team wins (ex. If a Doppelganger steals the Impostor's role, they can win from this)
+  
+### SPECIAL ROLE HANDLING ###
+# Should traitors be informed when a player who doesn't have a Traitor subrole enters and exits a vent?
+  ttt2_impostor_inform_about_non_traitors_venting [0/1] (default: 1)
+# Can the Trapper use the vents, and if so, for how long (Disabled if 0)?
+  ttt2_impostor_trapper_venting_time [0..n] (default: 30)
+# Should trappers be informed when anyone enters and exits a vent?
+  ttt2_impostor_inform_trappers_about_venting [0/1] (default: 1)
+# Should jesters be able to use vents?
+  ttt2_impostor_jesters_can_vent [0/1] (default: 0)
+# Should Doppelgangers that have stolen a Traitor role be treated like Traitors for the Impostor's abilities (ex. have access to vents and sabotage lights/comms immunity by default)?
+  ttt2_impostor_dopt_special_handling [0/1] (default: 1)[/code]
+ 
+--
+[h1]Credits:[/h1]
+[URL=https://steamcommunity.com/profiles/76561198025772353/]BlackMagicFine[/URL]: creator of this role addon
+[URL=https://steamcommunity.com/id/SmugglesTheButt/]Smuggles[/URL]: designer of the role, vent, wrench, Beacon speaker (on and off), cloud, and smoke stacks icons
+[URL=https://steamcommunity.com/id/Zzzaaaccc13/]Wasted[/URL]: designer of the Blight icon, which is used for sabotage reactor here
+[URL=https://steamcommunity.com/id/mineotopia]Mineotopia[/URL]: designer of the role thumbnail
+[URL=https://steamcommunity.com/profiles/76561198037564834]Veldrim[/URL]: heavily assisted with testing
+[URL=https://store.steampowered.com/app/945360/Among_Us/]Among Us by Innersloth[/URL]: The original work that inspired this role.
