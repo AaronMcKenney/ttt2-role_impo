@@ -466,7 +466,7 @@ if SERVER then
 	net.Receive("TTT2ImpostorSendSabotageRequest", function(len, ply)
 		local sabo_mode = net.ReadInt(16)
 		local selected_station = net.ReadInt(16)
-		local station_enabled = GetConVar("ttt2_impostor_station_enable"):GetBool()
+		local station_enabled = GetConVar("ttt2_impostor_station_enable"):GetBool() and IMPO_SABO_DATA.THRESHOLD ~= nil and IMPO_SABO_DATA.THRESHOLD > 0
 		
 		if not IsValid(ply) or not ply:IsPlayer() or not ply:IsTerror() or ply:GetSubRole() ~= ROLE_IMPOSTOR or not SabotageModeIsValid(sabo_mode) or GetRoundState() ~= ROUND_ACTIVE or IMPO_SABO_DATA.STRANGE_GAME then
 			return
@@ -725,7 +725,7 @@ if CLIENT then
 			end
 		end
 		
-		if GetConVar("ttt2_impostor_station_enable"):GetBool() and IMPO_SABO_DATA.THRESHOLD then
+		if GetConVar("ttt2_impostor_station_enable"):GetBool() and IMPO_SABO_DATA.THRESHOLD ~= nil and IMPO_SABO_DATA.THRESHOLD > 0 then
 			--Use simple timer so that this pop up message doesn't overwrite the message above.
 			timer.Simple(6, function()
 				EPOP:AddMessage({text = LANG.GetParamTranslation("SABO_STAT_INFO_" .. IMPOSTOR.name, {n = IMPO_SABO_DATA.THRESHOLD}), color = IMPOSTOR.color}, "", 6)
