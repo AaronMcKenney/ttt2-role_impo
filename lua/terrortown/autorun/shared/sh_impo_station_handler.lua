@@ -378,6 +378,7 @@ if CLIENT then
 	hook.Add("TTTPrepareRound", "ImpostorSaboDataPrepareRoundForClient", function()
 		IMPO_SABO_DATA.STATION_NETWORK = {}
 		IMPO_SABO_DATA.ACTIVE_STAT_ENT = nil
+		IMPO_SABO_DATA.THRESHOLD = 0
 		IMPO_SABO_DATA.STRANGE_GAME = false
 	end)
 	
