@@ -901,10 +901,10 @@ if CLIENT then
 			
 			--Use timer to prevent cases where key presses are registered multiple times on accident
 			--Not quite sure if this is a bug in GMod, my testing server, or my keyboard...
-			local cur_time = CurTime()
-			if client.impo_last_move_time == nil or cur_time > client.impo_last_move_time + IMPO_IOTA then
-				IMPO_VENT_DATA.MovePlayerFromVentTo(client, ent_idx)
-				client.impo_last_move_time = cur_time
+			if client.impo_last_move_time == nil or CurTime() > client.impo_last_move_time + IMPO_IOTA then
+				--Request a vent move to force the server to update the vent status first. The server will then tell the client to do the same.
+				--A bit convoluted, but adds another check to make sure that the client acts inline with the server's perceived reality.
+				IMPO_VENT_DATA.RequestVentMove(ent_idx)
 			end
 		end
 	end)

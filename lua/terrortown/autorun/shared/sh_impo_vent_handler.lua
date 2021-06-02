@@ -321,11 +321,21 @@ function IMPO_VENT_DATA.ExitVent(ply)
 			ply:SelectWeapon(ply.impo_in_vent_prev_wep)
 			ply.impo_in_vent_prev_wep = nil
 		end
+	else --CLIENT
+		client.impo_last_move_time = CurTime()
 	end
 end
 
 function IMPO_VENT_DATA.MovePlayerFromVentTo(ply, ent_idx)
 	if not IsValid(ply.impo_in_vent) then
+		--print("IMPO_DEBUG MovePlayerFromVentTo: Trying to move from an invalid vent! ent_idx=" .. tostring(ent_idx))
+		
+		if SERVER then
+			--Safety check: if the server receives a request from the client to move from a vent that does not exist,
+			--assume that the client believes that they are in a vent when they shouldn't be and force them out.
+			IMPO_VENT_DATA.ForceExitFromVent(ply)
+		end
+		
 		return
 	end
 	
@@ -335,25 +345,26 @@ function IMPO_VENT_DATA.MovePlayerFromVentTo(ply, ent_idx)
 	
 	if IsValid(new_vent) then
 		IMPO_VENT_DATA.MovePlayerToVent(ply, new_vent)
+		
+		if CLIENT then
+			--Separate from the MovePlayerToVent call as EnterVent also calls that function, and also sets impo_last_move_time later on.
+			client.impo_last_move_time = CurTime()
+		end
 	else
 		IMPO_VENT_DATA.ExitVent(ply)
 	end
 	
-	if CLIENT then
+	if SERVER then
 		--Send request to server to call this function
 		net.Start("TTT2ImpostorMoveFromVentUpdate")
 		net.WriteInt(ent_idx, 16)
-		net.SendToServer()
+		net.Send(ply)
 	end
 end
 
 function IMPO_VENT_DATA.ForceExitFromVent(ply)
 	--Unlike MovePlayerFromVentTo, which is called by the client to request a change in vent status,
 	--this function is used in the Server to force the player out.
-	if not IsValid(ply.impo_in_vent) then
-		return
-	end
-	
 	IMPO_VENT_DATA.ExitVent(ply)
 	
 	if SERVER then
@@ -394,9 +405,9 @@ end
 
 if SERVER then
 	net.Receive("TTT2ImpostorMoveFromVentUpdate", function(len, ply)
-			local ent_idx = net.ReadInt(16)
-			
-			IMPO_VENT_DATA.MovePlayerFromVentTo(ply, ent_idx)
+		local ent_idx = net.ReadInt(16)
+		
+		IMPO_VENT_DATA.MovePlayerFromVentTo(ply, ent_idx)
 	end)
 
 	hook.Add("PlayerSwitchWeapon", "ImpostorVentDataPlayerSwitchWeapon", function(ply, old, new)
@@ -429,6 +440,13 @@ if CLIENT then
 		IMPO_VENT_DATA.EnterVent(client, new_vent)
 	end)
 	
+	net.Receive("TTT2ImpostorMoveFromVentUpdate", function()
+		local client = LocalPlayer()
+		local ent_idx = net.ReadInt(16)
+		
+		IMPO_VENT_DATA.MovePlayerFromVentTo(client, ent_idx)
+	end)
+	
 	net.Receive("TTT2ImpostorForceExitFromVentUpdate", function()
 		local client = LocalPlayer()
 		
@@ -452,4 +470,10 @@ if CLIENT then
 			outline.Add(IMPO_VENT_DATA.VENT_NETWORK, IMPOSTOR.color, OUTLINE_MODE_BOTH)
 		end
 	end)
+	
+	function IMPO_VENT_DATA.RequestVentMove(ent_idx)
+		net.Start("TTT2ImpostorMoveFromVentUpdate")
+		net.WriteInt(ent_idx, 16)
+		net.SendToServer()
+	end
 end
