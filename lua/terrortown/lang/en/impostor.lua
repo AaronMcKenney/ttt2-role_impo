@@ -26,7 +26,7 @@ Impostors treat these vents as a teleportation network.
 
 NOTE: By default, vents are invisible to non-traitors until they are first entered or exited.]]
 L["VENT_PRIMARY_DESC_" .. IMPOSTOR.name] = "Primary attack to deploy."
-L["VENT_CANNOT_PLACE_" .. IMPOSTOR.name] = "Unable to place vent."
+L["VENT_CANNOT_PLACE_" .. IMPOSTOR.name] = "Unable to place vent (Must be very close to flat surface)."
 L["VENT_MAX_HIT_" .. IMPOSTOR.name] = "Maximum number of vents have been placed."
 L["VENT_FULL_" .. IMPOSTOR.name] = "You can't hold any more vents."
 L["VENT_CANNOT_TAKE_" .. IMPOSTOR.name] = "Unable to take vent."
