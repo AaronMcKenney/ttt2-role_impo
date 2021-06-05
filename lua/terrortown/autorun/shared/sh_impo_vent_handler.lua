@@ -322,7 +322,7 @@ function IMPO_VENT_DATA.ExitVent(ply)
 			ply.impo_in_vent_prev_wep = nil
 		end
 	else --CLIENT
-		client.impo_last_move_time = CurTime()
+		ply.impo_last_move_time = CurTime()
 	end
 end
 
@@ -348,7 +348,7 @@ function IMPO_VENT_DATA.MovePlayerFromVentTo(ply, ent_idx)
 		
 		if CLIENT then
 			--Separate from the MovePlayerToVent call as EnterVent also calls that function, and also sets impo_last_move_time later on.
-			client.impo_last_move_time = CurTime()
+			ply.impo_last_move_time = CurTime()
 		end
 	else
 		IMPO_VENT_DATA.ExitVent(ply)
