@@ -81,8 +81,8 @@ local function CanKillTarget(impo, tgt, dist)
 	
 	--Handle friendly fire and disguised roles
 	local can_kill_target = impo:GetTeam() ~= tgt:GetTeam()
-	if SPY and tgt:GetSubRole() == ROLE_SPY then
-		--Edge case: Prevent the Spy from being instant killable to prevent the traitors from having an easy solution.
+	if SPY and tgt:GetSubRole() == ROLE_SPY and impo:GetTeam() == TEAM_TRAITOR then
+		--Edge case: Prevent the Spy from being instant killable by regular impostors, as instant kills can be used for easy identification.
 		can_kill_target = false
 	end
 	
