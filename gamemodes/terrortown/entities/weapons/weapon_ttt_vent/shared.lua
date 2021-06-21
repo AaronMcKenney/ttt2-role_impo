@@ -57,6 +57,7 @@ SWEP.AmmoEnt = "none"
 --a role is in this table, those players can buy this.
 --nil means no one can buy this.
 SWEP.CanBuy = nil
+SWEP.notBuyable = true
 
 -- If LimitedStock is true, you can only buy one per round.
 SWEP.LimitedStock = true
