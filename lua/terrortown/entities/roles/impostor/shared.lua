@@ -17,9 +17,11 @@ function ROLE:PreInitialize()
 	self.abbr = "impo" -- abbreviation
 	
 	--Score vars
-	self.surviveBonus = 0.5 -- bonus multiplier for every survive while another player was killed
-	self.scoreKillsMultiplier = 5 -- multiplier for kill of player of another team
-	self.scoreTeamKillsMultiplier = -16 -- multiplier for teamkill
+	self.score.surviveBonusMultiplier = 0.5
+	self.score.timelimitMultiplier = -0.5
+	self.score.killsMultiplier = 2
+	self.score.teamKillsMultiplier = -16
+	self.score.bodyFoundMuliplier = 0
 	
 	--Prevent the Impostor from gaining credits normally.
 	self.preventFindCredits = true
@@ -315,6 +317,8 @@ if SERVER then
 		--If the impostor is able to, instantly kill the target and reset the cooldown.
 		if CanKillTarget(ply, tgt, dist) then
 			tgt:Kill()
+			events.Trigger(EVENT_IMPO_INSTA_KILL, ply, tgt)
+			
 			--Create a timer which will aid in preventing the Impostor from searching the corpse that they just made.
 			timer.Create("ImpostorJustKilled_Server_" .. ply:SteamID64(), IMPO_IOTA*2, 1, function()
 				return
