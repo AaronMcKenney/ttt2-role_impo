@@ -316,8 +316,14 @@ if SERVER then
 		
 		--If the impostor is able to, instantly kill the target and reset the cooldown.
 		if CanKillTarget(ply, tgt, dist) then
-			tgt:Kill()
 			events.Trigger(EVENT_IMPO_INSTA_KILL, ply, tgt)
+			--Make the target take an arbitrary amount of damage which will hopefully kill them
+			--While "tgt:Kill()" would be more effective, it messes with karma and scoring since the kill is registered as a suicide.
+			local dmg_info = DamageInfo()
+			dmg_info:SetDamage(999999)
+			dmg_info:SetAttacker(ply)
+			dmg_info:SetDamageType(DMG_GENERIC)
+			tgt:TakeDamageInfo(dmg_info)
 			
 			--Create a timer which will aid in preventing the Impostor from searching the corpse that they just made.
 			timer.Create("ImpostorJustKilled_Server_" .. ply:SteamID64(), IMPO_IOTA*2, 1, function()

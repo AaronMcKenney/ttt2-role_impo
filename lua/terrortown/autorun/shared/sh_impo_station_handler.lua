@@ -308,7 +308,7 @@ function IMPO_SABO_DATA.SetStrangeGame()
 		local dmg_info = DamageInfo()
 		dmg_info:SetDamage(30)
 		dmg_info:SetAttacker(IMPO_SABO_DATA.ACTIVE_STAT_ENT)
-		dmg_info:SetDamageType(DMG_DISSOLVE)
+		dmg_info:SetDamageType(DMG_RADIATION)
 		
 		for _, ply in ipairs(player.GetAll()) do
 			ply:ScreenFade(SCREENFADE.IN, COLOR_WHITE, 1.0, 0.5)

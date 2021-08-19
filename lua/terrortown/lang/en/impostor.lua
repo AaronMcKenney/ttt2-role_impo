@@ -88,6 +88,6 @@ L["ev_win_losers"] = "EVERYONE LOSES"
 -- EVENT STRINGS
 -- Need to be very specifically worded, due to how the system translates them.
 L["title_event_impo_insta_kill"] = "An Impostor instantly killed someone"
-L["desc_event_impo_insta_kill"] = "{name1} instantly killed {name2} (who did not die of suicide)"
+L["desc_event_impo_insta_kill"] = "{name1} instantly killed {name2}"
 L["tooltip_impo_insta_kill_score"] = "Instantly killed players: {score}"
 L["impo_insta_kill_score"] = "Instantly killed players:"

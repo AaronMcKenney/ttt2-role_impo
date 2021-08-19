@@ -26,29 +26,22 @@ if SERVER then
 	function EVENT:Trigger(impo, victim)
 		self:AddAffectedPlayers(
 			{impo:SteamID64(), victim:SteamID64()},
-			{impo:Nick(), impo:SteamID64()}
+			{impo:GetName(), victim:GetName()}
 		)
 		
 		return self:Add({
 			serialname = self.event.title,
 			impo_name = impo:GetName(),
 			impo_id = impo:SteamID64(),
-			victim_name = victim:GetName(),
-			same_team = (impo:GetTeam() == victim:GetTeam())
+			victim_name = victim:GetName()
 		})
 	end
 	
 	--Scores taken from default Traitor kills.
 	function EVENT:CalculateScore()
-		if not self.event.same_team then
-			self:SetPlayerScore(self.event.impo_id, {
-				score = 2
-			})
-		else
-			self:SetPlayerScore(self.event.impo_id, {
-				score = -16
-			})
-		end
+		self:SetPlayerScore(self.event.impo_id, {
+			score = 1
+		})
 	end
 	
 	function EVENT:Serialize()
