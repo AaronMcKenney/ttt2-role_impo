@@ -37,7 +37,6 @@ if SERVER then
 		})
 	end
 	
-	--Scores taken from default Traitor kills.
 	function EVENT:CalculateScore()
 		self:SetPlayerScore(self.event.impo_id, {
 			score = 1

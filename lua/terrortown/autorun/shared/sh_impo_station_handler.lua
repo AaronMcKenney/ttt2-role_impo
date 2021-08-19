@@ -98,6 +98,8 @@ if SERVER then
 		IMPO_SABO_DATA.THRESHOLD = 0
 		IMPO_SABO_DATA.ON_COOLDOWN = false
 		IMPO_SABO_DATA.STRANGE_GAME = false
+		IMPO_SABO_DATA.FORCE_END_OCCURRED = nil
+		IMPO_SABO_DATA.SABOTAGER = nil
 		
 		--print("IMPO_DEBUG ImpostorSaboDataPrepareRoundForServer: All Player Spawn Points")
 		for _, ply_spawn_pos in ipairs(all_ply_spawn_pos) do
@@ -339,6 +341,11 @@ function IMPO_SABO_DATA.ForceEndSabotage()
 			--Put the sabotage on cooldown here since the usual method (the timer) can't be used without ending the game.
 			IMPO_SABO_DATA.DestroyStation()
 			IMPO_SABO_DATA.PutSabotageOnCooldown(GetConVar("ttt2_impostor_sabo_react_cooldown"):GetInt())
+			
+			--Event handling
+			events.Trigger(EVENT_IMPO_SABO_SUCCESS, IMPO_SABO_DATA.SABOTAGER, SABO_MODE.REACT)
+			IMPO_SABO_DATA.FORCE_END_OCCURRED = nil
+			IMPO_SABO_DATA.SABOTAGER = nil
 		end
 	elseif CLIENT then
 		timer.Adjust("ImpostorSaboLightsTimer_Client", 0, nil, nil)

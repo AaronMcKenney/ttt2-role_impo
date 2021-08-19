@@ -340,6 +340,17 @@ if SERVER then
 		net.Send(ply)
 	end
 	
+	local function HandleEventsForSabotageEnd(sabo_mode)
+		if IMPO_SABO_DATA.FORCE_END_OCCURRED then
+			events.Trigger(EVENT_IMPO_SABO_SUCCESS, IMPO_SABO_DATA.SABOTAGER, sabo_mode)
+		else
+			events.Trigger(EVENT_IMPO_SABO_TIMEOUT, IMPO_SABO_DATA.SABOTAGER, sabo_mode)
+		end
+		
+		IMPO_SABO_DATA.FORCE_END_OCCURRED = nil
+		IMPO_SABO_DATA.SABOTAGER = nil
+	end
+	
 	local function SabotageLights()
 		local sabo_lights_mode = GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt()
 		local sabo_duration = GetConVar("ttt2_impostor_sabo_lights_length"):GetInt()
@@ -376,6 +387,8 @@ if SERVER then
 					end
 				end
 			end
+			
+			HandleEventsForSabotageEnd(SABO_MODE.LIGHTS)
 		end)
 	end
 	
@@ -403,6 +416,8 @@ if SERVER then
 			hook.Remove("Think", "ImpostorSaboComms_Deafen")
 			IMPO_SABO_DATA.DestroyStation()
 			IMPO_SABO_DATA.PutSabotageOnCooldown(sabo_cooldown)
+			
+			HandleEventsForSabotageEnd(SABO_MODE.COMMS)
 		end)
 	end
 	
@@ -440,6 +455,8 @@ if SERVER then
 		timer.Create("ImpostorSaboO2Timer_Server", sabo_duration, 1, function()
 			IMPO_SABO_DATA.DestroyStation()
 			IMPO_SABO_DATA.PutSabotageOnCooldown(sabo_cooldown)
+			
+			HandleEventsForSabotageEnd(SABO_MODE.O2)
 		end)
 		
 		SabotageO2_DamageOverTime(sabo_duration, sabo_duration, GetConVar("ttt2_impostor_sabo_o2_grace_period"):GetInt(), GetConVar("ttt2_impostor_sabo_o2_interval"):GetInt(), GetConVar("ttt2_impostor_sabo_o2_hp_loss"):GetInt(), GetConVar("ttt2_impostor_sabo_o2_stop_thresh"):GetInt())
@@ -462,6 +479,10 @@ if SERVER then
 		
 		timer.Create("ImpostorSaboReactTimer_Server", sabo_duration, 1, function()
 			if GetRoundState() == ROUND_ACTIVE then
+				events.Trigger(EVENT_IMPO_SABO_REACT_END, IMPO_SABO_DATA.SABOTAGER)
+				IMPO_SABO_DATA.FORCE_END_OCCURRED = nil
+				IMPO_SABO_DATA.SABOTAGER = nil
+				
 				if sabo_react_mode == SABO_REACT_MODE.EVERYONE_LOSES then
 					impo_team_win = TEAM_LOSER
 				else --SABO_REACT_MODE.TEAM_WIN
@@ -500,6 +521,9 @@ if SERVER then
 			--Prevent button spamming tricks by immediately disabling sabo.
 			IMPO_SABO_DATA.ON_COOLDOWN = true
 			
+			--Save player info for Event handling.
+			IMPO_SABO_DATA.SABOTAGER = ply
+			
 			if sabo_mode == SABO_MODE.LIGHTS then
 				SabotageLights()
 			elseif sabo_mode == SABO_MODE.COMMS then
@@ -509,6 +533,8 @@ if SERVER then
 			elseif sabo_mode == SABO_MODE.REACT then
 				SabotageReactor(ply:GetTeam())
 			end
+			
+			events.Trigger(EVENT_IMPO_SABO_START, ply, sabo_mode)
 		end
 	end)
 	

@@ -83,6 +83,7 @@ function ENT:Think()
 			timer.Create("ImpostorSaboStationEndProtocolInProgress", hold_time, 1, function()
 				self.removal_in_progress = true
 				if SERVER then
+					IMPO_SABO_DATA.FORCE_END_OCCURRED = true
 					IMPO_SABO_DATA.DestroyStation()
 				end
 			end)
