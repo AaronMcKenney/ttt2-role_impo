@@ -319,11 +319,17 @@ if SERVER then
 			events.Trigger(EVENT_IMPO_INSTA_KILL, ply, tgt)
 			--Make the target take an arbitrary amount of damage which will hopefully kill them
 			--While "tgt:Kill()" would be more effective, it messes with karma and scoring since the kill is registered as a suicide.
+			--Kill() is a part of GMod internal code, and not available on GitHub. I've been unable to simulate/emulate it.
 			local dmg_info = DamageInfo()
 			dmg_info:SetDamage(999999)
 			dmg_info:SetAttacker(ply)
 			dmg_info:SetDamageType(DMG_GENERIC)
 			tgt:TakeDamageInfo(dmg_info)
+			
+			--This could be done instead of TakeDamageInfo, but the slain are set as "spectators" instead of "missing in action". Perhaps Kill() command is doing something in addition to these commands?
+			--hook.Run("DoPlayerDeath", tgt, ply, dmg_info)
+			--hook.Run("PlayerDeath", tgt, ply, ply)
+			--hook.Run("PostPlayerDeath", tgt)
 			
 			--Create a timer which will aid in preventing the Impostor from searching the corpse that they just made.
 			timer.Create("ImpostorJustKilled_Server_" .. ply:SteamID64(), IMPO_IOTA*2, 1, function()
