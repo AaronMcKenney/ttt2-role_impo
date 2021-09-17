@@ -849,7 +849,7 @@ if CLIENT then
 	
 	local function SendInstantKillRequest()
 		local client = LocalPlayer()
-		if IsInSpecDM(client) then
+		if client:GetSubRole() ~= ROLE_IMPOSTOR or not client:Alive() or IsInSpecDM(client) then
 			return
 		end
 		
@@ -861,7 +861,7 @@ if CLIENT then
 	local function CycleSabotageMode()
 		local client = LocalPlayer()
 		
-		if IsInSpecDM(client) then
+		if GetRoundState() ~= ROUND_ACTIVE or client:GetSubRole() ~= ROLE_IMPOSTOR or not client:Alive() or IsInSpecDM(client) then
 			return
 		end
 		
@@ -893,7 +893,7 @@ if CLIENT then
 	local function SendSabotageRequest()
 		local client = LocalPlayer()
 		
-		if IsInSpecDM(client) then
+		if GetRoundState() ~= ROUND_ACTIVE or client:GetSubRole() ~= ROLE_IMPOSTOR or not client:Alive() or IsInSpecDM(client) then
 			return
 		end
 		

@@ -164,8 +164,8 @@ Convars are variables that are introduced to allow server owners to customize th
   ttt2_impostor_traitor_team_is_affected_by_sabo_lights [0/1] (default: 0)
   
 ### SABOTAGE COMMS ###
-# Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage Lights?
-  ttt2_impostor_traitor_team_is_affected_by_sabo_lights [0/1] (default: 0)
+# How long (in seconds) should the comms be sabotaged for (<= 0 to disable ability)?
+  ttt2_impostor_sabo_comms_length [0..n] (default: 60)
 # What is the cooldown (in seconds) on the impostor's Sabotage Comms ability?
   ttt2_impostor_sabo_comms_cooldown [0..n] (default: 120)
 # During Sabotage Comms, should the affected be deafened in addition to having text/voice chat disabled?
