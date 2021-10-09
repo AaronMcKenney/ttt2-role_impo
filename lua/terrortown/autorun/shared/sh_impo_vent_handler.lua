@@ -83,21 +83,21 @@ local function JesterCanVent(ply)
 	return false
 end
 
-local function HandleSpecialRoleVenting(ply, is_entering_vent)
+local function HandleSpecialRoleVenting(ply, is_entering_vent, was_role)
 	local role_has_special_handling = false
 	local role_str = ""
 	local total_time_allowed = 0
 	local treat_like_traitor = false
-	if TrapperCanVent(ply) then
+	if TrapperCanVent(ply) or was_role == ROLE_TRAPPER then
 		role_has_special_handling = true
 		role_str = "Trapper"
 		total_time_allowed = GetConVar("ttt2_impostor_trapper_venting_time"):GetInt()
-	elseif DopTraitorCanVent(ply) then
+	elseif DopTraitorCanVent(ply) or was_role == ROLE_DOPPELGANGER then
 		role_has_special_handling = true
 		role_str = "DopTraitor"
 		total_time_allowed = -1
 		treat_like_traitor = true
-	elseif JesterCanVent(ply) then
+	elseif JesterCanVent(ply) or was_role == ROLE_JESTER then
 		role_has_special_handling = true
 		role_str = "Jester"
 		total_time_allowed = -1
@@ -273,7 +273,7 @@ function IMPO_VENT_DATA.EnterVent(ply, vent)
 		end
 	end
 	
-	HandleSpecialRoleVenting(ply, true)
+	HandleSpecialRoleVenting(ply, true, nil)
 end
 
 function IMPO_VENT_DATA.ExitVent(ply)
@@ -310,7 +310,7 @@ function IMPO_VENT_DATA.ExitVent(ply)
 		end
 	end
 	
-	HandleSpecialRoleVenting(ply, false)
+	HandleSpecialRoleVenting(ply, false, nil)
 	
 	ply.impo_in_vent = nil
 	
@@ -402,6 +402,47 @@ function IMPO_VENT_DATA.AddVentToNetwork(vent, owner)
 	--	print("IMPO_DEBUG AddVentToNetwork: There are now " .. #IMPO_VENT_DATA.VENT_NETWORK .. " vents on the Client")
 	--end
 end
+
+local function VentSecurityCheck(ply)
+	if not IsValid(ply.impo_in_vent) then
+		return false
+	end
+	
+	if not IMPO_VENT_DATA.CanUseVentNetwork(ply) then
+		IMPO_VENT_DATA.ExitVent(ply)
+		return false
+	end
+	
+	return true
+end
+hook.Add("TTT2UpdateTeam", "ImpostorUpdateTeam", function(ply, oldTeam, team)
+	if not VentSecurityCheck(ply) or oldTeam == team then
+		return
+	end
+	
+	if oldTeam == TEAM_DOPPELGANGER then
+		--Special case: If we have a player who was once a doppelganger in the vents, inform others that they're now gone or whatever.
+		HandleSpecialRoleVenting(ply, false, ROLE_DOPPELGANGER)
+	end
+end)
+hook.Add("TTT2UpdateSubrole", "ImpostorUpdateSubrole", function(ply, oldSubrole, subrole)
+	if not VentSecurityCheck(ply) or oldSubrole == subrole then
+		return
+	end
+	
+	if oldSubrole == ROLE_TRAPPER or oldSubrole == ROLE_JESTER then
+		--Special case: If we have a Trapper who has become anything else we need to stop the timer.
+		--They have now "exited" the vent.
+		--Can't really handle Doppelgangers here since we don't have access to their old team.
+		--It's hacky I know.
+		HandleSpecialRoleVenting(ply, false, oldSubrole)
+	end
+	
+	--Needed for Trappers, whose timer needs to start/unpause.
+	--Also informs Traitors that a foreigner has "entered" the vent.
+	--(Note: There is a weird case in which a Trapper becomes a Jester, both of whom are given the ability to vent. This leads to two quick messages, one saying that a foreigner has exited the vents and another saying that they have entered the vents.)
+	HandleSpecialRoleVenting(ply, true, nil)
+end)
 
 if SERVER then
 	net.Receive("TTT2ImpostorMoveFromVentUpdate", function(len, ply)
