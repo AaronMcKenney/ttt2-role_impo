@@ -36,9 +36,9 @@ if SERVER then
 	end
 	
 	function EVENT:CalculateScore()
-		--Same score as if they killed two traitors on their team.
+		--Same score as if they killed one traitor on their team.
 		self:SetPlayerScore(self.event.impo_id, {
-			score = -32
+			score = -16
 		})
 	end
 	
