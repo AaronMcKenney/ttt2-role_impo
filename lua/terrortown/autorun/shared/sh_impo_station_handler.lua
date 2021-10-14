@@ -91,7 +91,7 @@ if SERVER then
 	hook.Add("TTTPrepareRound", "ImpostorSaboDataPrepareRoundForServer", function()
 		local min_dist = GetConVar("ttt2_impostor_min_station_dist"):GetInt()
 		local min_dist_sqrd = min_dist * min_dist
-		local all_ply_spawn_pos = spawn.GetPlayerSpawnPointTable()
+		local all_ply_spawn_points = plyspawn.GetPlayerSpawnPoints()
 		
 		IMPO_SABO_DATA.STATION_NETWORK = {}
 		IMPO_SABO_DATA.ACTIVE_STAT_ENT = nil
@@ -102,12 +102,13 @@ if SERVER then
 		IMPO_SABO_DATA.SABOTAGER = nil
 		
 		--print("IMPO_DEBUG ImpostorSaboDataPrepareRoundForServer: All Player Spawn Points")
-		for _, ply_spawn_pos in ipairs(all_ply_spawn_pos) do
-			--print(ply_spawn_pos)
-			if SafePosCanBeAdded(ply_spawn_pos) then
-				--print("  Adding spawn point")
+		--PrintTable(all_ply_spawn_points) --IMPO_DEBUG
+		for _, ply_spawn_point in ipairs(all_ply_spawn_points) do
+			--PrintTable(ply_spawn_point) --IMPO_DEBUG
+			if SafePosCanBeAdded(ply_spawn_point.pos) then
+				--print("  Adding spawn point") --IMPO_DEBUG
 				local stat_spawn = {}
-				stat_spawn.pos = ply_spawn_pos
+				stat_spawn.pos = ply_spawn_point.pos
 				stat_spawn.used = false
 				
 				IMPO_SABO_DATA.STATION_NETWORK[#IMPO_SABO_DATA.STATION_NETWORK + 1] = stat_spawn
@@ -196,7 +197,7 @@ if SERVER then
 			--Spy support: Treat spies like traitors, as otherwise the station manager would be an easy spy detector.
 			if tgt:GetTeam() ~= TEAM_TRAITOR and ply:GetTeam() ~= tgt:GetTeam() and not IsSpy(tgt) then
 				if SafePosCanBeAdded(tgt:GetPos()) then
-					if spawn.IsSpawnPointSafe(ply, tgt:GetPos(), false, player.GetAll()) then
+					if plyspawn.IsSpawnPointSafe(ply, tgt:GetPos(), false, player.GetAll()) then
 						maybe_spawn_pos = tgt:GetPos()
 					else
 						LANG.Msg(ply, "SABO_MNGR_UNSAFE_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)

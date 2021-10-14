@@ -25,8 +25,6 @@ function ROLE:PreInitialize()
 	
 	--Prevent the Impostor from gaining credits normally.
 	self.preventFindCredits = true
-	self.preventKillCredits = true
-	self.preventTraitorAloneCredits = true
 	
 	self.defaultEquipment = SPECIAL_EQUIPMENT -- here you can set up your own default equipment
 	self.defaultTeam = TEAM_TRAITOR
@@ -41,8 +39,8 @@ function ROLE:PreInitialize()
 		
 		--Impostor can't access shop, and has no credits.
 		credits = 0,
-		creditsTraitorKill = 0,
-		creditsTraitorDead = 0,
+		creditsAwardDeadEnable = 0,
+		creditsAwardKillEnable = 0,
 		shopFallback = SHOP_DISABLED
 	}
 end
@@ -54,7 +52,8 @@ end
 --CREATES "TEAM_LOSER". THEY'RE SOLE PURPOSE IS TO LOSE. EVERYONE LOSES.
 roles.InitCustomTeam("loser", {
 	icon = "vgui/ttt/dynamic/roles/icon_inno",
-	color = Color(0, 0, 0, 255)
+	--Very Dark Grey
+	color = Color(47, 47, 47, 255)
 })
 
 --------------------------------------------
