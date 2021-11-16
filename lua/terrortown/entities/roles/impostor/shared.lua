@@ -26,8 +26,11 @@ function ROLE:PreInitialize()
 	--Prevent the Impostor from gaining credits normally.
 	self.preventFindCredits = true
 	
-	self.defaultEquipment = SPECIAL_EQUIPMENT -- here you can set up your own default equipment
 	self.defaultTeam = TEAM_TRAITOR
+	self.defaultEquipment = TRAITOR_EQUIPMENT
+	
+	--This role can see which players are missing in action as well as the haste timer.
+	self.isOmniscientRole = true
 	
 	self.conVarData = {
 		pct = 0.17, -- necessary: percentage of getting this role selected (per player)
