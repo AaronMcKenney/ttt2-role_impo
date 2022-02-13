@@ -209,9 +209,7 @@ Convars are variables that are introduced to allow server owners to customize th
 # Should trappers be informed when anyone enters and exits a vent?
   ttt2_impostor_inform_trappers_about_venting [0/1] (default: 1)
 # Should jesters be able to use vents?
-  ttt2_impostor_jesters_can_vent [0/1] (default: 0)
-# Should Doppelgangers that have stolen a Traitor role be treated like Traitors for the Impostor's abilities (ex. have access to vents and sabotage lights/comms immunity by default)?
-  ttt2_impostor_dopt_special_handling [0/1] (default: 1)[/code]
+  ttt2_impostor_jesters_can_vent [0/1] (default: 0)[/code]
  
 --
 [h1]Credits:[/h1]

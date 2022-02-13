@@ -54,7 +54,6 @@ CreateConVar("ttt2_impostor_inform_about_non_traitors_venting", "1", {FCVAR_ARCH
 CreateConVar("ttt2_impostor_trapper_venting_time", "30", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_inform_trappers_about_venting", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_jesters_can_vent", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
-CreateConVar("ttt2_impostor_dopt_special_handling", "1", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 
 hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	tbl[ROLE_IMPOSTOR] = tbl[ROLE_IMPOSTOR] or {}
@@ -538,14 +537,6 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		checkbox = true,
 		desc = "ttt2_impostor_jesters_can_vent (Def: 0)"
 	})
-	
-	--# Should Doppelgangers that have stolen a Traitor role be treated like Traitors for the Impostor's abilities (ex. have access to vents and sabotage lights/comms immunity by default)?
-	--  ttt2_impostor_dopt_special_handling [0/1] (default: 1)
-	table.insert(tbl[ROLE_IMPOSTOR], {
-		cvar = "ttt2_impostor_dopt_special_handling",
-		checkbox = true,
-		desc = "ttt2_impostor_dopt_special_handling (Def: 1)"
-	})
 end)
 
 hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
@@ -595,7 +586,6 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalInt("ttt2_impostor_trapper_venting_time", GetConVar("ttt2_impostor_trapper_venting_time"):GetInt())
 	SetGlobalBool("ttt2_impostor_inform_trappers_about_venting", GetConVar("ttt2_impostor_inform_trappers_about_venting"):GetBool())
 	SetGlobalBool("ttt2_impostor_jesters_can_vent", GetConVar("ttt2_impostor_jesters_can_vent"):GetBool())
-	SetGlobalBool("ttt2_impostor_dopt_special_handling", GetConVar("ttt2_impostor_dopt_special_handling"):GetBool())
 end)
 
 cvars.AddChangeCallback("ttt2_impostor_inform_everyone", function(name, old, new)
@@ -735,7 +725,4 @@ cvars.AddChangeCallback("ttt2_impostor_inform_trappers_about_venting", function(
 end)
 cvars.AddChangeCallback("ttt2_impostor_jesters_can_vent", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_jesters_can_vent", tobool(tonumber(new)))
-end)
-cvars.AddChangeCallback("ttt2_impostor_dopt_special_handling", function(name, old, new)
-	SetGlobalBool("ttt2_impostor_dopt_special_handling", tobool(tonumber(new)))
 end)

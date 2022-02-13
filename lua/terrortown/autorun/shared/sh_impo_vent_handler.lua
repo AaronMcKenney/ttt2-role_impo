@@ -59,16 +59,8 @@ local function TrapperCanVent(ply)
 	return false
 end
 
-local function isDopTraitor(ply)
-	if DOPPELGANGER and ply:GetTeam() == TEAM_DOPPELGANGER and ply:GetSubRole() ~= ROLE_IMPOSTOR and ply:GetBaseRole() == ROLE_TRAITOR then
-		return true
-	end
-	
-	return false
-end
-
-local function DopTraitorCanVent(ply)
-	if isDopTraitor(ply) and GetConVar("ttt2_impostor_dopt_special_handling"):GetBool() and GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() then
+local function DisguisedAsTraitor(ply)
+	if ply:GetTeam() ~= TEAM_TRAITOR and ply:GetBaseRole() == ROLE_TRAITOR then
 		return true
 	end
 	
@@ -92,7 +84,7 @@ local function HandleSpecialRoleVenting(ply, is_entering_vent, was_role)
 		role_has_special_handling = true
 		role_str = "Trapper"
 		total_time_allowed = GetConVar("ttt2_impostor_trapper_venting_time"):GetInt()
-	elseif DopTraitorCanVent(ply) or was_role == ROLE_DOPPELGANGER then
+	elseif DisguisedAsTraitor(ply) or was_role == -1 then
 		role_has_special_handling = true
 		role_str = "DopTraitor"
 		total_time_allowed = -1
@@ -150,13 +142,13 @@ local function HandleSpecialRoleVenting(ply, is_entering_vent, was_role)
 	if SERVER and GetConVar("ttt2_impostor_inform_about_non_traitors_venting"):GetBool() and not treat_like_traitor then
 		if is_entering_vent then
 			for _, ply_i in ipairs(player.GetAll()) do
-				if ply_i:GetSubRole() == ROLE_IMPOSTOR or ply_i:GetTeam() == TEAM_TRAITOR or DopTraitorCanVent(ply_i) then
+				if ply_i:GetSubRole() == ROLE_IMPOSTOR or ply_i:GetTeam() == TEAM_TRAITOR or DisguisedAsTraitor(ply_i) then
 					LANG.Msg(ply_i, "VENT_FOREIGNER_ENTER_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 				end
 			end
 		else
 			for _, ply_i in ipairs(player.GetAll()) do
-				if ply_i:GetSubRole() == ROLE_IMPOSTOR or ply_i:GetTeam() == TEAM_TRAITOR or DopTraitorCanVent(ply_i) then
+				if ply_i:GetSubRole() == ROLE_IMPOSTOR or ply_i:GetTeam() == TEAM_TRAITOR or DisguisedAsTraitor(ply_i) then
 					LANG.Msg(ply_i, "VENT_FOREIGNER_EXIT_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 				end
 			end
@@ -207,7 +199,7 @@ local function UpdateVentStatus(ply, vent_role_str, is_exiting_vent)
 end
 
 function IMPO_VENT_DATA.CanUseVentNetwork(ply)
-	if ply:IsTerror() and ply:Alive() and not IsInSpecDM(ply) and (ply:GetSubRole() == ROLE_IMPOSTOR or (GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() and ply:GetTeam() == TEAM_TRAITOR) or TrapperCanVent(ply) or DopTraitorCanVent(ply) or JesterCanVent(ply)) then
+	if ply:IsTerror() and ply:Alive() and not IsInSpecDM(ply) and (ply:GetSubRole() == ROLE_IMPOSTOR or (GetConVar("ttt2_impostor_traitor_team_can_use_vents"):GetBool() and (ply:GetTeam() == TEAM_TRAITOR or DisguisedAsTraitor(ply))) or TrapperCanVent(ply) or JesterCanVent(ply)) then
 		return true
 	end
 	
@@ -445,9 +437,9 @@ hook.Add("TTT2UpdateTeam", "ImpostorUpdateTeam", function(ply, oldTeam, team)
 		return
 	end
 	
-	if oldTeam == TEAM_DOPPELGANGER then
-		--Special case: If we have a player who was once a doppelganger in the vents, inform others that they're now gone or whatever.
-		HandleSpecialRoleVenting(ply, false, ROLE_DOPPELGANGER)
+	if oldTeam ~= TEAM_TRAITOR then
+		--Special case: If we have a player who was once a non-Traitor in the vents, inform others that they're now gone or whatever.
+		HandleSpecialRoleVenting(ply, false, -1)
 	end
 end)
 hook.Add("TTT2UpdateSubrole", "ImpostorUpdateSubrole", function(ply, oldSubrole, subrole)
@@ -541,7 +533,7 @@ if CLIENT then
 		--Outline vents for impostors and traitor team (They will be able to see it regardless of where they are)
 		--Special roles such as Trappers and Jesters have to work for their access.
 		--Could use OUTLINE_MODE_VISIBLE to only outline vents that aren't blocked, but that code is finicky and doesn't work on all surfaces. Perhaps it doesn't like vents that are partially in a surface?
-		if (client:GetSubRole() == ROLE_IMPOSTOR or client:GetTeam() == TEAM_TRAITOR or DopTraitorCanVent(client)) and not IsInSpecDM(client) and #IMPO_VENT_DATA.VENT_NETWORK > 0 and not IsValid(client.impo_in_vent) then
+		if (client:GetSubRole() == ROLE_IMPOSTOR or client:GetTeam() == TEAM_TRAITOR or DisguisedAsTraitor(client)) and not IsInSpecDM(client) and #IMPO_VENT_DATA.VENT_NETWORK > 0 and not IsValid(client.impo_in_vent) then
 			outline.Add(IMPO_VENT_DATA.VENT_NETWORK, IMPOSTOR.color, OUTLINE_MODE_BOTH)
 		end
 	end)

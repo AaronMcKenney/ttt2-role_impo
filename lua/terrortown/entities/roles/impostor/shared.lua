@@ -156,19 +156,19 @@ local function SabotageModeIsValid(sabo_mode)
 	return false
 end
 
-local function ActsLikeTraitorButNotImpostor(ply)
-	--Only handle Dop!Traitor (who explicitly isn't an Impostor) for now.
-	--Handling Spy scenario would lead to them being able to vent and not be affected by sabos. Historically they only look like a traitor, they don't have special traitor abilities.
-	--Handling Defective scenario would lead to them being unable to vent and being affected by sabos. Probably not worth it.
-	local team = ply:GetTeam()
-	if DOPPELGANGER and team == TEAM_DOPPELGANGER and GetConVar("ttt2_impostor_dopt_special_handling"):GetBool() then
-		local role_data = roles.GetByIndex(ply:GetSubRole())
-		if role_data.defaultTeam == TEAM_TRAITOR then
-			team = TEAM_TRAITOR
-		end
+local function DisguisedAsTraitor(ply)
+	if ply:GetTeam() ~= TEAM_TRAITOR and ply:GetBaseRole() == ROLE_TRAITOR then
+		return true
 	end
 	
-	return team == TEAM_TRAITOR and ply:GetSubRole() ~= ROLE_IMPOSTOR
+	return false
+end
+
+local function ActsLikeTraitorButNotImpostor(ply)
+	--Only handle roles that are traitors (or are disguised as traitors), but are not explicitly an Impostor for now.
+	--Handling Spy scenario would lead to them being able to vent and not be affected by sabos. Historically they only look like a traitor, they don't have special traitor abilities.
+	--Handling Defective scenario would lead to them being unable to vent and being affected by sabos. Probably not worth it.
+	return ply:GetSubRole() ~= ROLE_IMPOSTOR and (ply:GetTeam() == TEAM_TRAITOR or DisguisedAsTraitor(ply))
 end
 
 local function CanHaveLightsSabotaged(ply)
