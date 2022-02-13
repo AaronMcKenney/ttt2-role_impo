@@ -104,7 +104,7 @@ local function HandleSpecialRoleVenting(ply, is_entering_vent, was_role)
 	end
 	
 	if not role_has_special_handling then
-		return
+		return role_str
 	end
 	
 	if total_time_allowed > 0 then
@@ -162,6 +162,8 @@ local function HandleSpecialRoleVenting(ply, is_entering_vent, was_role)
 			end
 		end
 	end
+	
+	return role_str
 end
 
 local function InformTrappers(ply, is_entering_vent)
@@ -181,6 +183,26 @@ local function InformTrappers(ply, is_entering_vent)
 				LANG.Msg(ply_i, "VENT_ANYONE_EXIT_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			end
 		end
+	end
+end
+
+local function UpdateVentStatus(ply, vent_role_str, is_exiting_vent)
+	--Always remove the status first, as we might switch from a normal status to a timed status or vice-versa.
+	STATUS:RemoveStatus(ply, "ttt2_impo_in_vent")
+	
+	if is_exiting_vent then
+		return
+	end
+	
+	local server_client_str = "SERVER_"
+	if CLIENT then
+		server_client_str = "CLIENT_"
+	end
+	local vent_timer_str = "Impostor" .. vent_role_str .. "Vent_" .. server_client_str .. ply:SteamID64()
+	if not timer.Exists(vent_timer_str) then
+		STATUS:AddStatus(ply, "ttt2_impo_in_vent")
+	else
+		STATUS:AddTimedStatus(ply, "ttt2_impo_in_vent", math.ceil(math.abs(timer.TimeLeft(vent_timer_str))), true)
 	end
 end
 
@@ -273,7 +295,8 @@ function IMPO_VENT_DATA.EnterVent(ply, vent)
 		end
 	end
 	
-	HandleSpecialRoleVenting(ply, true, nil)
+	local vent_role_str = HandleSpecialRoleVenting(ply, true, nil)
+	UpdateVentStatus(ply, vent_role_str, false)
 end
 
 function IMPO_VENT_DATA.ExitVent(ply)
@@ -324,6 +347,8 @@ function IMPO_VENT_DATA.ExitVent(ply)
 	else --CLIENT
 		ply.impo_last_move_time = CurTime()
 	end
+	
+	STATUS:RemoveStatus(ply, "ttt2_impo_in_vent")
 end
 
 function IMPO_VENT_DATA.MovePlayerFromVentTo(ply, ent_idx)
@@ -435,13 +460,15 @@ hook.Add("TTT2UpdateSubrole", "ImpostorUpdateSubrole", function(ply, oldSubrole,
 		--They have now "exited" the vent.
 		--Can't really handle Doppelgangers here since we don't have access to their old team.
 		--It's hacky I know.
-		HandleSpecialRoleVenting(ply, false, oldSubrole)
+		local vent_role_str = HandleSpecialRoleVenting(ply, false, oldSubrole)
+		UpdateVentStatus(ply, vent_role_str, false)
 	end
 	
 	--Needed for Trappers, whose timer needs to start/unpause.
 	--Also informs Traitors that a foreigner has "entered" the vent.
 	--(Note: There is a weird case in which a Trapper becomes a Jester, both of whom are given the ability to vent. This leads to two quick messages, one saying that a foreigner has exited the vents and another saying that they have entered the vents.)
-	HandleSpecialRoleVenting(ply, true, nil)
+	local vent_role_str = HandleSpecialRoleVenting(ply, true, nil)
+	UpdateVentStatus(ply, vent_role_str, false)
 end)
 
 if SERVER then
@@ -471,6 +498,13 @@ if SERVER then
 end
 
 if CLIENT then
+	hook.Add("Initialize", "InitializeUndecided", function()
+		STATUS:RegisterStatus("ttt2_impo_in_vent", {
+			hud = Material("vgui/ttt/icon_vent"),
+			type = "good"
+		})
+	end)
+	
 	net.Receive("TTT2ImpostorEnterVentUpdate", function()
 		local client = LocalPlayer()
 		local new_vent_idx = net.ReadInt(16)
