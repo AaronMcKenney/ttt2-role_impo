@@ -8,6 +8,7 @@ if SERVER then
 	util.AddNetworkString("TTT2ImpostorSendSabotageRequest")
 	util.AddNetworkString("TTT2ImpostorSabotageLightsScreenFade")
 	util.AddNetworkString("TTT2ImpostorSabotageLightsRedownloadMap")
+	util.AddNetworkString("TTT2ImpostorSabotageLightsFogState")
 	util.AddNetworkString("TTT2ImpostorSendSabotageResponse")
 end
 
@@ -67,7 +68,7 @@ IMPO_IOTA = 0.3
 --Sabotage enum
 SABO_MODE = {NONE = 0, MNGR = 1, LIGHTS = 2, COMMS = 3, O2 = 4, REACT = 5, NUM = 6}
 SABO_MODE_ABBR = {"None", "Mngr", "Lights", "Comms", "O2", "React", "Num"}
-SABO_LIGHTS_MODE = {SCREEN_FADE = 0, DISABLE_MAP = 1}
+SABO_LIGHTS_MODE = {SCREEN_FADE = 0, DISABLE_MAP = 1, FOG = 2}
 SABO_REACT_MODE = {EVERYONE_LOSES = 0, TEAM_WIN = 1}
 
 local function IsInSpecDM(ply)
@@ -101,9 +102,10 @@ local function SabotageLightsIsEnabled()
 	local sabo_lights_mode = GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt()
 	local fade_trans_len = GetConVar("ttt2_impostor_sabo_lights_fade_trans_length"):GetFloat()
 	local fade_dark_len = GetConVar("ttt2_impostor_sabo_lights_fade_dark_length"):GetFloat()
+	local fog_scale_other = GetConVar("ttt2_impostor_sabo_lights_fog_scale_other"):GetFloat()
 	local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetInt()
 	
-	if (sabo_lights_mode == SABO_LIGHTS_MODE.SCREEN_FADE and (fade_trans_len <= 0.0 or fade_dark_len < 0.0)) or sabo_lights_len <= 0 then
+	if (sabo_lights_mode == SABO_LIGHTS_MODE.SCREEN_FADE and (fade_trans_len <= 0.0 or fade_dark_len < 0.0)) or (sabo_lights_mode == SABO_LIGHTS_MODE.FOG and fog_scale_other <= 0.0) or sabo_lights_len <= 0 then
 		return false
 	end
 	
@@ -378,9 +380,13 @@ if SERVER then
 				net.Send(ply)
 				--Keep track of who had their map disabled, in case a role changes during sabo.
 				ply.impo_tmp_light_map_disabled = true
+			else --SABO_LIGHTS_MODE.FOG
+				net.Start("TTT2ImpostorSabotageLightsFogState")
+				net.WriteBool(true)
+				net.Send(ply)
 			end
 		end
-		
+
 		timer.Create("ImpostorSaboLightsTimer_Server", sabo_duration, 1, function()
 			IMPO_SABO_DATA.DestroyStation()
 			IMPO_SABO_DATA.PutSabotageOnCooldown(sabo_cooldown)
@@ -393,6 +399,12 @@ if SERVER then
 						net.Send(ply)
 						ply.impo_tmp_light_map_disabled = nil
 					end
+				end
+			elseif sabo_lights_mode == SABO_LIGHTS_MODE.FOG then
+				for _, ply in ipairs(player.GetAll()) do
+					net.Start("TTT2ImpostorSabotageLightsFogState")
+					net.WriteBool(false)
+					net.Send(ply)
 				end
 			end
 			
@@ -717,6 +729,111 @@ if CLIENT then
 	net.Receive("TTT2ImpostorSabotageLightsRedownloadMap", function()
 		render.RedownloadAllLightmaps()
 	end)
+
+	net.Receive("TTT2ImpostorSabotageLightsFogState", function()
+		local fog_enable = net.ReadBool()
+
+		if not fog_enable then
+			hook.Remove("SetupWorldFog", "TTT2ImpostorSetupWorldFog")
+			hook.Remove("SetupSkyboxFog", "TTT2ImpostorSkyboxFog")
+			return
+		end
+
+		hook.Add("SetupWorldFog", "TTT2ImpostorSetupWorldFog", function()
+			--Limits the player's view distance like in among us, traitors and innocents can have differing view distances (in among us, impostors typically can see further than crewmates)
+			local client = LocalPlayer()
+			local fog_scale_other = GetConVar("ttt2_impostor_sabo_lights_fog_scale_other"):GetFloat()
+			local fog_scale_impo = GetConVar("ttt2_impostor_sabo_lights_fog_scale_impo"):GetFloat()
+			local fog_scale_ttt2 = 0.0
+
+			--Here CanHaveLightsSabotaged(ply) means something a little different. If true the fog will be more punishing. If false the fog will be somewhat lax.
+			if CanHaveLightsSabotaged(client) and fog_scale_other > 0.0 then
+				fog_scale_ttt2 = fog_scale_other
+			elseif fog_scale_impo > 0.0 then
+				fog_scale_ttt2 = fog_scale_impo
+			else
+				--ConVar for fog scaling is zero or less. Don't create any fog
+				return
+			end
+
+			local fog_density = 1.0
+			if timer.Exists("ImpostorSaboLightsTimer_Client") then
+				local time_left = timer.TimeLeft("ImpostorSaboLightsTimer_Client")
+				local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetInt()
+				local trans_time = 2.0
+				
+				if time_left > sabo_lights_len - trans_time then
+					--Fog is coming
+					fog_density = (sabo_lights_len - time_left) / trans_time
+				elseif time_left > trans_time then
+					--Fog is in full swing
+					fog_density = 1.0
+				else
+					--Fog is leaving
+					fog_density = time_left / trans_time
+				end
+			end
+
+			render.FogMode(MATERIAL_FOG_LINEAR)
+			render.FogColor(0, 0, 0)
+			render.FogMaxDensity(fog_density)
+			render.FogStart(300 * fog_scale_ttt2)
+			render.FogEnd(600 * fog_scale_ttt2)
+
+			--Need to return true in order to apply fog.
+			return true
+		end)
+
+		hook.Add("SetupSkyboxFog", "TTT2ImpostorSkyboxFog", function(scale)
+			--If a map has a 3D skybox, apply a fog effect to that too
+			local client = LocalPlayer()
+			local fog_scale_other = GetConVar("ttt2_impostor_sabo_lights_fog_scale_other"):GetFloat()
+			local fog_scale_impo = GetConVar("ttt2_impostor_sabo_lights_fog_scale_impo"):GetFloat()
+			local fog_scale_ttt2 = 0.0
+
+			--Here CanHaveLightsSabotaged(ply) means something a little different. If true the fog will be more punishing. If false the fog will be somewhat lax.
+			if CanHaveLightsSabotaged(client) and fog_scale_other > 0.0 then
+				fog_scale_ttt2 = fog_scale_other
+			elseif fog_scale_impo > 0.0 then
+				fog_scale_ttt2 = fog_scale_impo
+			else
+				--ConVar for fog scaling is zero or less. Don't create any fog
+				return
+			end
+
+			local fog_density = 1.0
+			if timer.Exists("ImpostorSaboLightsTimer_Client") then
+				local time_left = timer.TimeLeft("ImpostorSaboLightsTimer_Client")
+				local sabo_lights_len = GetConVar("ttt2_impostor_sabo_lights_length"):GetInt()
+				local trans_time = 1.0
+				
+				--local ajm_debug_str = "AJM time_left=" .. tostring(time_left)
+				if time_left > sabo_lights_len - trans_time then
+					--Fog is coming
+					fog_density = (sabo_lights_len - time_left) / trans_time
+					--ajm_debug_str = ajm_debug_str .. ", Fog is coming, fog_density=" .. tostring(fog_density)
+				elseif time_left > trans_time then
+					--Fog is in full swing
+					fog_density = 1.0
+					--ajm_debug_str = ajm_debug_str .. ", Fog is here, fog_density=".. tostring(fog_density)
+				else
+					--Fog is leaving
+					fog_density = time_left / trans_time
+					--ajm_debug_str = ajm_debug_str .. ", Fog is leaving, fog_density=" .. tostring(fog_density)
+				end
+				--print(ajm_debug_str)
+			end
+
+			render.FogMode(MATERIAL_FOG_LINEAR)
+			render.FogColor(0, 0, 0)
+			render.FogMaxDensity(fog_density)
+			render.FogStart(300 * scale * fog_scale_ttt2)
+			render.FogEnd(600 * scale * fog_scale_ttt2)
+
+			--Need to return true in order to apply fog.
+			return true
+		end)
+	end)
 	
 	local function SabotageReactorCountdown(time_left)
 		local timer_duration = -1
@@ -750,8 +867,10 @@ if CLIENT then
 		if sabo_mode == SABO_MODE.LIGHTS then
 			if GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt() == SABO_LIGHTS_MODE.SCREEN_FADE then
 				EPOP:AddMessage({text = LANG.GetTranslation("SABO_LIGHTS_INFO_FADE_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
-			else --SABO_LIGHTS_MODE.DISABLE_MAP
+			elseif GetConVar("ttt2_impostor_sabo_lights_mode"):GetInt() == SABO_LIGHTS_MODE.DISABLE_MAP then
 				EPOP:AddMessage({text = LANG.GetTranslation("SABO_LIGHTS_INFO_MAP_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
+			else --SABO_LIGHTS_MODE.FOG
+				EPOP:AddMessage({text = LANG.GetTranslation("SABO_LIGHTS_INFO_FOG_" .. IMPOSTOR.name), color = IMPOSTOR.color}, "", 6)
 			end
 		elseif sabo_mode == SABO_MODE.COMMS then
 			if GetConVar("ttt2_impostor_sabo_comms_deafen"):GetBool() then

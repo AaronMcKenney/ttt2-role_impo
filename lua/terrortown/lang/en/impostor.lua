@@ -49,6 +49,7 @@ L["SABO_CANNOT_PLACE_" .. IMPOSTOR.name] = "Failed to create Impostor sabotage s
 L["SABO_LIGHTS_" .. IMPOSTOR.name] = "SABOTAGE LIGHTS"
 L["SABO_LIGHTS_INFO_FADE_" .. IMPOSTOR.name] = "An Impostor has sabotaged the lights! Victims will experience rolling blackouts until the sabotage ends!" 
 L["SABO_LIGHTS_INFO_MAP_" .. IMPOSTOR.name] = "An Impostor has sabotaged the lights! Victims will experience darkness until the sabotage ends!"
+L["SABO_LIGHTS_INFO_FOG_" .. IMPOSTOR.name] = "An Impostor has sabotaged the lights! Victims will experience fog until the sabotage ends!"
 L["SABO_LIGHTS_START_" .. IMPOSTOR.name] = "An Impostor has sabotaged the lights!"
 L["SABO_LIGHTS_END_" .. IMPOSTOR.name] = "The lights are back on!"
 L["SABO_COMMS_" .. IMPOSTOR.name] = "SABOTAGE COMMS"

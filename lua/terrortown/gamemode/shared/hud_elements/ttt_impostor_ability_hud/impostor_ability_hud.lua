@@ -200,13 +200,33 @@ if CLIENT then
 					icon = icon_unlit_bulb
 				elseif dark_time_left > 0 and dark_time_left <= fade_trans_time then
 					--Screen is transitioning from complete darkness
-					local fract = 1 - (dark_time_left / fade_trans_time)
+					local fract = 1.0 - (dark_time_left / fade_trans_time)
 					if GetConVar("ttt2_impostor_sabo_lights_cooldown"):GetInt() > 0 and (time_left - dark_time_left) <= 0 then
 						bg_color = COLOR_LGRAY
 					end
 					local h, s, v = ColorToHSV(bg_color)
 					bg_color = HSVToColor(h, s, v * fract)
 				end
+			elseif sabo_lights_mode == SABO_LIGHTS_MODE.FOG then
+				local trans_time = 2.0
+				
+				if time_left > sabo_lights_len - trans_time then
+					--Fog is coming
+					local fract = 1 - (sabo_lights_len - time_left) / trans_time
+					local h, s, v = ColorToHSV(bg_color)
+					bg_color = HSVToColor(h, s, v * fract)
+				elseif time_left > trans_time then
+					--Fog is in full swing
+					bg_color = COLOR_BLACK
+				else
+					--Fog is leaving
+					local fract = 1 - time_left / trans_time
+					local h, s, v = ColorToHSV(COLOR_LGRAY)
+					bg_color = HSVToColor(h, s, v * fract)
+				end
+
+				icon_color = COLOR_LGRAY
+				icon = icon_unlit_bulb
 			end
 		else
 			--Sabotage is ready to go

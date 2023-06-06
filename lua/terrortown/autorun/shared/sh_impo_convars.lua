@@ -30,6 +30,8 @@ CreateConVar("ttt2_impostor_sabo_lights_mode", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY
 CreateConVar("ttt2_impostor_sabo_lights_fade_trans_length", "2.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_fade_dark_length", "1.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_sabo_lights_fade_bright_length", "5", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_lights_fog_scale_other", "1.0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
+CreateConVar("ttt2_impostor_sabo_lights_fog_scale_impo", "1.5", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 CreateConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", "0", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
 --Sabotage Comms
 CreateConVar("ttt2_impostor_sabo_comms_length", "60", {FCVAR_ARCHIVE, FCVAR_NOTFIY})
@@ -287,16 +289,18 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 	})
 	
 	--# What should happen when the lights are sabotaged?
-	--  ttt2_impostor_sabo_lights_mode [0..1] (default: 0)
+	--  ttt2_impostor_sabo_lights_mode [0/1/2] (default: 0)
 	--  # 0: A series of Screen fades occur, which blacks out the entire screen. Flashlights will not help you.
 	--  # 1: Map lighting is temporarily disabled. Flashlights work. Effectiveness depends on map (ex. some props may still be fully lit, and players may be easier to see instead of harder)
+	--  # 2: Surrounds everyone with a black fog. Impostors also experience fog, though they have much greater visibility than their opposition. Strange behavior when used with other fog effects (ex. one overrides the other)
 	table.insert(tbl[ROLE_IMPOSTOR], {
 		cvar = "ttt2_impostor_sabo_lights_mode",
 		combobox = true,
 		desc = "ttt2_impostor_sabo_lights_mode (Def: 0)",
 		choices = {
-			"0 - Screen fade (flashlights do nothing)",
-			"1 - Disable map lighting (Strange behavior on certain maps)"
+			"0 - Screen fade (Flashlights do nothing)",
+			"1 - Disable map lighting (Strange behavior on certain maps)",
+			"2 - Fog (Strange behavior when used with other fog effects)"
 		},
 		numStart = 0
 	})
@@ -314,7 +318,7 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_sabo_lights_fade_trans_length (Def: 2.0)"
 	})
 	
-	--# How long (in seconds) should the victims be in complete darkness under Screen Fade mode (<= 0.0 to disable ability)?
+	--# How long (in seconds) should the victims be in complete darkness under Screen Fade mode (< 0.0 to disable ability)?
 	--  Note: Only applicable if ttt2_impostor_sabo_lights_mode is 0 (Screen fade mode)
 	--  ttt2_impostor_sabo_lights_fade_dark_length [0.0..n.m] (default: 1.0)
 	table.insert(tbl[ROLE_IMPOSTOR], {
@@ -326,7 +330,7 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		desc = "ttt2_impostor_sabo_lights_fade_dark_length (Def: 1.0)"
 	})
 	
-	--# How long (in seconds) should the victims be safe from the dark under Screen Fade mode (<= 0.0 to disable ability)?
+	--# How long (in seconds) should the victims be safe from the dark under Screen Fade mode?
 	--  Note: Only applicable if ttt2_impostor_sabo_lights_mode is 0 (Screen fade mode)
 	--  ttt2_impostor_sabo_lights_fade_bright_length [0..n] (default: 5)
 	table.insert(tbl[ROLE_IMPOSTOR], {
@@ -336,6 +340,30 @@ hook.Add("TTTUlxDynamicRCVars", "TTTUlxDynamicImpostorCVars", function(tbl)
 		max = 30,
 		decimal = 0,
 		desc = "ttt2_impostor_sabo_lights_fade_bright_length (Def: 5)"
+	})
+	
+	--# What scale should be applied to the fog distance for the victims (<= 0.0 to disable ability)?
+	--  Note: Only applicable if ttt2_impostor_sabo_lights_mode is 2 (Fog mode)
+	--  ttt2_impostor_sabo_lights_fog_scale_other [0..n.m] (default: 1.0)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_lights_fog_scale_other",
+		slider = true,
+		min = 0.2,
+		max = 5.0,
+		decimal = 2,
+		desc = "ttt2_impostor_sabo_lights_fog_scale_other (Def: 1.0)"
+	})
+	
+	--# What scale should be applied to the fog distance for the Impostor (<= 0 to apply no fog to Impostor)?
+	--  Note: Only applicable if ttt2_impostor_sabo_lights_mode is 2 (Fog mode)
+	--  ttt2_impostor_sabo_lights_fog_scale_impo [0..n.m] (default: 1.5)
+	table.insert(tbl[ROLE_IMPOSTOR], {
+		cvar = "ttt2_impostor_sabo_lights_fog_scale_impo",
+		slider = true,
+		min = 0.0,
+		max = 5.0,
+		decimal = 2,
+		desc = "ttt2_impostor_sabo_lights_fog_scale_impo (Def: 1.5)"
 	})
 	
 	--# Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage Lights?
@@ -566,6 +594,8 @@ hook.Add("TTT2SyncGlobals", "AddImpostorGlobals", function()
 	SetGlobalFloat("ttt2_impostor_sabo_lights_fade_trans_length", GetConVar("ttt2_impostor_sabo_lights_fade_trans_length"):GetFloat())
 	SetGlobalFloat("ttt2_impostor_sabo_lights_fade_dark_length", GetConVar("ttt2_impostor_sabo_lights_fade_dark_length"):GetFloat())
 	SetGlobalInt("ttt2_impostor_sabo_lights_fade_bright_length", GetConVar("ttt2_impostor_sabo_lights_fade_bright_length"):GetInt())
+	SetGlobalFloat("ttt2_impostor_sabo_lights_fog_scale_other", GetConVar("ttt2_impostor_sabo_lights_fog_scale_other"):GetFloat())
+	SetGlobalFloat("ttt2_impostor_sabo_lights_fog_scale_impo", GetConVar("ttt2_impostor_sabo_lights_fog_scale_impo"):GetFloat())
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", GetConVar("ttt2_impostor_traitor_team_is_affected_by_sabo_lights"):GetBool())
 	SetGlobalInt("ttt2_impostor_sabo_comms_length", GetConVar("ttt2_impostor_sabo_comms_length"):GetInt())
 	SetGlobalInt("ttt2_impostor_sabo_comms_cooldown", GetConVar("ttt2_impostor_sabo_comms_cooldown"):GetInt())
@@ -668,6 +698,12 @@ cvars.AddChangeCallback("ttt2_impostor_sabo_lights_fade_dark_length", function(n
 end)
 cvars.AddChangeCallback("ttt2_impostor_sabo_lights_fade_bright_length", function(name, old, new)
 	SetGlobalInt("ttt2_impostor_sabo_lights_fade_bright_length", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_lights_fog_scale_other", function(name, old, new)
+	SetGlobalFloat("ttt2_impostor_sabo_lights_fog_scale_other", tonumber(new))
+end)
+cvars.AddChangeCallback("ttt2_impostor_sabo_lights_fog_scale_impo", function(name, old, new)
+	SetGlobalFloat("ttt2_impostor_sabo_lights_fog_scale_impo", tonumber(new))
 end)
 cvars.AddChangeCallback("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", function(name, old, new)
 	SetGlobalBool("ttt2_impostor_traitor_team_is_affected_by_sabo_lights", tobool(tonumber(new)))

@@ -147,19 +147,26 @@ Convars are variables that are introduced to allow server owners to customize th
 # What is the cooldown (in seconds) on the impostor's Sabotage Lights ability?
   ttt2_impostor_sabo_lights_cooldown [0..n] (default: 120)
 # What should happen when the lights are sabotaged?
-  ttt2_impostor_sabo_lights_mode [0..1] (default: 0)
+  ttt2_impostor_sabo_lights_mode [0/1/2] (default: 0)
   # 0: A series of Screen fades occur, which blacks out the entire screen. Flashlights will not help you.
   # 1: Map lighting is temporarily disabled. Flashlights work. Effectiveness depends on map (ex. some props may still be fully lit, and players may be easier to see instead of harder)
+  # 2: Surrounds everyone with a black fog. Impostors also experience fog, though they have much greater visibility than their opposition. Strange behavior when used with other fog effects (ex. one overrides the other)
 # How long (in seconds) should it take for lights to fade to black upon activating Sabotage Lights under Screen Fade mode (<= 0.0 to disable ability)?
   Note: Only applicable if ttt2_impostor_sabo_lights_mode is 0 (Screen fade mode)
   Note: Fade time is nonlinear. HUD's color difference may be off for large fade times..
   ttt2_impostor_sabo_lights_fade_trans_length [0.0..n.m] (default: 2.0)
-# How long (in seconds) should the victims be in complete darkness under Screen Fade mode (<= 0.0 to disable ability)?
+# How long (in seconds) should the victims be in complete darkness under Screen Fade mode (< 0.0 to disable ability)?
   Note: Only applicable if ttt2_impostor_sabo_lights_mode is 0 (Screen fade mode)
   ttt2_impostor_sabo_lights_fade_dark_length [0.0..n.m] (default: 1.0)
-# How long (in seconds) should the victims be in complete darkness under Screen Fade mode (<= 0.0 to disable ability)?
+# How long (in seconds) should the victims be safe from the dark under Screen Fade mode?
   Note: Only applicable if ttt2_impostor_sabo_lights_mode is 0 (Screen fade mode)
-  ttt2_impostor_sabo_lights_fade_dark_length [0.0..n.m] (default: 1.0)
+  ttt2_impostor_sabo_lights_fade_bright_length [0..n] (default: 5)
+# What scale should be applied to the fog distance for the victims (<= 0.0 to disable ability)?
+  Note: Only applicable if ttt2_impostor_sabo_lights_mode is 2 (Fog mode)
+  ttt2_impostor_sabo_lights_fog_scale_other [0..n.m] (default: 1.0)
+# What scale should be applied to the fog distance for the Impostor (<= 0 to apply no fog to Impostor)?
+  Note: Only applicable if ttt2_impostor_sabo_lights_mode is 2 (Fog mode)
+  ttt2_impostor_sabo_lights_fog_scale_impo [0..n] (default: 1.5)
 # Should all (non-Impostor) traitor roles be affected by an Impostor's Sabotage Lights?
   ttt2_impostor_traitor_team_is_affected_by_sabo_lights [0/1] (default: 0)
   
