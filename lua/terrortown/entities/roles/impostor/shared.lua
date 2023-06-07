@@ -65,6 +65,8 @@ roles.InitCustomTeam("loser", {
 --------------------------------------------
 --Used to reduce chances of lag interrupting otherwise seemless player interactions.
 IMPO_IOTA = 0.3
+--Instant Kill enum
+INSTANT_KILL_MODE = {INTERACT = 0, KNIFE = 1}
 --Sabotage enum
 SABO_MODE = {NONE = 0, MNGR = 1, LIGHTS = 2, COMMS = 3, O2 = 4, REACT = 5, NUM = 6}
 SABO_MODE_ABBR = {"None", "Mngr", "Lights", "Comms", "O2", "React", "Num"}
@@ -261,7 +263,8 @@ if SERVER then
 		net.Send(ply)
 	end
 	
-	local function PutInstantKillOnCooldown(ply)
+	--This function isn't local, so that it can be referenced by the knife weapon.
+	function TTT2ImpostorPutInstantKillOnCooldown(ply)
 		local kill_cooldown = GetConVar("ttt2_impostor_kill_cooldown"):GetInt()
 		
 		--Handle case where admin wants impostor to be overpowered trash.
@@ -273,6 +276,7 @@ if SERVER then
 		
 		--Turn off ability to kill
 		ply.impo_can_insta_kill = false
+		ply:StripWeapon('weapon_ttt_impo_knife')
 		SendInstantKillUpdateToClient(ply)
 		
 		--Create a timer that is unique to the player. When it finishes, turn on ability to kill.
@@ -280,6 +284,9 @@ if SERVER then
 			--Verify the player's existence, in case they are dropped from the Server.
 			if IsValid(ply) and ply:IsPlayer() then
 				ply.impo_can_insta_kill = true
+				if GetConVar("ttt2_impostor_kill_mode"):GetInt() == INSTANT_KILL_MODE.KNIFE and ply:GetSubRole() == ROLE_IMPOSTOR then
+					ply:GiveEquipmentWeapon('weapon_ttt_impo_knife')
+				end
 				SendInstantKillUpdateToClient(ply)
 			end
 		end)
@@ -306,9 +313,13 @@ if SERVER then
 	end
 	
 	net.Receive("TTT2ImpostorSendInstantKillRequest", function(len, ply)
-		if not IsValid(ply) or not ply:IsPlayer() or not ply:IsTerror() or ply:GetSubRole() ~= ROLE_IMPOSTOR then
+		if GetConVar("ttt2_impostor_kill_mode"):GetInt() ~= INSTANT_KILL_MODE.INTERACT or not IsValid(ply) or not ply:IsPlayer() or not ply:IsTerror() or ply:GetSubRole() ~= ROLE_IMPOSTOR then
 			return
 		end
+		
+		--This method is super janky if either the Impostor or their victim is moving. This is most likely due to lag during the trace calculation.
+		--The usual way to fix this is (probably) to call GMod's LagCompensation function, however that only works on predicted server hooks... which this isn't.
+		--Some people seem to not mind this jankiness, as instant kills are quite powerful, and requiring the players to stay relatively still has been seen as a good restriction.
 		
 		--Determine if the impostor is looking at someone who isn't on their team
 		local trace = ply:GetEyeTrace(MASK_SHOT_HULL)
@@ -339,7 +350,7 @@ if SERVER then
 			timer.Create("ImpostorJustKilled_Server_" .. ply:SteamID64(), IMPO_IOTA*2, 1, function()
 				return
 			end)
-			PutInstantKillOnCooldown(ply)
+			TTT2ImpostorPutInstantKillOnCooldown(ply)
 		end
 	end)
 	
@@ -560,7 +571,7 @@ if SERVER then
 	
 	function ROLE:GiveRoleLoadout(ply, isRoleChange)
 		ply:GiveEquipmentWeapon('weapon_ttt_vent')
-		PutInstantKillOnCooldown(ply)
+		TTT2ImpostorPutInstantKillOnCooldown(ply)
 		SendDefaultSaboMode(ply)
 		if #IMPO_SABO_DATA.STATION_NETWORK > 0 then
 			IMPO_SABO_DATA.SendStationNetwork(ply)
@@ -569,6 +580,7 @@ if SERVER then
 	
 	function ROLE:RemoveRoleLoadout(ply, isRoleChange)
 		ply:StripWeapon('weapon_ttt_vent')
+		ply:StripWeapon('weapon_ttt_impo_knife')
 	end
 	
 	hook.Add("EntityTakeDamage", "ImpostorModifyDamage", function(target, dmg_info)
@@ -951,7 +963,7 @@ if CLIENT then
 		local client = LocalPlayer()
 		local ent = tData:GetEntity()
 		
-		if not IsValid(client) or not client:IsPlayer() or not client:Alive() or not client:IsTerror() or client:GetSubRole() ~= ROLE_IMPOSTOR or not IsValid(ent) then
+		if GetConVar("ttt2_impostor_kill_mode"):GetInt() ~= INSTANT_KILL_MODE.INTERACT or not IsValid(client) or not client:IsPlayer() or not client:Alive() or not client:IsTerror() or client:GetSubRole() ~= ROLE_IMPOSTOR or not IsValid(ent) then
 			return
 		end
 		
@@ -969,6 +981,10 @@ if CLIENT then
 	end)
 	
 	local function SendInstantKillRequest()
+		if GetConVar("ttt2_impostor_kill_mode"):GetInt() ~= INSTANT_KILL_MODE.INTERACT then
+			return
+		end
+
 		local client = LocalPlayer()
 		if client:GetSubRole() ~= ROLE_IMPOSTOR or not client:Alive() or IsInSpecDM(client) then
 			return

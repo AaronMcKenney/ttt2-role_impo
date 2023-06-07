@@ -95,6 +95,10 @@ Convars are variables that are introduced to allow server owners to customize th
   ttt2_impostor_sabo_pop_ups [0/1] (default: 1)
   
 ### INSTANT KILL ###
+# What method can the Impostor use to instantly kill their victim?
+  ttt2_impostor_kill_mode [0/1] (default: 0)
+  # 0: Interact with the use key while the victim is in line of sight (Warning: this is janky when either player is running around)
+  # 1: Impostor is given a knife
 # What is the range on the impostor's instant-kill ability?
   ttt2_impostor_kill_dist [0..n] (default: 150)
 # What is the cooldown (in seconds) on the impostor's instant-kill ability?

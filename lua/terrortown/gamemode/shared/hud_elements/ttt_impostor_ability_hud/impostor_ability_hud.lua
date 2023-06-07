@@ -135,7 +135,7 @@ if CLIENT then
 		if not client.impo_can_insta_kill and timer.Exists("ImpostorKillTimer_Client_" .. client:SteamID64()) then
 			local time_left = timer.TimeLeft("ImpostorKillTimer_Client_" .. client:SteamID64())
 			kill_str = kill_str .. TimeLeftToString(time_left)
-		elseif client.impo_can_insta_kill then
+		elseif client.impo_can_insta_kill and GetConVar("ttt2_impostor_kill_mode"):GetInt() == INSTANT_KILL_MODE.INTERACT then
 			local kill_key = string.upper(input.GetKeyName(bind.Find("ImpostorSendInstantKillRequest")))
 			kill_str = kill_str .. " (" .. LANG.GetTranslation("PRESS_" .. IMPOSTOR.name) .. kill_key .. ")"
 		end
