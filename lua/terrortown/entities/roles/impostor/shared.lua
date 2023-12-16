@@ -1257,4 +1257,364 @@ if CLIENT then
 			DrawStationManagerHUD()
 		end
 	end)
+
+	-------------
+	-- CONVARS --
+	-------------
+	function ROLE:AddToSettingsMenu(parent)
+		local form = vgui.CreateTTT2Form(parent, "header_roles_additional")
+
+		form:MakeHelp({
+			label = "label_impostor_help_general"
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_inform_everyone",
+			label = "label_impostor_inform_everyone"
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_normal_dmg_multi",
+			label = "label_impostor_normal_dmg_multi",
+			min = 0.0,
+			max = 1.0,
+			decimal = 2
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_sabo_pop_ups",
+			label = "label_impostor_sabo_pop_ups"
+		})
+
+		form:MakeHelp({
+			label = "label_impostor_help_instant_kill"
+		})
+		form:MakeComboBox({
+			serverConvar = "ttt2_impostor_kill_mode",
+			label = "label_impostor_kill_mode",
+			choices = {{
+				value = 0,
+				title = LANG.GetTranslation("label_impostor_kill_mode_0")
+			},{
+				value = 1,
+				title = LANG.GetTranslation("label_impostor_kill_mode_1")
+			}}
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_kill_dist",
+			label = "label_impostor_kill_dist",
+			min = 0,
+			max = 1000,
+			decimal = 0
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_kill_cooldown",
+			label = "label_impostor_kill_cooldown",
+			min = 0,
+			max = 120,
+			decimal = 0
+		})
+
+		form:MakeHelp({
+			label = "label_impostor_help_venting"
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_num_starting_vents",
+			label = "label_impostor_num_starting_vents",
+			min = 0,
+			max = 10,
+			decimal = 0
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_vent_capacity",
+			label = "label_impostor_vent_capacity",
+			min = 0,
+			max = 10,
+			decimal = 0
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_global_max_num_vents",
+			label = "label_impostor_global_max_num_vents",
+			min = -1,
+			max = 15,
+			decimal = 0
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_vent_placement_range",
+			label = "label_impostor_vent_placement_range",
+			min = 0,
+			max = 1000,
+			decimal = 0
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_nearby_new_vents_use_ply_pos_as_exit",
+			label = "label_impostor_nearby_new_vents_use_ply_pos_as_exit"
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_hide_unused_vents",
+			label = "label_impostor_hide_unused_vents"
+		})
+		form:MakeComboBox({
+			serverConvar = "ttt2_impostor_vent_secondary_fire_mode",
+			label = "label_impostor_vent_secondary_fire_mode",
+			choices = {{
+				value = 0,
+				title = LANG.GetTranslation("label_impostor_vent_secondary_fire_mode_0")
+			},{
+				value = 1,
+				title = LANG.GetTranslation("label_impostor_vent_secondary_fire_mode_1")
+			},{
+				value = 2,
+				title = LANG.GetTranslation("label_impostor_vent_secondary_fire_mode_2")
+			}}
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_traitor_team_can_use_vents",
+			label = "label_impostor_traitor_team_can_use_vents"
+		})
+
+		form:MakeHelp({
+			label = "label_impostor_help_sabo_station"
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_station_enable",
+			label = "label_impostor_station_enable"
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_station_manager_enable",
+			label = "label_impostor_station_manager_enable"
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_dissuade_station_reuse",
+			label = "label_impostor_dissuade_station_reuse"
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_min_station_dist",
+			label = "label_impostor_min_station_dist",
+			min = 0,
+			max = 2000,
+			decimal = 0
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_station_radius",
+			label = "label_impostor_station_radius",
+			min = 0,
+			max = 500,
+			decimal = 0
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_stop_station_ply_prop",
+			label = "label_impostor_stop_station_ply_prop",
+			min = 0.0,
+			max = 1.0,
+			decimal = 2
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_station_hold_time",
+			label = "label_impostor_station_hold_time",
+			min = 0,
+			max = 10,
+			decimal = 0
+		})
+
+		form:MakeHelp({
+			label = "label_impostor_help_sabo_lights"
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_lights_length",
+			label = "label_impostor_sabo_lights_length",
+			min = 0,
+			max = 180,
+			decimal = 0
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_lights_cooldown",
+			label = "label_impostor_sabo_lights_cooldown",
+			min = 0,
+			max = 300,
+			decimal = 0
+		})
+		form:MakeComboBox({
+			serverConvar = "ttt2_impostor_sabo_lights_mode",
+			label = "label_impostor_sabo_lights_mode",
+			choices = {{
+				value = 0,
+				title = LANG.GetTranslation("label_impostor_sabo_lights_mode_0")
+			},{
+				value = 1,
+				title = LANG.GetTranslation("label_impostor_sabo_lights_mode_1")
+			},{
+				value = 2,
+				title = LANG.GetTranslation("label_impostor_sabo_lights_mode_2")
+			}}
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_lights_fade_trans_length",
+			label = "label_impostor_sabo_lights_fade_trans_length",
+			min = 0.0,
+			max = 5.0,
+			decimal = 2
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_lights_fade_dark_length",
+			label = "label_impostor_sabo_lights_fade_dark_length",
+			min = 0.0,
+			max = 30.0,
+			decimal = 2
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_lights_fade_bright_length",
+			label = "label_impostor_sabo_lights_fade_bright_length",
+			min = 0,
+			max = 30,
+			decimal = 0
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_lights_fog_scale_other",
+			label = "label_impostor_sabo_lights_fog_scale_other",
+			min = 0.2,
+			max = 5.0,
+			decimal = 2
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_lights_fog_scale_impo",
+			label = "label_impostor_sabo_lights_fog_scale_impo",
+			min = 0.0,
+			max = 5.0,
+			decimal = 2
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_traitor_team_is_affected_by_sabo_lights",
+			label = "label_impostor_traitor_team_is_affected_by_sabo_lights"
+		})
+
+		form:MakeHelp({
+			label = "label_impostor_help_sabo_comms"
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_comms_length",
+			label = "label_impostor_sabo_comms_length",
+			min = 0,
+			max = 120,
+			decimal = 0
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_comms_cooldown",
+			label = "label_impostor_sabo_comms_cooldown",
+			min = 0,
+			max = 300,
+			decimal = 0
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_sabo_comms_deafen",
+			label = "label_impostor_sabo_comms_deafen"
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_traitor_team_is_affected_by_sabo_comms",
+			label = "label_impostor_traitor_team_is_affected_by_sabo_comms"
+		})
+
+		form:MakeHelp({
+			label = "label_impostor_help_sabo_o2"
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_o2_length",
+			label = "label_impostor_sabo_o2_length",
+			min = 0,
+			max = 120,
+			decimal = 0
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_o2_cooldown",
+			label = "label_impostor_sabo_o2_cooldown",
+			min = 0,
+			max = 300,
+			decimal = 0
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_o2_hp_loss",
+			label = "label_impostor_sabo_o2_hp_loss",
+			min = 1,
+			max = 10,
+			decimal = 0
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_o2_interval",
+			label = "label_impostor_sabo_o2_interval",
+			min = 1,
+			max = 10,
+			decimal = 0
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_o2_grace_period",
+			label = "label_impostor_sabo_o2_grace_period",
+			min = 0,
+			max = 120,
+			decimal = 0
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_o2_stop_thresh",
+			label = "label_impostor_sabo_o2_stop_thresh",
+			min = 0,
+			max = 100,
+			decimal = 0
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_traitor_team_is_affected_by_sabo_o2",
+			label = "label_impostor_traitor_team_is_affected_by_sabo_o2"
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_is_affected_by_sabo_o2",
+			label = "label_impostor_is_affected_by_sabo_o2"
+		})
+
+		form:MakeHelp({
+			label = "label_impostor_help_sabo_react"
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_react_length",
+			label = "label_impostor_sabo_react_length",
+			min = 0,
+			max = 120,
+			decimal = 0
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_sabo_react_cooldown",
+			label = "label_impostor_sabo_react_cooldown",
+			min = 0,
+			max = 300,
+			decimal = 0
+		})
+		form:MakeComboBox({
+			serverConvar = "ttt2_impostor_sabo_react_win_mode",
+			label = "label_impostor_sabo_react_win_mode",
+			choices = {{
+				value = 0,
+				title = LANG.GetTranslation("label_impostor_sabo_react_win_mode_0")
+			},{
+				value = 1,
+				title = LANG.GetTranslation("label_impostor_sabo_react_win_mode_1")
+			}}
+		})
+
+		form:MakeHelp({
+			label = "label_impostor_help_special_role"
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_inform_about_non_traitors_venting",
+			label = "label_impostor_inform_about_non_traitors_venting"
+		})
+		form:MakeSlider({
+			serverConvar = "ttt2_impostor_trapper_venting_time",
+			label = "label_impostor_trapper_venting_time",
+			min = 0,
+			max = 120,
+			decimal = 0
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_inform_trappers_about_venting",
+			label = "label_impostor_inform_trappers_about_venting"
+		})
+		form:MakeCheckBox({
+			serverConvar = "ttt2_impostor_jesters_can_vent",
+			label = "label_impostor_jesters_can_vent"
+		})
+	end
 end
