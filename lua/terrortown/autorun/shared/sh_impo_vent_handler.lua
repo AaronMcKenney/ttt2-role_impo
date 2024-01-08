@@ -52,7 +52,7 @@ end
 
 local function TrapperCanVent(ply)
 	local total_trapper_time_allowed = GetConVar("ttt2_impostor_trapper_venting_time"):GetInt()
-	if TRAPPER and ply:GetSubRole() == ROLE_TRAPPER and total_trapper_time_allowed > 0 and not ply.impo_trapper_timer_expired then
+	if TRAPPER and ply:GetSubRole() == ROLE_TRAPPER and total_trapper_time_allowed > 0 and not ply.impo_vent_timer_expired then
 		return true
 	end
 	
@@ -99,7 +99,7 @@ local function HandleSpecialRoleVenting(ply, is_entering_vent, was_role)
 		return role_str
 	end
 	
-	if total_time_allowed > 0 then
+	if total_time_allowed > 0 and not ply.impo_vent_timer_expired then
 		local server_client_str = "SERVER_"
 		if CLIENT then
 			server_client_str = "CLIENT_"
@@ -111,7 +111,7 @@ local function HandleSpecialRoleVenting(ply, is_entering_vent, was_role)
 				--Verify the player's existence, in case they are dropped from the Server.
 				if IsValid(ply) and ply:IsPlayer() then
 					--Currently only the trapper has a timer.
-					ply.impo_trapper_timer_expired = true
+					ply.impo_vent_timer_expired = true
 					if IsValid(ply.impo_in_vent) then
 						IMPO_VENT_DATA.ExitVent(ply)
 					end
@@ -128,7 +128,7 @@ local function HandleSpecialRoleVenting(ply, is_entering_vent, was_role)
 			LANG.Msg("VENT_TIME_LEFT_" .. IMPOSTOR.name, {t = time_left}, MSG_MSTACK_WARN)
 		end
 		
-		--Timer should only run while the trapper is in a vent.
+		--Timer should only run while the player is in a vent.
 		--Could use timer.Toggle here, but decided that this is safer.
 		if is_entering_vent then
 			timer.UnPause(vent_timer_str)

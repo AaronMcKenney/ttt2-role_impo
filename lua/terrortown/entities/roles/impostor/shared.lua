@@ -662,7 +662,7 @@ if SERVER then
 		--Reset data for everyone in case someone becomes an impostor/traitor/trapper/etc.
 		for _, ply in ipairs(player.GetAll()) do
 			ply.impo_in_vent = nil
-			ply.impo_trapper_timer_expired = nil
+			ply.impo_vent_timer_expired = nil
 		end
 	end)
 end
@@ -692,7 +692,7 @@ if CLIENT then
 		client.impo_in_vent = nil
 		client.impo_selected_vent = nil
 		client.impo_last_switch_time = nil
-		client.impo_trapper_timer_expired = nil
+		client.impo_vent_timer_expired = nil
 		client.impo_sabo_mode = nil
 		client.impo_highlighted_station = nil
 		client.impo_selected_station = nil
