@@ -80,7 +80,7 @@ local function HandleSpecialRoleVenting(ply, is_entering_vent, was_role)
 	local role_str = ""
 	local total_time_allowed = 0
 	local treat_like_traitor = false
-	if TrapperCanVent(ply) or was_role == ROLE_TRAPPER then
+	if TRAPPER and (TrapperCanVent(ply) or was_role == ROLE_TRAPPER) then
 		role_has_special_handling = true
 		role_str = "Trapper"
 		total_time_allowed = GetConVar("ttt2_impostor_trapper_venting_time"):GetInt()
@@ -89,7 +89,7 @@ local function HandleSpecialRoleVenting(ply, is_entering_vent, was_role)
 		role_str = "DopTraitor"
 		total_time_allowed = -1
 		treat_like_traitor = true
-	elseif JesterCanVent(ply) or was_role == ROLE_JESTER then
+	elseif JESTER and (JesterCanVent(ply) or was_role == ROLE_JESTER) then
 		role_has_special_handling = true
 		role_str = "Jester"
 		total_time_allowed = -1
