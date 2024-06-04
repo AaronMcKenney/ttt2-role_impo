@@ -953,7 +953,7 @@ if CLIENT then
 		--See https://ttt.badking.net/help/gameplay/ for details.
 		--This should be prevented during Sabotage Comms.
 		if timer.Exists("ImpostorSaboCommsTimer_Client") then
-			LANG.Msg("SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			LANG.Msg("SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_CHAT_WARN)
 			return true
 		end
 	end)
