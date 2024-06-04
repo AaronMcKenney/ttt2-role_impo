@@ -626,7 +626,7 @@ if SERVER then
 	hook.Add("TTT2AvoidGeneralChat", "ImpostorAvoidGeneralChat", function(sender, text)
 		--Prevents player from sending messages to general chat.
 		if timer.Exists("ImpostorSaboCommsTimer_Server") then
-			LANG.Msg(sender, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			LANG.Msg(sender, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_CHAT_WARN)
 			return false
 		end
 	end)
@@ -634,7 +634,7 @@ if SERVER then
 	hook.Add("TTT2AvoidTeamChat", "ImpostorAvoidTeamChat", function(sender, tm, msg)
 		if timer.Exists("ImpostorSaboCommsTimer_Server") and (tm == TEAM_INNOCENT or tm == TEAM_NONE or (IsValid(sender) and CanHaveCommsSabotaged(sender))) then
 			--Jam everyone but traitors while Sabotage Comms is in effect.
-			LANG.Msg(sender, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
+			LANG.Msg(sender, "SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_CHAT_WARN)
 			return false
 		end
 	end)
@@ -943,7 +943,6 @@ if CLIENT then
 	hook.Add("TTT2CanUseVoiceChat", "ImpostorCanUseVoiceChatForClient", function(speaker, isTeamVoice)
 		--Jam all voice channels except traitor chat and spectator chat
 		if timer.Exists("ImpostorSaboCommsTimer_Client") and (not isTeamVoice or CanHaveCommsSabotaged(speaker)) and not speaker:IsSpec() then
-			LANG.Msg("SABO_COMMS_START_" .. IMPOSTOR.name, nil, MSG_MSTACK_WARN)
 			return false
 		end
 	end)
